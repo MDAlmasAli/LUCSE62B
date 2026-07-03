@@ -105,15 +105,25 @@ class PushService {
 
       // Token registration + refresh.
       _token = await FirebaseMessaging.instance.getToken();
+      await _subscribeToBroadcasts();
       await _register();
       FirebaseMessaging.instance.onTokenRefresh.listen((t) {
         _token = t;
+        _subscribeToBroadcasts();
         _register();
       });
 
       _ready = true;
     } catch (e) {
       debugPrint('PushService init failed: $e');
+    }
+  }
+
+  Future<void> _subscribeToBroadcasts() async {
+    try {
+      await FirebaseMessaging.instance.subscribeToTopic('all_users');
+    } catch (e) {
+      debugPrint('FCM topic subscription failed: $e');
     }
   }
 
