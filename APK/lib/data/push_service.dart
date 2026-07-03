@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../core/supa.dart';
+import '../core/worker_api.dart';
 import 'session.dart';
 
 /// Background isolate handler — must be a top-level function.
@@ -105,15 +106,12 @@ class PushService {
 
       // Token registration + refresh.
       _token = await FirebaseMessaging.instance.getToken();
-      await _subscribeToBroadcasts();
-      await _register();
-      FirebaseMessaging.instance.onTokenRefresh.listen((t) {
-        _token = t;
-        _subscribeToBroadcasts();
-        _register();
-      });
-
       _ready = true;
+      await _syncForSession();
+      FirebaseMessaging.instance.onTokenRefresh.listen((t) async {
+        _token = t;
+        await _syncForSession();
+      });
     } catch (e) {
       debugPrint('PushService init failed: $e');
     }
@@ -124,6 +122,14 @@ class PushService {
       await FirebaseMessaging.instance.subscribeToTopic('all_users');
     } catch (e) {
       debugPrint('FCM topic subscription failed: $e');
+    }
+  }
+
+  Future<void> _unsubscribeFromBroadcasts() async {
+    try {
+      await FirebaseMessaging.instance.unsubscribeFromTopic('all_users');
+    } catch (e) {
+      debugPrint('FCM topic unsubscribe failed: $e');
     }
   }
 
@@ -143,9 +149,25 @@ class PushService {
     }
   }
 
-  /// Re-link the token after a login/logout so pushes target the right student.
+  Future<void> _unregister() async {
+    final token = _token;
+    if (token == null) return;
+    await WorkerApi.instance.unregisterFcmToken(token);
+  }
+
+  Future<void> _syncForSession() async {
+    if (Session.instance.isLoggedIn) {
+      await _subscribeToBroadcasts();
+      await _register();
+    } else {
+      await _unsubscribeFromBroadcasts();
+      await _unregister();
+    }
+  }
+
+  /// Re-link or remove the token after login/logout/access revocation.
   Future<void> onAuthChanged() async {
-    if (_ready) await _register();
+    if (_ready) await _syncForSession();
   }
 
   void _showForeground(RemoteMessage m) {

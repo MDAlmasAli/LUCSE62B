@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'constants.dart';
+import 'sheets_api.dart';
 
 /// Thin client for the Cloudflare Worker REST endpoints
 /// (https://lucse62b-api...workers.dev). Mirrors the calls the website makes.
@@ -20,7 +21,10 @@ class WorkerApi {
   Future<Map<String, dynamic>?> lookup(String studentId) async {
     try {
       final r = await http
-          .get(_u('/lookup?id=${Uri.encodeComponent(studentId)}'), headers: _origin)
+          .get(
+            _u('/lookup?id=${Uri.encodeComponent(studentId)}'),
+            headers: _origin,
+          )
           .timeout(const Duration(seconds: 8));
       if (r.statusCode == 429) return {'_rate_limited': true};
       if (r.statusCode != 200) return null;
@@ -30,11 +34,54 @@ class WorkerApi {
     }
   }
 
-  Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
-    final r = await http
-        .post(_u(path),
+  /// Returns true/false only when the authoritative Main Sheet roster was
+  /// checked successfully. Null means offline/temporary server failure and
+  /// must never force a legitimate user out.
+  Future<bool?> sessionActive(String studentId) async {
+    try {
+      final r = await http
+          .get(
+            _u('/session-status?id=${Uri.encodeComponent(studentId)}'),
+            headers: _origin,
+          )
+          .timeout(const Duration(seconds: 8));
+      // Backward-compatible fallback while an older Worker deployment is
+      // still live: read the public (phone-stripped) Student Info roster.
+      if (r.statusCode == 404) {
+        final rows = await SheetsApi.instance.sheet('Student Info');
+        return rows.any((row) => row.length > 1 && row[1].trim() == studentId);
+      }
+      if (r.statusCode != 200) return null;
+      final data = jsonDecode(r.body) as Map<String, dynamic>;
+      return data['active'] is bool ? data['active'] as bool : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Remove an FCM token after logout/access revocation.
+  Future<void> unregisterFcmToken(String token) async {
+    try {
+      await http
+          .delete(
+            _u('/fcm-token'),
             headers: {'Content-Type': 'application/json', ..._origin},
-            body: jsonEncode(body))
+            body: jsonEncode({'token': token}),
+          )
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {}
+  }
+
+  Future<Map<String, dynamic>> _post(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final r = await http
+        .post(
+          _u(path),
+          headers: {'Content-Type': 'application/json', ..._origin},
+          body: jsonEncode(body),
+        )
         .timeout(const Duration(seconds: 12));
     if (r.statusCode < 200 || r.statusCode >= 300) {
       throw Exception('worker ${r.statusCode}');
@@ -43,15 +90,21 @@ class WorkerApi {
   }
 
   /// GET /gallery?folder=&limit= → { files: [{ id, folder }] }.
-  Future<List<Map<String, dynamic>>> gallery(String folderId, {int limit = 300}) async {
+  Future<List<Map<String, dynamic>>> gallery(
+    String folderId, {
+    int limit = 300,
+  }) async {
     try {
       final r = await http
-          .get(_u('/gallery?folder=${Uri.encodeComponent(folderId)}&limit=$limit'),
-              headers: _origin)
+          .get(
+            _u('/gallery?folder=${Uri.encodeComponent(folderId)}&limit=$limit'),
+            headers: _origin,
+          )
           .timeout(const Duration(seconds: 20));
       if (r.statusCode != 200) return [];
       final data = jsonDecode(r.body) as Map<String, dynamic>;
-      return ((data['files'] as List?) ?? const []).cast<Map<String, dynamic>>();
+      return ((data['files'] as List?) ?? const [])
+          .cast<Map<String, dynamic>>();
     } catch (_) {
       return [];
     }
@@ -63,12 +116,16 @@ class WorkerApi {
   Future<List<Map<String, dynamic>>> driveFolder(String folderId) async {
     try {
       final r = await http
-          .get(_u('/drive?folder=${Uri.encodeComponent(folderId)}'), headers: _origin)
+          .get(
+            _u('/drive?folder=${Uri.encodeComponent(folderId)}'),
+            headers: _origin,
+          )
           .timeout(const Duration(seconds: 20));
       if (r.statusCode != 200) return _diskFolder(folderId);
       final data = jsonDecode(r.body) as Map<String, dynamic>;
       if (data['error'] != null) return _diskFolder(folderId);
-      final files = ((data['files'] as List?) ?? const []).cast<Map<String, dynamic>>();
+      final files = ((data['files'] as List?) ?? const [])
+          .cast<Map<String, dynamic>>();
       await _persistFolder(folderId, files);
       return files;
     } catch (_) {
@@ -92,11 +149,16 @@ class WorkerApi {
 
   String _folderKey(String id) => id.replaceAll(RegExp(r'[^A-Za-z0-9]'), '_');
 
-  Future<void> _persistFolder(String id, List<Map<String, dynamic>> files) async {
+  Future<void> _persistFolder(
+    String id,
+    List<Map<String, dynamic>> files,
+  ) async {
     try {
       final d = await _cacheDir();
       if (d == null) return;
-      await File('${d.path}/${_folderKey(id)}.json').writeAsString(jsonEncode(files));
+      await File(
+        '${d.path}/${_folderKey(id)}.json',
+      ).writeAsString(jsonEncode(files));
     } catch (_) {}
   }
 
@@ -135,9 +197,16 @@ class WorkerApi {
       _post('/verify-otp', {'student_id': studentId, 'otp': otp});
 
   Future<Map<String, dynamic>> setPassword(
-          String studentId, String pst, String password, {String? name}) =>
-      _post('/set-password',
-          {'student_id': studentId, 'pst': pst, 'password': password, 'name': name});
+    String studentId,
+    String pst,
+    String password, {
+    String? name,
+  }) => _post('/set-password', {
+    'student_id': studentId,
+    'pst': pst,
+    'password': password,
+    'name': name,
+  });
 
   // The LU result fetch is the slowest call in the app (it scrapes the LU
   // portal). Profile, Results, Retake & Improve and Course List each call it
@@ -150,11 +219,17 @@ class WorkerApi {
 
   /// POST /result → verifies DOB against LU portal, returns results payload.
   /// Cached for the session once it succeeds.
-  Future<Map<String, dynamic>> result(String studentId, String birthDate) async {
+  Future<Map<String, dynamic>> result(
+    String studentId,
+    String birthDate,
+  ) async {
     final key = '$studentId|$birthDate';
     final cached = _resultCache[key];
     if (cached != null) return cached;
-    final r = await _post('/result', {'student_id': studentId, 'birth_date': birthDate});
+    final r = await _post('/result', {
+      'student_id': studentId,
+      'birth_date': birthDate,
+    });
     if (r['success'] == true) _resultCache[key] = r;
     return r;
   }
@@ -163,13 +238,21 @@ class WorkerApi {
   /// from the LU result page) so future /result loads serve it. The Worker gates
   /// writes to the student's own id. Returns true on success.
   Future<bool> resultImport(
-      String studentId, String birthDate, Map<String, dynamic> data) async {
+    String studentId,
+    String birthDate,
+    Map<String, dynamic> data,
+  ) async {
     try {
       final r = await http
-          .post(_u('/result-import'),
-              headers: {'Content-Type': 'application/json', ..._origin},
-              body: jsonEncode(
-                  {'student_id': studentId, 'birth_date': birthDate, 'data': data}))
+          .post(
+            _u('/result-import'),
+            headers: {'Content-Type': 'application/json', ..._origin},
+            body: jsonEncode({
+              'student_id': studentId,
+              'birth_date': birthDate,
+              'data': data,
+            }),
+          )
           .timeout(const Duration(seconds: 15));
       if (r.statusCode < 200 || r.statusCode >= 300) return false;
       final j = jsonDecode(r.body) as Map<String, dynamic>;
@@ -183,7 +266,10 @@ class WorkerApi {
   /// Lighter than /result and often works even when results are CAPTCHA-blocked.
   Future<String?> myPhone(String studentId, String birthDate) async {
     try {
-      final d = await _post('/my-phone', {'student_id': studentId, 'birth_date': birthDate});
+      final d = await _post('/my-phone', {
+        'student_id': studentId,
+        'birth_date': birthDate,
+      });
       final p = d['phone'];
       return (p is String && p.trim().isNotEmpty) ? p.trim() : null;
     } catch (_) {
@@ -253,7 +339,11 @@ class WorkerApi {
 
   /// POST /attendance → mark / unmark a student present (admin only).
   Future<bool> attendanceSet(
-      String adminId, String studentId, String studentName, bool present) async {
+    String adminId,
+    String studentId,
+    String studentName,
+    bool present,
+  ) async {
     try {
       await _post('/attendance', {
         'action': present ? 'mark' : 'unmark',

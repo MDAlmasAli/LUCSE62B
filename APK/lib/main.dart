@@ -7,6 +7,7 @@ import 'data/connectivity_service.dart';
 import 'data/models/app_version.dart';
 import 'data/push_service.dart';
 import 'data/session.dart';
+import 'data/session_validator.dart';
 import 'data/update_service.dart';
 import 'features/update/update_gate.dart';
 
@@ -27,6 +28,7 @@ Future<void> main() async {
   // whenever the login state changes so pushes target the right student.
   PushService.instance.init();
   Session.instance.addListener(() => PushService.instance.onAuthChanged());
+  SessionValidator.instance.start();
 
   // Check for updates before anything else. A FORCED update blocks the whole
   // app; an optional one is surfaced on the home screen.

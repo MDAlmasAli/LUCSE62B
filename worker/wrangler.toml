@@ -22,6 +22,7 @@ FIREBASE_PROJECT_ID = "cse-62b-portal"
 #   VAPID_PRIVATE_KEY   ← run: wrangler secret put VAPID_PRIVATE_KEY
 #   FIREBASE_CLIENT_EMAIL ← service-account client_email
 #   FIREBASE_PRIVATE_KEY  ← service-account private_key PEM
+#   RELEASE_PUBLISH_KEY   ← owner-only APK publishing endpoint
 #   RESULT_STUDENT_ID   ← CR's student ID for result monitoring
 #   RESULT_BIRTH_DATE   ← CR's birth date (YYYY-MM-DD) for result monitoring
 

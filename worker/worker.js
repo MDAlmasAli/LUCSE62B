@@ -68,6 +68,20 @@ export default {
         return jsonResp(cors, { found: true, id: cells[1] || sid, name: cells[2] || 'Student' });
       }
 
+      // Main Sheet is the authoritative access list. The minute cron refreshes
+      // this roster in KV, so clients can revalidate without hammering Sheets.
+      if (p === '/session-status') {
+        if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
+        const sid = String(url.searchParams.get('id') || '').trim();
+        if (!/^\d{8,16}$/.test(sid)) return errResp(cors, 400, 'Invalid ID');
+        const roster = await getActiveStudentRoster(env);
+        if (!roster) return errResp(cors, 503, 'Roster temporarily unavailable');
+        return jsonResp(cors, {
+          active: roster.ids.includes(sid),
+          checked_at: new Date(roster.checkedAt).toISOString(),
+        });
+      }
+
       // ── GET /sheet?name=TabName ───────────────────────────────────────
       if (p === '/sheet') {
         const name = url.searchParams.get('name');
@@ -618,6 +632,18 @@ export default {
         return jsonResp(cors, { dob: dob || null });
       }
 
+      // Native app logout/revocation: remove this device token server-side.
+      if (p === '/fcm-token' && request.method === 'DELETE') {
+        if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
+        const { token } = await request.json().catch(() => ({}));
+        if (!token || !env.SUPA_KEY) return errResp(cors, 400, 'Missing fields');
+        await fetch(`${SUPA_URL}/rest/v1/fcm_tokens?token=eq.${encodeURIComponent(token)}`, {
+          method: 'DELETE',
+          headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` },
+        }).catch(() => {});
+        return jsonResp(cors, { ok: true });
+      }
+
       // ── POST /push-subscribe { endpoint, p256dh, auth, student_id? } ──
       if (p === '/push-subscribe' && request.method === 'POST') {
         if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
@@ -710,6 +736,121 @@ export default {
         await insertNotification(env, 'push_test', title, body, link);
         const delivery = await sendPushToAll(env);
         return jsonResp(cors, { ok: true, delivery, at: new Date().toISOString() });
+      }
+
+      // Owner-only APK publisher. The binary is streamed directly to Supabase
+      // Storage; release metadata is inserted only after a successful upload.
+      if (p === '/release-apk' && request.method === 'POST') {
+        const token = request.headers.get('x-release-key') || '';
+        if (!env.RELEASE_PUBLISH_KEY || token !== env.RELEASE_PUBLISH_KEY) {
+          return errResp(cors, 403, 'Forbidden');
+        }
+        if (!env.SUPA_KEY) return errResp(cors, 500, 'Not configured');
+
+        const versionName = String(request.headers.get('x-version-name') || '').trim();
+        const versionCode = Number(request.headers.get('x-version-code') || 0);
+        if (!/^\d+\.\d+\.\d+$/.test(versionName) ||
+            !Number.isInteger(versionCode) || versionCode < 1) {
+          return errResp(cors, 400, 'Invalid version');
+        }
+        const size = Number(request.headers.get('content-length') || 0);
+        if (size && size > 50 * 1024 * 1024) return errResp(cors, 413, 'APK too large');
+
+        const parseList = value => {
+          try {
+            const parsed = JSON.parse(value || '[]');
+            return Array.isArray(parsed) ? parsed.map(String).slice(0, 20) : [];
+          } catch {
+            return [];
+          }
+        };
+        const features = parseList(request.headers.get('x-release-features'));
+        const fixes = parseList(request.headers.get('x-release-fixes'));
+        const objectName = `lucse62b-${versionName}-arm64.apk`;
+        const storageHeaders = {
+          'apikey': env.SUPA_KEY,
+          'Authorization': `Bearer ${env.SUPA_KEY}`,
+        };
+        const upload = await fetch(
+          `${SUPA_URL}/storage/v1/object/app-releases/${encodeURIComponent(objectName)}`,
+          {
+            method: 'POST',
+            headers: {
+              ...storageHeaders,
+              'Content-Type': 'application/vnd.android.package-archive',
+              'Cache-Control': '3600',
+              'x-upsert': 'true',
+            },
+            body: request.body,
+          },
+        );
+        if (!upload.ok) return errResp(cors, 502, `Storage upload failed (${upload.status})`);
+
+        let minVersionCode = 1;
+        const latest = await fetch(
+          `${SUPA_URL}/rest/v1/app_updates?select=min_version_code&order=version_code.desc&limit=1`,
+          { headers: storageHeaders },
+        ).catch(() => null);
+        if (latest?.ok) {
+          const rows = await latest.json();
+          minVersionCode = Number(rows?.[0]?.min_version_code || 1);
+        }
+        const apkUrl = `${SUPA_URL}/storage/v1/object/public/app-releases/${objectName}`;
+        const metadata = await fetch(`${SUPA_URL}/rest/v1/app_updates`, {
+          method: 'POST',
+          headers: {
+            ...storageHeaders,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            version_name: versionName,
+            version_code: versionCode,
+            min_version_code: minVersionCode,
+            apk_url: apkUrl,
+            features,
+            fixes,
+          }),
+        });
+        if (!metadata.ok) {
+          return errResp(cors, 502, `Release metadata failed (${metadata.status})`);
+        }
+
+        // Keep only the newest APK object. Supabase recommends deleting files
+        // through the Storage API so object metadata is removed consistently.
+        let oldRemoved = 0;
+        const listed = await fetch(`${SUPA_URL}/storage/v1/object/list/app-releases`, {
+          method: 'POST',
+          headers: { ...storageHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prefix: '',
+            limit: 100,
+            offset: 0,
+            sortBy: { column: 'name', order: 'asc' },
+          }),
+        }).catch(() => null);
+        if (listed?.ok) {
+          const objects = await listed.json();
+          const old = objects
+            .map(item => String(item?.name || ''))
+            .filter(name => name.endsWith('.apk') && name !== objectName);
+          if (old.length) {
+            const removed = await fetch(`${SUPA_URL}/storage/v1/object/app-releases`, {
+              method: 'DELETE',
+              headers: { ...storageHeaders, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prefixes: old }),
+            }).catch(() => null);
+            if (removed?.ok) oldRemoved = old.length;
+          }
+        }
+
+        return jsonResp(cors, {
+          ok: true,
+          version_name: versionName,
+          version_code: versionCode,
+          apk_url: apkUrl,
+          old_apks_removed: oldRemoved,
+        });
       }
 
       // ── GET /attendance — today's attendance records ──────────────────
@@ -1199,10 +1340,115 @@ function decodeXmlEntities(s) {
 
 const MONITOR_DAYS = ['SATURDAY','SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'];
 
+const ACTIVE_ROSTER_KEY = 'active_student_roster_v1';
+
+async function fetchActiveStudentIds(env) {
+  if (!env.MAIN_SHEET_ID) throw new Error('MAIN_SHEET_ID is not configured');
+  let ids = [];
+
+  // Sheets API v4 reflects edits immediately and avoids GVIZ cache delays.
+  if (env.DRIVE_API_KEY) {
+    try {
+      const range = encodeURIComponent("'Student Info'!B:B");
+      const u = `https://sheets.googleapis.com/v4/spreadsheets/${env.MAIN_SHEET_ID}` +
+        `/values/${range}?majorDimension=ROWS&key=${env.DRIVE_API_KEY}`;
+      const r = await fetch(u, { headers: { 'Referer': 'https://lucse62b.xyz/' } });
+      if (r.ok) {
+        const data = await r.json();
+        ids = (data.values || [])
+          .map(row => String((row || [])[0] || '').trim())
+          .filter(id => /^\d{8,16}$/.test(id));
+      }
+    } catch {}
+  }
+
+  // Public-sheet fallback for projects where the Sheets API is unavailable.
+  if (!ids.length) {
+    const tq = encodeURIComponent('select B where B is not null');
+    const u = `https://docs.google.com/spreadsheets/d/${env.MAIN_SHEET_ID}` +
+      `/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('Student Info')}&tq=${tq}&_t=${Date.now()}`;
+    const r = await fetch(u);
+    if (!r.ok) throw new Error(`Roster GVIZ ${r.status}`);
+    const text = await r.text();
+    const match = text.match(/setResponse\(([\s\S]+)\)\s*;?\s*$/);
+    if (!match) throw new Error('Bad roster GVIZ response');
+    const data = JSON.parse(match[1]);
+    ids = (data.table?.rows || [])
+      .map(row => String(row?.c?.[0]?.f || row?.c?.[0]?.v || '').trim())
+      .filter(id => /^\d{8,16}$/.test(id));
+  }
+
+  ids = [...new Set(ids)];
+  // Never publish an empty roster on an upstream parsing/outage error, because
+  // that would incorrectly log out the whole class.
+  if (!ids.length) throw new Error('Active roster is empty');
+  return ids;
+}
+
+async function unlinkRemovedStudents(env, previousIds, currentIds) {
+  if (!env.SUPA_KEY || !previousIds?.length) return;
+  const active = new Set(currentIds);
+  const removed = previousIds.filter(id => !active.has(id) && /^\d{8,16}$/.test(id));
+  if (!removed.length) return;
+  const filter = encodeURIComponent(`in.(${removed.join(',')})`);
+  const headers = {
+    'apikey': env.SUPA_KEY,
+    'Authorization': `Bearer ${env.SUPA_KEY}`,
+  };
+  await Promise.allSettled([
+    fetch(`${SUPA_URL}/rest/v1/fcm_tokens?student_id=${filter}`, {
+      method: 'DELETE', headers,
+    }),
+    fetch(`${SUPA_URL}/rest/v1/push_subscriptions?student_id=${filter}`, {
+      method: 'DELETE', headers,
+    }),
+  ]);
+}
+
+async function refreshActiveStudentRoster(env) {
+  const ids = await fetchActiveStudentIds(env);
+  let previous = null;
+  if (env.SMS_RATE) {
+    try {
+      const raw = await env.SMS_RATE.get(ACTIVE_ROSTER_KEY);
+      if (raw) previous = JSON.parse(raw);
+    } catch {}
+  }
+  const roster = { ids, checkedAt: Date.now() };
+  if (env.SMS_RATE) {
+    await env.SMS_RATE.put(ACTIVE_ROSTER_KEY, JSON.stringify(roster), {
+      expirationTtl: 86400,
+    });
+  }
+  await unlinkRemovedStudents(env, previous?.ids || [], ids);
+  return roster;
+}
+
+async function getActiveStudentRoster(env) {
+  if (env.SMS_RATE) {
+    try {
+      const raw = await env.SMS_RATE.get(ACTIVE_ROSTER_KEY);
+      if (raw) {
+        const roster = JSON.parse(raw);
+        if (Array.isArray(roster.ids) &&
+            Number(roster.checkedAt) > Date.now() - 90000) {
+          return roster;
+        }
+      }
+    } catch {}
+  }
+  try {
+    return await refreshActiveStudentRoster(env);
+  } catch {
+    return null;
+  }
+}
+
 async function runFastMonitor(env) {
   if (!env.SUPA_KEY) return;
   const started = new Date().toISOString();
   const checks = await Promise.allSettled([
+    refreshActiveStudentRoster(env),
     checkSiteUpdates(env),
     checkAppUpdates(env),
     checkDeadlines(env),

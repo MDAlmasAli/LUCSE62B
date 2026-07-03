@@ -2,7 +2,7 @@
  * Shared Authentication State Checker
  * - Keeps header login/profile button in sync
  * - Option A: Force re-login after 7 days
- * - Option B: Background sheet re-validation every 1 hour
+ * - Option B: Main Sheet re-validation every minute and on tab focus
  */
 (function () {
   if (window.lu62b_auth_initialized) return;
@@ -10,7 +10,7 @@
 
   const WORKER_URL = 'https://lucse62b-api.sy164425.workers.dev';
   const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-  const ONE_HOUR   = 60 * 60 * 1000;
+  const VALIDATION_INTERVAL = 60 * 1000;
 
   const rawData    = localStorage.getItem('lu62b_student') || sessionStorage.getItem('lu62b_student');
   const isInPages  = window.location.pathname.includes('/pages/');
@@ -25,38 +25,75 @@
   );
 
   // ── Force logout helper ──────────────────────────────────────────────
+  var logoutStarted = false;
+
+  async function revokeWebPush() {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      reg.active?.postMessage({ type: 'SET_STUDENT_ID', studentId: null });
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub) return;
+      await Promise.allSettled([
+        fetch(WORKER_URL + '/push-subscribe', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+          keepalive: true,
+        }),
+        sub.unsubscribe(),
+      ]);
+    } catch (e) {}
+  }
+
   function forceLogout(reason) {
+    if (logoutStarted) return;
+    logoutStarted = true;
     localStorage.removeItem('lu62b_student');
     sessionStorage.removeItem('lu62b_student');
     localStorage.removeItem('lu62b_last_validation');
     const loginPath = isInPages ? 'login.html' : 'pages/login.html';
-    window.location.replace(loginPath + '?lo=' + reason);
+    Promise.race([
+      revokeWebPush(),
+      new Promise(function (resolve) { setTimeout(resolve, 1200); }),
+    ]).finally(function () {
+      window.location.replace(loginPath + '?lo=' + reason);
+    });
   }
 
   // ── Sheet validation (proxied via Worker) ────────────────────────────
   function checkStudentInSheet(studentId) {
     var timeout = new Promise(function (resolve) {
-      setTimeout(function () { resolve(false); }, 5000); // network timeout → fail closed
+      setTimeout(function () { resolve(null); }, 5000);
     });
-    var check = fetch(WORKER_URL + '/lookup?id=' + encodeURIComponent(studentId))
-      .then(function (r) { return r.json(); })
-      .then(function (data) { return data.found === true; })
-      .catch(function () { return false; }); // network error → fail closed
+    var check = fetch(WORKER_URL + '/session-status?id=' + encodeURIComponent(studentId), {
+      cache: 'no-store',
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        return data && typeof data.active === 'boolean' ? data.active : null;
+      })
+      .catch(function () { return null; });
     return Promise.race([timeout, check]);
   }
 
+  var validationRunning = false;
+
   function runBackgroundValidation(session) {
-    if (!session || !session.id) return;
+    if (!session || !session.id || isDemoSession || validationRunning || logoutStarted) return;
     // Skip on login/password-setup pages — no point checking there
     const page = window.location.pathname.split('/').pop();
     if (page === 'login.html' || page === 'password-setup.html') return;
 
+    validationRunning = true;
     checkStudentInSheet(session.id).then(function (found) {
-      if (found) {
+      if (found === true) {
         localStorage.setItem('lu62b_last_validation', JSON.stringify({ t: Date.now() }));
-      } else {
+      } else if (found === false) {
         forceLogout('removed');
       }
+    }).finally(function () {
+      validationRunning = false;
     });
   }
 
@@ -69,10 +106,10 @@
         return;
       }
 
-      // B — background sheet re-validation (once per hour, applies to all sessions)
+      // B — authoritative Main Sheet validation (every minute + tab focus)
       var lastVal = null;
       try { lastVal = JSON.parse(localStorage.getItem('lu62b_last_validation')); } catch (e) {}
-      var shouldValidate = !lastVal || !lastVal.t || (Date.now() - lastVal.t > ONE_HOUR);
+      var shouldValidate = !lastVal || !lastVal.t || (Date.now() - lastVal.t > VALIDATION_INTERVAL);
 
       if (shouldValidate) {
         if (document.readyState === 'loading') {
@@ -80,6 +117,14 @@
         } else {
           runBackgroundValidation(session);
         }
+      }
+
+      if (!isDemoSession) {
+        setInterval(function () { runBackgroundValidation(session); }, VALIDATION_INTERVAL);
+        window.addEventListener('focus', function () { runBackgroundValidation(session); });
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState === 'visible') runBackgroundValidation(session);
+        });
       }
     }
 
