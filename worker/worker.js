@@ -21,7 +21,8 @@ export default {
     const cors   = {
       'Access-Control-Allow-Origin':  (ALLOWED_ORIGINS.includes(origin) || isLocalOrigin) ? origin : ALLOWED_ORIGINS[0],
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Range',
+      'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, Content-Type',
       'Access-Control-Max-Age':       '86400',
     };
 
@@ -512,6 +513,53 @@ export default {
       }
 
       // ── POST /dob-sync { student_id, dob } — upsert DOB to Supabase ─────────
+      // GET /drive-file?id=FILE_ID&mime=MIME&name=NAME
+      // Stream a public Drive resource through the Worker. This gives the web
+      // resource manager a CORS-safe byte stream for download controls and its
+      // built-in PDF/PPTX viewers.
+      if (p === '/drive-file') {
+        const id = url.searchParams.get('id') || '';
+        const mime = url.searchParams.get('mime') || '';
+        const name = (url.searchParams.get('name') || 'download')
+          .replace(/[\r\n"\\/]/g, '_').slice(0, 180);
+        if (!/^[A-Za-z0-9_-]{10,100}$/.test(id)) {
+          return errResp(cors, 400, 'Invalid file ID');
+        }
+
+        let upstream;
+        if (mime === 'application/vnd.google-apps.document') {
+          upstream = `https://docs.google.com/document/d/${id}/export?format=pdf`;
+        } else if (mime === 'application/vnd.google-apps.presentation') {
+          upstream = `https://docs.google.com/presentation/d/${id}/export/pptx`;
+        } else if (mime === 'application/vnd.google-apps.spreadsheet') {
+          upstream = `https://docs.google.com/spreadsheets/d/${id}/export?format=xlsx`;
+        } else if (mime === 'application/vnd.google-apps.drawing') {
+          upstream = `https://docs.google.com/drawings/d/${id}/export/png`;
+        } else {
+          upstream = `https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`;
+        }
+
+        const upstreamHeaders = {};
+        const range = request.headers.get('Range');
+        if (range) upstreamHeaders.Range = range;
+        const r = await fetch(upstream, {
+          headers: upstreamHeaders,
+          redirect: 'follow',
+        });
+        if (!r.ok && r.status !== 206) {
+          return errResp(cors, r.status, 'Drive download failed');
+        }
+
+        const headers = new Headers(cors);
+        for (const key of ['Content-Type', 'Content-Length', 'Content-Range', 'Accept-Ranges', 'ETag']) {
+          const value = r.headers.get(key);
+          if (value) headers.set(key, value);
+        }
+        headers.set('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(name)}`);
+        headers.set('Cache-Control', 'private, no-store');
+        return new Response(r.body, { status: r.status, headers });
+      }
+
       if (p === '/dob-sync' && request.method === 'POST') {
         if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
         const { student_id, dob } = await request.json();

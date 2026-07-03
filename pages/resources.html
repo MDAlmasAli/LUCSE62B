@@ -136,6 +136,7 @@
       display: flex; align-items: center; gap: 14px;
       padding: 14px 20px; transition: background 0.15s;
       border-bottom: 1px solid rgba(255,255,255,0.04);
+      flex-wrap: wrap;
     }
     .file-item:last-child { border-bottom: none; }
     .file-item:hover { background: rgba(255,255,255,0.03); }
@@ -173,6 +174,35 @@
     .file-btn.dl:hover { box-shadow: 0 4px 14px rgba(16,185,129,0.2); }
     .file-btn.vw { background: rgba(14,165,233,0.1); color: #38bdf8; border: 1px solid rgba(14,165,233,0.25); }
     .file-btn.vw:hover { box-shadow: 0 4px 14px rgba(14,165,233,0.2); }
+    .file-btn { cursor: pointer; }
+    .download-panel {
+      display: none; flex-basis: 100%; margin-left: 54px;
+      padding: 9px 11px; border-radius: 11px;
+      background: rgba(16,185,129,0.06);
+      border: 1px solid rgba(16,185,129,0.16);
+    }
+    .download-panel.active { display: block; }
+    .download-progress {
+      height: 6px; border-radius: 100px; overflow: hidden;
+      background: rgba(148,163,184,0.14);
+    }
+    .download-progress > span {
+      display: block; width: 0; height: 100%; border-radius: inherit;
+      background: linear-gradient(90deg,#10b981,#34d399);
+      transition: width 0.15s linear;
+    }
+    .download-row {
+      display: flex; align-items: center; gap: 8px; margin-top: 7px;
+      color: var(--muted); font-size: 0.7rem;
+    }
+    .download-status { flex: 1; min-width: 0; }
+    .download-control {
+      width: 28px; height: 28px; border-radius: 8px; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--text); background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+    }
+    .download-control.stop { color: #f87171; }
 
     /* Empty / loading */
     .res-empty {
@@ -388,9 +418,51 @@
       background: rgba(16,185,129,0.12); color: #34d399;
       border: 1px solid rgba(16,185,129,0.25);
       -webkit-tap-highlight-color: transparent;
+      cursor: pointer;
     }
+    .preview-nav {
+      display: none; align-items: center; gap: 6px; flex-shrink: 0;
+    }
+    .preview-nav.visible { display: flex; }
+    .preview-tool {
+      height: 34px; min-width: 34px; padding: 0 9px; border-radius: 9px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: #fff; background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.14); cursor: pointer;
+    }
+    .preview-page-input {
+      width: 54px; height: 34px; border-radius: 9px; padding: 0 7px;
+      color: #fff; text-align: center; background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.14); outline: none;
+    }
+    .preview-page-count { color: #cbd5e1; font-size: 0.72rem; white-space: nowrap; }
     .preview-frame {
       flex: 1; border: none; background: #111;
+    }
+    .preview-frame.hidden { display: none; }
+    .document-viewer {
+      flex: 1; min-height: 0; display: none; overflow: auto;
+      align-items: center; justify-content: center; padding: 14px;
+      background: #090b11;
+    }
+    .document-viewer.visible { display: flex; }
+    .document-canvas {
+      display: block; max-width: 100%; max-height: 100%;
+      background: #fff; box-shadow: 0 14px 45px rgba(0,0,0,0.5);
+    }
+    .document-loading {
+      color: #cbd5e1; font-size: 0.86rem;
+      display: flex; align-items: center; gap: 9px;
+    }
+    .preview-modal.landscape .document-viewer { padding: 6px; }
+    @media (max-width: 700px) {
+      .preview-topbar { gap: 7px; padding: 8px; flex-wrap: wrap; }
+      .preview-title { order: 1; min-width: calc(100% - 52px); }
+      .preview-close { order: 0; }
+      .preview-nav { order: 2; width: 100%; justify-content: center; }
+      .preview-download { order: 3; }
+      .download-panel { margin-left: 0; }
+      .file-item > div[style*="display:flex"] { width: 100%; justify-content: flex-end; }
     }
   </style>
 </head>
@@ -494,11 +566,32 @@
         <i class="fa-solid fa-xmark"></i>
       </button>
       <span class="preview-title" id="previewTitle"></span>
-      <a class="preview-download" id="previewDl" href="#" target="_blank" rel="noopener">
+      <div class="preview-nav" id="previewNav">
+        <button class="preview-tool" onclick="stepPreview(-1)" aria-label="Previous page">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <input class="preview-page-input" id="previewPageInput" type="number" min="1" value="1"
+          aria-label="Page or slide number" onchange="goToPreviewPage(this.value)"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();goToPreviewPage(this.value);}">
+        <span class="preview-page-count" id="previewPageCount">/ 1</span>
+        <button class="preview-tool" onclick="stepPreview(1)" aria-label="Next page">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        <button class="preview-tool" id="previewLandscapeBtn" onclick="togglePreviewLandscape()" aria-label="Landscape view" title="Landscape view">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
+      </div>
+      <button class="preview-download" id="previewDl" type="button">
         <i class="fa-solid fa-download"></i> Download
-      </a>
+      </button>
     </div>
     <iframe class="preview-frame" id="previewFrame" src="" allowfullscreen></iframe>
+    <div class="document-viewer" id="documentViewer">
+      <div class="document-loading" id="documentLoading">
+        <div class="spin"></div><span>Loading document…</span>
+      </div>
+      <canvas class="document-canvas" id="documentCanvas" width="1280" height="720" style="display:none;"></canvas>
+    </div>
       <footer>
       <div class="footer-brand">CSE 62B · PORTAL</div>
       <div class="footer-links">
@@ -517,19 +610,214 @@
 
   <script src="../assets/js/sheets.js"></script>
   <script>
-    /* -- Preview modal -- */
-    function openPreview(name, previewUrl, downloadUrl) {
-      document.getElementById('previewTitle').textContent = name;
-      document.getElementById('previewFrame').src = previewUrl;
-      document.getElementById('previewDl').href = downloadUrl;
+    const RESOURCE_WORKER = 'https://lucse62b-api.sy164425.workers.dev';
+    const resourceFiles = new Map();
+    const viewerScripts = new Map();
+    let previewState = null;
+    let previewGeneration = 0;
+
+    function proxyFileUrl(file) {
+      const q = new URLSearchParams({
+        id: file.id,
+        mime: file.mimeType || '',
+        name: file.name || 'download',
+      });
+      return `${RESOURCE_WORKER}/drive-file?${q}`;
+    }
+
+    function loadViewerScript(src, ready) {
+      if (ready()) return Promise.resolve();
+      if (viewerScripts.has(src)) return viewerScripts.get(src);
+      const promise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => ready() ? resolve() : reject(new Error('Viewer library unavailable'));
+        script.onerror = () => reject(new Error('Could not load viewer library'));
+        document.head.appendChild(script);
+      });
+      viewerScripts.set(src, promise);
+      return promise;
+    }
+
+    function showPreviewModal(file, custom) {
+      document.getElementById('previewTitle').textContent = file.name;
       document.getElementById('previewModal').classList.add('open');
+      document.getElementById('previewNav').classList.toggle('visible', custom);
+      document.getElementById('previewFrame').classList.toggle('hidden', custom);
+      document.getElementById('documentViewer').classList.toggle('visible', custom);
+      document.getElementById('documentLoading').style.display = custom ? 'flex' : 'none';
+      document.getElementById('documentCanvas').style.display = 'none';
+      document.getElementById('previewDl').onclick = () => startManagedDownload(file.id);
       document.body.style.overflow = 'hidden';
       const ft = document.querySelector('footer');
       if (ft) ft.style.display = 'none';
     }
-    function closePreview() {
-      document.getElementById('previewModal').classList.remove('open');
+
+    async function openResourcePreview(id) {
+      const file = resourceFiles.get(id);
+      if (!file) return;
+      const type = mimeToType(file.mimeType);
+      const generation = ++previewGeneration;
+      if (type !== 'pdf' && type !== 'ppt') {
+        showPreviewModal(file, false);
+        document.getElementById('previewFrame').src = `https://drive.google.com/file/d/${file.id}/preview`;
+        previewState = { file, type: 'iframe', page: 1, count: 1 };
+        return;
+      }
+
+      showPreviewModal(file, true);
+      document.getElementById('previewPageInput').value = '1';
+      document.getElementById('previewPageCount').textContent = '/ …';
+      previewState = { file, type, page: 1, count: 0, generation };
+      try {
+        if (type === 'pdf') await openPdfPreview(file, generation);
+        else await openPptxPreview(file, generation);
+      } catch (err) {
+        if (generation !== previewGeneration) return;
+        document.getElementById('documentLoading').innerHTML =
+          `<i class="fa-solid fa-triangle-exclamation"></i><span>${esc(err.message || 'Could not open document')}</span>`;
+        if (type === 'ppt') {
+          document.getElementById('documentViewer').classList.remove('visible');
+          document.getElementById('previewFrame').classList.remove('hidden');
+          document.getElementById('previewFrame').src = `https://drive.google.com/file/d/${file.id}/preview`;
+          document.getElementById('previewNav').classList.remove('visible');
+        }
+      }
+    }
+
+    async function openPdfPreview(file, generation) {
+      await loadViewerScript(
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+        () => !!window.pdfjsLib
+      );
+      if (generation !== previewGeneration) return;
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const task = window.pdfjsLib.getDocument(proxyFileUrl(file));
+      const doc = await task.promise;
+      if (generation !== previewGeneration) { doc.destroy(); return; }
+      previewState = { ...previewState, pdf: doc, count: doc.numPages, page: 1 };
+      await renderPreviewPage(1);
+    }
+
+    async function openPptxPreview(file, generation) {
+      await loadViewerScript(
+        'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+        () => !!window.JSZip
+      );
+      await loadViewerScript(
+        'https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js',
+        () => !!window.Chart
+      );
+      await loadViewerScript(
+        'https://cdn.jsdelivr.net/npm/pptxviewjs@1.1.9/dist/PptxViewJS.min.js',
+        () => !!window.PptxViewJS
+      );
+      if (generation !== previewGeneration) return;
+      const canvas = document.getElementById('documentCanvas');
+      canvas.width = 1280; canvas.height = 720;
+      const viewer = new window.PptxViewJS.PPTXViewer({ canvas, autoExposeGlobals: true });
+      let slideCount = 0;
+      viewer.on?.('loadComplete', info => {
+        slideCount = Number(info?.slideCount || 0);
+      });
+      viewer.on?.('slideChanged', index => {
+        if (!previewState || previewState.type !== 'ppt') return;
+        previewState.page = Number(index) + 1;
+        updatePreviewCounter();
+      });
+      await viewer.loadFromUrl(proxyFileUrl(file));
+      if (generation !== previewGeneration) return;
+      slideCount = slideCount || Number(viewer.slideCount || viewer.slides?.length || 1);
+      previewState = { ...previewState, pptx: viewer, count: slideCount, page: 1 };
+      await viewer.render(canvas);
+      document.getElementById('documentLoading').style.display = 'none';
+      canvas.style.display = 'block';
+      updatePreviewCounter();
+    }
+
+    async function renderPreviewPage(page) {
+      if (!previewState || !previewState.count) return;
+      const target = Math.max(1, Math.min(previewState.count, Number(page) || 1));
+      const canvas = document.getElementById('documentCanvas');
+      if (previewState.type === 'ppt') {
+        await previewState.pptx.renderSlide(target - 1, canvas);
+      } else if (previewState.type === 'pdf') {
+        previewState.renderTask?.cancel?.();
+        const pdfPage = await previewState.pdf.getPage(target);
+        const base = pdfPage.getViewport({ scale: 1 });
+        const host = document.getElementById('documentViewer');
+        const availableWidth = Math.max(280, host.clientWidth - 28);
+        const availableHeight = Math.max(300, host.clientHeight - 28);
+        const scale = Math.min(availableWidth / base.width, availableHeight / base.height);
+        const viewport = pdfPage.getViewport({ scale: Math.max(0.35, scale) });
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(viewport.width * ratio);
+        canvas.height = Math.floor(viewport.height * ratio);
+        canvas.style.width = `${Math.floor(viewport.width)}px`;
+        canvas.style.height = `${Math.floor(viewport.height)}px`;
+        const ctx = canvas.getContext('2d');
+        const renderTask = pdfPage.render({
+          canvasContext: ctx,
+          viewport,
+          transform: ratio === 1 ? null : [ratio, 0, 0, ratio, 0, 0],
+        });
+        previewState.renderTask = renderTask;
+        await renderTask.promise;
+      }
+      previewState.page = target;
+      document.getElementById('documentLoading').style.display = 'none';
+      canvas.style.display = 'block';
+      updatePreviewCounter();
+    }
+
+    function updatePreviewCounter() {
+      if (!previewState) return;
+      document.getElementById('previewPageInput').value = previewState.page || 1;
+      document.getElementById('previewPageInput').max = previewState.count || 1;
+      document.getElementById('previewPageCount').textContent = `/ ${previewState.count || '…'}`;
+    }
+
+    function goToPreviewPage(value) {
+      if (!previewState?.count) return;
+      renderPreviewPage(Number(value)).catch(() => {});
+    }
+
+    function stepPreview(delta) {
+      if (!previewState?.count) return;
+      renderPreviewPage((previewState.page || 1) + delta).catch(() => {});
+    }
+
+    async function togglePreviewLandscape() {
+      const modal = document.getElementById('previewModal');
+      const landscape = !modal.classList.contains('landscape');
+      modal.classList.toggle('landscape', landscape);
+      try {
+        if (landscape) {
+          if (!document.fullscreenElement) await modal.requestFullscreen?.();
+          await screen.orientation?.lock?.('landscape');
+        } else {
+          screen.orientation?.unlock?.();
+          if (document.fullscreenElement === modal) await document.exitFullscreen?.();
+        }
+      } catch (_) {}
+      if (previewState?.type === 'pdf') {
+        setTimeout(() => renderPreviewPage(previewState.page).catch(() => {}), 180);
+      }
+    }
+
+    async function closePreview() {
+      previewGeneration++;
+      const modal = document.getElementById('previewModal');
+      modal.classList.remove('open', 'landscape');
       document.getElementById('previewFrame').src = '';
+      document.getElementById('documentCanvas').style.display = 'none';
+      try { previewState?.renderTask?.cancel?.(); } catch (_) {}
+      try { await previewState?.pdf?.destroy?.(); } catch (_) {}
+      try { previewState?.pptx?.destroy?.(); } catch (_) {}
+      try { screen.orientation?.unlock?.(); } catch (_) {}
+      try { if (document.fullscreenElement === modal) await document.exitFullscreen?.(); } catch (_) {}
+      previewState = null;
       document.body.style.overflow = '';
       const ft = document.querySelector('footer');
       if (ft) ft.style.display = '';
@@ -610,6 +898,133 @@
       if (mimeType === 'application/vnd.google-apps.presentation') return `https://docs.google.com/presentation/d/${id}/export/pptx`;
       if (mimeType === 'application/vnd.google-apps.spreadsheet')  return `https://docs.google.com/spreadsheets/d/${id}/export?format=xlsx`;
       return `https://drive.google.com/uc?export=download&id=${id}`;
+    }
+
+    const resourceDownloadTasks = new Map();
+
+    function prettyBytes(bytes) {
+      if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+      const units = ['B','KB','MB','GB'];
+      let value = bytes, unit = 0;
+      while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
+      return `${value.toFixed(value < 10 && unit ? 1 : 0)} ${units[unit]}`;
+    }
+
+    function updateDownloadUi(id, task, message) {
+      const panel = document.getElementById(`dlPanel-${id}`);
+      if (!panel) return;
+      panel.classList.add('active');
+      const percent = task.total > 0 ? Math.min(100, task.received / task.total * 100) : 0;
+      panel.querySelector('.download-progress > span').style.width =
+        task.total > 0 ? `${percent}%` : '35%';
+      panel.querySelector('.download-status').textContent = message ||
+        `${prettyBytes(task.received)}${task.total ? ` / ${prettyBytes(task.total)} · ${Math.round(percent)}%` : ''}`;
+      const pauseIcon = panel.querySelector('.download-pause i');
+      if (pauseIcon) pauseIcon.className = task.paused ? 'fa-solid fa-play' : 'fa-solid fa-pause';
+    }
+
+    async function startManagedDownload(id) {
+      const file = resourceFiles.get(id);
+      if (!file) return;
+      const running = resourceDownloadTasks.get(id);
+      if (running) {
+        if (running.paused) toggleDownloadPause(id);
+        return;
+      }
+      const controller = new AbortController();
+      const task = {
+        controller, reader: null, writer: null, root: null, tempName: '',
+        received: 0, total: 0, paused: false, cancelled: false,
+        resumeWaiter: null, chunks: [],
+      };
+      resourceDownloadTasks.set(id, task);
+      updateDownloadUi(id, task, 'Starting download…');
+      try {
+        const response = await fetch(proxyFileUrl(file), { signal: controller.signal });
+        if (!response.ok || !response.body) throw new Error(`Download failed (${response.status})`);
+        task.total = Number(response.headers.get('content-length') || 0);
+        task.reader = response.body.getReader();
+
+        if (navigator.storage?.getDirectory) {
+          try {
+            task.root = await navigator.storage.getDirectory();
+            task.tempName = `lu62b-${id}.download`;
+            const handle = await task.root.getFileHandle(task.tempName, { create: true });
+            task.writer = await handle.createWritable();
+          } catch (_) {
+            task.writer = null; task.root = null;
+          }
+        }
+
+        while (!task.cancelled) {
+          while (task.paused && !task.cancelled) {
+            await new Promise(resolve => { task.resumeWaiter = resolve; });
+          }
+          if (task.cancelled) break;
+          const { done, value } = await task.reader.read();
+          if (done) break;
+          if (task.writer) await task.writer.write(value);
+          else task.chunks.push(value);
+          task.received += value.byteLength;
+          updateDownloadUi(id, task);
+        }
+        if (task.cancelled) return;
+
+        let blob;
+        if (task.writer) {
+          await task.writer.close();
+          task.writer = null;
+          const handle = await task.root.getFileHandle(task.tempName);
+          blob = await handle.getFile();
+        } else {
+          blob = new Blob(task.chunks, {
+            type: response.headers.get('content-type') || file.mimeType || 'application/octet-stream',
+          });
+        }
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = file.name || 'download';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+        updateDownloadUi(id, { ...task, received: task.total || task.received }, 'Download complete');
+        const panel = document.getElementById(`dlPanel-${id}`);
+        panel?.querySelectorAll('.download-control').forEach(btn => btn.style.display = 'none');
+        if (task.root && task.tempName) {
+          setTimeout(() => task.root.removeEntry(task.tempName).catch(() => {}), 60000);
+        }
+      } catch (err) {
+        if (!task.cancelled) updateDownloadUi(id, task, err.message || 'Download failed');
+      } finally {
+        resourceDownloadTasks.delete(id);
+      }
+    }
+
+    function toggleDownloadPause(id) {
+      const task = resourceDownloadTasks.get(id);
+      if (!task || task.cancelled) return;
+      task.paused = !task.paused;
+      if (!task.paused && task.resumeWaiter) {
+        task.resumeWaiter();
+        task.resumeWaiter = null;
+      }
+      updateDownloadUi(id, task, task.paused ? `Paused · ${prettyBytes(task.received)}` : '');
+    }
+
+    async function stopManagedDownload(id) {
+      const task = resourceDownloadTasks.get(id);
+      if (!task) return;
+      task.cancelled = true;
+      task.paused = false;
+      task.resumeWaiter?.();
+      task.controller.abort();
+      try { await task.reader?.cancel(); } catch (_) {}
+      try { await task.writer?.abort(); } catch (_) {}
+      try { if (task.root && task.tempName) await task.root.removeEntry(task.tempName); } catch (_) {}
+      updateDownloadUi(id, task, 'Download stopped');
+      resourceDownloadTasks.delete(id);
     }
 
     /* -- Mark colors -- */
@@ -748,7 +1163,9 @@
     /* Check if file type supports Drive preview */
     function canPreview(mimeType) {
       const m = mimeType || '';
-      return m === 'application/pdf'
+      const type = mimeToType(m);
+      return type === 'pdf'
+        || type === 'ppt'
         || m.startsWith('video/')
         || m.startsWith('audio/')
         || m.startsWith('image/')
@@ -759,10 +1176,8 @@
 
     function fileItemHtml(f) {
       const tm      = typeMeta(f.mimeType);
-      const dlUrl   = fileUrl(f);
-      const prevUrl = `https://drive.google.com/file/d/${f.id}/preview`;
       const preview = canPreview(f.mimeType);
-      const nameEsc = esc(f.name).replace(/'/g, '\\x27');
+      resourceFiles.set(f.id, f);
       return `
         <div class="file-item">
           <div class="file-type-icon ${tm.cls}"><i class="fa-solid ${tm.icon}"></i></div>
@@ -771,12 +1186,24 @@
             <span class="file-type-label">${f._folderPath ? `<i class="fa-solid fa-folder" style="font-size:0.65rem;margin-right:3px;opacity:0.6;"></i>${esc(f._folderPath)} · ` : ''}${tm.label}</span>
           </div>
           <div style="display:flex;gap:6px;flex-shrink:0;">
-            ${preview ? `<button class="file-btn vw" onclick="openPreview('${nameEsc}','${esc(prevUrl)}','${esc(dlUrl)}')" style="border:none;cursor:pointer;">
+            ${preview ? `<button class="file-btn vw" onclick="openResourcePreview('${esc(f.id)}')" style="border:none;">
               <i class="fa-solid fa-eye"></i> Preview
             </button>` : ''}
-            <a class="file-btn dl" href="${dlUrl}" target="_blank" rel="noopener">
+            <button class="file-btn dl" onclick="startManagedDownload('${esc(f.id)}')" style="border:none;">
               <i class="fa-solid fa-download"></i> Download
-            </a>
+            </button>
+          </div>
+          <div class="download-panel" id="dlPanel-${esc(f.id)}">
+            <div class="download-progress"><span></span></div>
+            <div class="download-row">
+              <span class="download-status">Starting download…</span>
+              <button class="download-control download-pause" onclick="toggleDownloadPause('${esc(f.id)}')" title="Pause or resume">
+                <i class="fa-solid fa-pause"></i>
+              </button>
+              <button class="download-control stop" onclick="stopManagedDownload('${esc(f.id)}')" title="Stop download">
+                <i class="fa-solid fa-stop"></i>
+              </button>
+            </div>
           </div>
         </div>`;
     }
