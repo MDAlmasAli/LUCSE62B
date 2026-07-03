@@ -8,15 +8,20 @@ compatibility_date = "2024-01-01"
 enabled = true
 
 [triggers]
-crons = ["0 * * * *"]
+# Minute monitor: public updates + deadline reminders. Hourly monitor: heavier
+# personalized result / enrolled-course checks.
+crons = ["* * * * *", "0 * * * *"]
 
 [vars]
 CPG_TEACHERS_GID = "1051481415"
 VAPID_PUBLIC_KEY = "BKvTLWhriB6TC5zTPHg7ueOTkPuscWWohuFAshrCCigaT1cKm_vUTrFYtV6x8yDgmQZiOjPIjxf5sMdYErfFPK4"
 VAPID_SUBJECT    = "mailto:sy164425@gmail.com"
+FIREBASE_PROJECT_ID = "cse-62b-portal"
 # Secrets stored in Cloudflare dashboard → Workers → lucse62b-api → Settings → Variables:
 #   SUPA_KEY, DRIVE_API_KEY, SMS_API_KEY, SMS_SENDER_ID, MAIN_SHEET_ID, CPG_TEACHERS_GID
 #   VAPID_PRIVATE_KEY   ← run: wrangler secret put VAPID_PRIVATE_KEY
+#   FIREBASE_CLIENT_EMAIL ← service-account client_email
+#   FIREBASE_PRIVATE_KEY  ← service-account private_key PEM
 #   RESULT_STUDENT_ID   ← CR's student ID for result monitoring
 #   RESULT_BIRTH_DATE   ← CR's birth date (YYYY-MM-DD) for result monitoring
 

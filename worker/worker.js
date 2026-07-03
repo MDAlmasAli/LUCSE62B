@@ -679,12 +679,37 @@ export default {
            result baselines now without overloading the subrequest limit).
            Otherwise run the normal hour-split monitor. */
         const batchParam = url.searchParams.get('batch');
-        if (batchParam !== null) {
+        if (url.searchParams.get('fast') === '1') {
+          ctx.waitUntil(runFastMonitor(env).catch(() => {}));
+        } else if (batchParam !== null) {
           ctx.waitUntil(checkResult(env, { batchIndex: parseInt(batchParam, 10) || 0 }).catch(() => {}));
         } else {
           ctx.waitUntil(runMonitor(env));
         }
-        return jsonResp(cors, { ok: true, triggered: true, batch: batchParam, at: new Date().toISOString() });
+        return jsonResp(cors, {
+          ok: true,
+          triggered: true,
+          fast: url.searchParams.get('fast') === '1',
+          batch: batchParam,
+          at: new Date().toISOString(),
+        });
+      }
+
+      // Owner-only end-to-end push test. Inserts a visible test notification,
+      // wakes every web subscription, and sends the same message to the APK's
+      // all_users FCM topic.
+      if (p === '/push-test' && request.method === 'POST') {
+        const token = request.headers.get('x-monitor-key') || '';
+        if (!env.SUPA_KEY || token !== env.SUPA_KEY) {
+          return errResp(cors, 403, 'Forbidden');
+        }
+        const payload = await request.json().catch(() => ({}));
+        const title = String(payload.title || '🔔 Push notification test').slice(0, 100);
+        const body = String(payload.body || 'CSE 62B notification delivery is working.').slice(0, 500);
+        const link = String(payload.link || '/');
+        await insertNotification(env, 'push_test', title, body, link);
+        const delivery = await sendPushToAll(env);
+        return jsonResp(cors, { ok: true, delivery, at: new Date().toISOString() });
       }
 
       // ── GET /attendance — today's attendance records ──────────────────
@@ -758,7 +783,11 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runMonitor(env));
+    if (event.cron === '* * * * *') {
+      ctx.waitUntil(runFastMonitor(env));
+    } else {
+      ctx.waitUntil(runMonitor(env));
+    }
   },
 };
 
@@ -1170,6 +1199,36 @@ function decodeXmlEntities(s) {
 
 const MONITOR_DAYS = ['SATURDAY','SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY'];
 
+async function runFastMonitor(env) {
+  if (!env.SUPA_KEY) return;
+  const started = new Date().toISOString();
+  const checks = await Promise.allSettled([
+    checkSiteUpdates(env),
+    checkAppUpdates(env),
+    checkDeadlines(env),
+    checkDeadlineReminders(env),
+    checkNotices(env),
+    checkClassRoutine(env),
+    checkExamRoutine(env, 'mid'),
+    checkExamRoutine(env, 'final'),
+  ]);
+  const failed = checks.filter(r => r.status === 'rejected').length;
+  await fetch(`${SUPA_URL}/rest/v1/monitor_state`, {
+    method: 'POST',
+    headers: {
+      'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}`,
+      'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates',
+    },
+    body: JSON.stringify({
+      key: 'cron_fast_heartbeat',
+      state_hash: `${started}:${failed}`,
+      state_data: { at: started, checks: checks.length, failed },
+      last_checked: new Date().toISOString(),
+      last_changed: new Date().toISOString(),
+    }),
+  }).catch(() => {});
+}
+
 async function runMonitor(env) {
   if (!env.SUPA_KEY) return;
   const hour = new Date().getUTCHours();
@@ -1183,18 +1242,11 @@ async function runMonitor(env) {
   try {
     /* What's New announcements have no push path of their own — broadcast them
        every hour (cheap: one read + at most one wake-push to all subscribers). */
-    await checkSiteUpdates(env).catch(() => {});
+    // Public update monitors run every minute in runFastMonitor.
     if (hour % 2 === 0) {
-      await Promise.allSettled([
-        checkClassRoutine(env).catch(() => {}),
-        checkExamRoutine(env, 'mid').catch(() => {}),
-        checkExamRoutine(env, 'final').catch(() => {}),
-        checkNotices(env).catch(() => {}),
-        checkDeadlines(env).catch(() => {}),
-      ]);
       /* Enrolled retake/improve course routine + exam changes — per-student */
       await checkEnrolledCourses(env).catch(() => {});
-      note = 'routine+exam+notices+enrolled+deadlines';
+      note = 'enrolled-course-checks';
     } else {
       note = await checkResult(env).catch(e => 'error:' + ((e && e.message) || e)) || '';
     }
@@ -1688,6 +1740,92 @@ async function checkDeadlines(env) {
    service worker then shows the latest notification — the DB trigger already
    inserted the matching 'whats_new' row). Seeds a baseline on first run so old
    updates aren't re-announced. */
+function dhakaClockParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Dhaka',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(date);
+  return Object.fromEntries(parts.map(p => [p.type, p.value]));
+}
+
+function addDateKeyDays(key, days) {
+  const [y, m, d] = key.split('-').map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d + days));
+  return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(next.getUTCDate()).padStart(2, '0')}`;
+}
+
+function deadlineDateKey(raw, formatted) {
+  const value = String(raw || '').trim();
+  const gviz = value.match(/^Date\((\d+),(\d+),(\d+)/);
+  if (gviz) {
+    return `${gviz[1]}-${String(Number(gviz[2]) + 1).padStart(2, '0')}-${String(Number(gviz[3])).padStart(2, '0')}`;
+  }
+  const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const parsed = new Date(formatted || value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  const p = dhakaClockParts(parsed);
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+/* At 18:00 Asia/Dhaka, remind everyone about classwork due the next day.
+   Sent keys are persisted so cron retries never duplicate a reminder. */
+async function checkDeadlineReminders(env) {
+  if (!env.SUPA_KEY || !env.MAIN_SHEET_ID) return;
+  const clock = dhakaClockParts();
+  if (Number(clock.hour) !== 18) return;
+  const today = `${clock.year}-${clock.month}-${clock.day}`;
+  const tomorrow = addDateKeyDays(today, 1);
+
+  const u = `https://docs.google.com/spreadsheets/d/${env.MAIN_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Deadlines&_t=${Date.now()}`;
+  const r = await fetch(u).catch(() => null);
+  if (!r || !r.ok) return;
+  const text = await r.text();
+  const match = text.match(/setResponse\(([\s\S]+)\)\s*;?\s*$/);
+  if (!match) return;
+  let rows;
+  try { rows = JSON.parse(match[1]).table?.rows || []; } catch { return; }
+
+  const due = [];
+  for (const row of rows) {
+    const cells = row.c || [];
+    const textAt = i => {
+      const cell = cells[i];
+      return cell && cell.v !== null && cell.v !== undefined
+        ? String(cell.f || cell.v).trim() : '';
+    };
+    const course = textAt(0), type = textAt(1), title = textAt(2);
+    if (!title || course.toLowerCase() === 'course' || type.toLowerCase() === 'type') continue;
+    if (deadlineDateKey(cells[3]?.v, cells[3]?.f) !== tomorrow) continue;
+    due.push({
+      course, type, title,
+      deadline: textAt(3),
+      key: `${course}|${type}|${title}|${textAt(3)}`,
+    });
+  }
+
+  const state = await supabaseGetState(env, 'deadline_reminder');
+  const known = state?.state_data?.date === today
+    ? new Set(state.state_data?.keys || []) : new Set();
+  const fresh = due.filter(item => !known.has(item.key));
+  const keys = [...new Set([...known, ...due.map(item => item.key)])];
+  const hash = await sha256(`${today}|${JSON.stringify(keys)}`);
+  await supabaseUpsertState(env, 'deadline_reminder', hash, {
+    date: today, tomorrow, keys,
+  });
+  if (!fresh.length) return;
+
+  const title = fresh.length === 1
+    ? '⏰ Classwork due tomorrow'
+    : `⏰ ${fresh.length} classwork items due tomorrow`;
+  const body = fresh.slice(0, 6).map(item =>
+    `• ${item.course ? item.course + ' · ' : ''}${item.type ? item.type + ': ' : ''}${item.title}`
+  ).join('\n') + (fresh.length > 6 ? `\n…and ${fresh.length - 6} more` : '');
+  await insertNotification(env, 'deadline_reminder', title, body, '/pages/classwork.html');
+  await sendPushToAll(env);
+}
+
 async function checkSiteUpdates(env) {
   if (!env.SUPA_KEY) return;
   const r = await fetch(
@@ -1713,6 +1851,35 @@ async function checkSiteUpdates(env) {
    every ~8h; results rarely change minute-to-minute). A personal in-app
    notification is always inserted; a push is also sent if the student has
    subscribed. opts.batchIndex forces a specific batch (manual seeding). ── */
+async function checkAppUpdates(env) {
+  if (!env.SUPA_KEY) return;
+  const r = await fetch(
+    `${SUPA_URL}/rest/v1/app_updates?select=version_name,version_code,features,fixes,created_at&order=version_code.desc&limit=1`,
+    { headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` } }
+  ).catch(() => null);
+  if (!r || !r.ok) return;
+  const rows = await r.json();
+  if (!rows.length) return;
+  const latest = rows[0];
+  const versionCode = Number(latest.version_code || 0);
+  if (!versionCode) return;
+  const stored = await supabaseGetState(env, 'app_updates');
+  if (!stored) {
+    await supabaseUpsertState(env, 'app_updates', String(versionCode), { version_code: versionCode });
+    return;
+  }
+  const previous = Number(stored.state_data?.version_code || stored.state_hash || 0);
+  if (versionCode <= previous) return;
+  await supabaseUpsertState(env, 'app_updates', String(versionCode), { version_code: versionCode });
+  const changes = [...(latest.features || []), ...(latest.fixes || [])].slice(0, 4);
+  const title = `🚀 App update v${latest.version_name || versionCode}`;
+  const body = changes.length
+    ? changes.map(x => `• ${x}`).join('\n')
+    : 'A new CSE 62B Portal update is available.';
+  await insertNotification(env, 'app_update', title, body, '/pages/whats-new.html');
+  await sendPushToAll(env);
+}
+
 async function checkResult(env, opts = {}) {
   if (!env.SUPA_KEY) return 'no-key';
 
@@ -2252,16 +2419,135 @@ async function sendWebPush(endpoint, env) {
   } catch { return 0; }
 }
 
+let _fcmAccessToken = '';
+let _fcmAccessTokenExpires = 0;
+
+function pemToBytes(pem) {
+  const normalized = String(pem || '').replace(/\\n/g, '\n');
+  const body = normalized
+    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+    .replace(/-----END PRIVATE KEY-----/g, '')
+    .replace(/\s+/g, '');
+  return Uint8Array.from(atob(body), c => c.charCodeAt(0));
+}
+
+async function firebaseAccessToken(env) {
+  if (_fcmAccessToken && Date.now() < _fcmAccessTokenExpires - 60000) {
+    return _fcmAccessToken;
+  }
+  if (!env.FIREBASE_CLIENT_EMAIL || !env.FIREBASE_PRIVATE_KEY) return '';
+  const now = Math.floor(Date.now() / 1000);
+  const header = b64urlEncode(new TextEncoder().encode(JSON.stringify({
+    alg: 'RS256', typ: 'JWT',
+  })));
+  const claims = b64urlEncode(new TextEncoder().encode(JSON.stringify({
+    iss: env.FIREBASE_CLIENT_EMAIL,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+  })));
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    pemToBytes(env.FIREBASE_PRIVATE_KEY),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    key,
+    new TextEncoder().encode(`${header}.${claims}`),
+  );
+  const assertion = `${header}.${claims}.${b64urlEncode(new Uint8Array(signature))}`;
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion,
+    }),
+  });
+  if (!response.ok) return '';
+  const data = await response.json();
+  _fcmAccessToken = data.access_token || '';
+  _fcmAccessTokenExpires = Date.now() + Number(data.expires_in || 3600) * 1000;
+  return _fcmAccessToken;
+}
+
+async function latestPublicNotification(env) {
+  const r = await fetch(
+    `${SUPA_URL}/rest/v1/notifications?student_id=is.null&select=title,body,link&order=created_at.desc&limit=1`,
+    { headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` } }
+  ).catch(() => null);
+  if (!r || !r.ok) return null;
+  const rows = await r.json();
+  return rows[0] || null;
+}
+
+async function sendFcmToAll(env, notification) {
+  if (!env.FIREBASE_PROJECT_ID ||
+      !env.FIREBASE_CLIENT_EMAIL ||
+      !env.FIREBASE_PRIVATE_KEY) {
+    return { status: 'not_configured' };
+  }
+  try {
+    const accessToken = await firebaseAccessToken(env);
+    if (!accessToken) return { status: 'auth_failed' };
+    const title = String(notification?.title || 'CSE 62B Portal');
+    const body = String(notification?.body || 'New update available.');
+    const link = String(notification?.link || '/');
+    const r = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(env.FIREBASE_PROJECT_ID)}/messages:send`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: {
+            topic: 'all_users',
+            notification: { title, body },
+            data: { title, body, link },
+            android: {
+              priority: 'HIGH',
+              notification: {
+                channel_id: 'lu62b_default',
+                sound: 'default',
+              },
+            },
+            apns: { payload: { aps: { sound: 'default' } } },
+          },
+        }),
+      },
+    );
+    if (r.ok) return { status: 'sent', code: r.status };
+    return { status: 'failed', code: r.status };
+  } catch {
+    return { status: 'error' };
+  }
+}
+
 async function sendPushToAll(env) {
-  if (!env.SUPA_KEY || !env.VAPID_PRIVATE_KEY) return;
+  if (!env.SUPA_KEY) return { web: { status: 'not_configured' }, fcm: { status: 'not_configured' } };
+  const notification = await latestPublicNotification(env);
+  const fcmPromise = sendFcmToAll(env, notification);
+  if (!env.VAPID_PRIVATE_KEY) {
+    return { web: { status: 'not_configured' }, fcm: await fcmPromise };
+  }
   const r = await fetch(`${SUPA_URL}/rest/v1/push_subscriptions?select=endpoint`, {
     headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` },
   }).catch(() => null);
-  if (!r || !r.ok) return;
+  if (!r || !r.ok) {
+    return { web: { status: 'subscription_fetch_failed' }, fcm: await fcmPromise };
+  }
   const subs = await r.json();
   const expired = [];
+  let delivered = 0;
   await Promise.allSettled(subs.map(async sub => {
     const status = await sendWebPush(sub.endpoint, env);
+    if (status >= 200 && status < 300) delivered++;
     if (status === 410) expired.push(sub.endpoint);
   }));
   for (const ep of expired) {
@@ -2270,4 +2556,8 @@ async function sendPushToAll(env) {
       headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` },
     }).catch(() => {});
   }
+  return {
+    web: { status: 'sent', delivered, total: subs.length, expired: expired.length },
+    fcm: await fcmPromise,
+  };
 }
