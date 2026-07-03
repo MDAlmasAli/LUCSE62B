@@ -5,6 +5,8 @@ Thumbs.db
 .env
 .env.*
 *.local.json
+firebase-service-account*.json
+*firebase-adminsdk*.json
 .claude/
 .claude/settings.local.json
 skills-lock.json
