@@ -110,8 +110,6 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                           color: color, fontWeight: FontWeight.w700, fontSize: 14)),
                   const SizedBox(height: 2),
                   Text(c.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           color: AppColors.textSecondary, fontSize: 12.5, height: 1.3)),
                 ],

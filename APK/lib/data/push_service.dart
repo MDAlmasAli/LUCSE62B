@@ -10,8 +10,40 @@ import 'session.dart';
 /// Background isolate handler — must be a top-level function.
 @pragma('vm:entry-point')
 Future<void> _bgHandler(RemoteMessage message) async {
-  // Firebase shows the system notification automatically when the app is in
-  // the background/terminated; nothing else needed here.
+  await Firebase.initializeApp();
+  // Notification payloads are displayed by Android automatically. Data-only
+  // messages need a local notification or users would never see them.
+  if (message.notification != null) return;
+  final title = message.data['title']?.toString() ?? '';
+  final body = message.data['body']?.toString() ?? '';
+  if (title.isEmpty && body.isEmpty) return;
+  final local = FlutterLocalNotificationsPlugin();
+  const settings = InitializationSettings(
+    android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    iOS: DarwinInitializationSettings(),
+  );
+  await local.initialize(settings: settings);
+  await local
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >()
+      ?.createNotificationChannel(PushService._channel);
+  await local.show(
+    id: message.messageId?.hashCode ?? message.data.hashCode,
+    title: title,
+    body: body,
+    notificationDetails: const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'lu62b_default',
+        'Notifications',
+        channelDescription: 'CSE 62B Portal notifications',
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+      ),
+      iOS: DarwinNotificationDetails(),
+    ),
+  );
 }
 
 /// Firebase Cloud Messaging integration: registers the device token (linked to
@@ -24,6 +56,7 @@ class PushService {
   final _local = FlutterLocalNotificationsPlugin();
   String? _token;
   bool _ready = false;
+  Future<void>? _initializing;
 
   static const _channel = AndroidNotificationChannel(
     'lu62b_default',
@@ -32,10 +65,12 @@ class PushService {
     importance: Importance.high,
   );
 
-  Future<void> init() async {
+  Future<void> init() => _initializing ??= _init();
+
+  Future<void> _init() async {
     try {
-      await Firebase.initializeApp();
       FirebaseMessaging.onBackgroundMessage(_bgHandler);
+      await Firebase.initializeApp();
 
       // Local notifications (used to display foreground messages).
       const initSettings = InitializationSettings(
@@ -45,11 +80,25 @@ class PushService {
       await _local.initialize(settings: initSettings);
       await _local
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.createNotificationChannel(_channel);
 
       // Permission (iOS + Android 13+).
-      await FirebaseMessaging.instance.requestPermission();
+      final permission = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      if (permission.authorizationStatus == AuthorizationStatus.denied) {
+        debugPrint('Push notification permission denied');
+      }
+      await FirebaseMessaging.instance
+          .setForegroundNotificationPresentationOptions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
 
       // Show foreground messages ourselves.
       FirebaseMessaging.onMessage.listen(_showForeground);
@@ -91,11 +140,13 @@ class PushService {
 
   void _showForeground(RemoteMessage m) {
     final n = m.notification;
-    if (n == null) return;
+    final title = n?.title ?? m.data['title']?.toString() ?? '';
+    final body = n?.body ?? m.data['body']?.toString() ?? '';
+    if (title.isEmpty && body.isEmpty) return;
     _local.show(
-      id: n.hashCode,
-      title: n.title,
-      body: n.body,
+      id: m.messageId?.hashCode ?? m.data.hashCode,
+      title: title,
+      body: body,
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           'lu62b_default',

@@ -71,7 +71,18 @@ class ResultData {
     'B-': 2.75, 'C+': 2.50, 'C': 2.25, 'D': 2.00, 'F': 0.00,
   };
 
-  static double _d(Object? v) => double.tryParse('$v') ?? 0;
+  /// Lenient numeric parse matching the website's `parseFloat` — pulls the
+  /// number out even when the cell carries trailing text (e.g. "120.00 Cr").
+  /// `double.tryParse` would reject those and yield 0, which made values like
+  /// "Total Credit Completed" come out wrong.
+  static double _d(Object? v) {
+    if (v is num) return v.toDouble();
+    final s = '$v'.trim();
+    final direct = double.tryParse(s);
+    if (direct != null) return direct;
+    final m = RegExp(r'-?\d+(?:\.\d+)?').firstMatch(s);
+    return m != null ? (double.tryParse(m.group(0)!) ?? 0) : 0;
+  }
 
   /// Parse the raw `/result` JSON map. Returns null if it isn't a success body.
   static ResultData? parse(Map<String, dynamic> raw) {
@@ -113,13 +124,40 @@ class ResultData {
     }
     out.sort((a, b) => b.sortKey.compareTo(a.sortKey));
 
+    // "Credit Completed" — prefer the reported value, but if it's missing or
+    // garbled (parsed to 0), compute it from the passed courses (best attempt
+    // per course, excluding F) so the total is never shown wrong.
+    var totalCredit = _d(s['credit']);
+    if (totalCredit <= 0) {
+      final bestGrade = <String, String>{};
+      final bestRank = <String, int>{};
+      final maxCr = <String, double>{};
+      for (final sem in out) {
+        for (final c in sem.courses) {
+          final code = _normCode(c.code);
+          final rk = _rank(c.grade);
+          if (code.isEmpty || rk < 0) continue;
+          if (!bestRank.containsKey(code) || rk > bestRank[code]!) {
+            bestRank[code] = rk;
+            bestGrade[code] = c.grade.trim().toUpperCase();
+          }
+          if (c.credit > (maxCr[code] ?? 0)) maxCr[code] = c.credit;
+        }
+      }
+      var sum = 0.0;
+      bestGrade.forEach((code, g) {
+        if (g != 'F') sum += maxCr[code] ?? 0;
+      });
+      totalCredit = sum;
+    }
+
     return ResultData(
       name: (s['name'] ?? '').toString(),
       id: (s['id'] ?? '').toString(),
       department: (s['department'] ?? '').toString(),
       degree: (rs['Degree'] ?? s['degree'] ?? '').toString(),
       cgpa: _d(s['cgpa']),
-      totalCredit: _d(s['credit']),
+      totalCredit: totalCredit,
       coursesCompleted: out.fold(0, (a, sem) => a + sem.courses.length),
       imported: raw['imported'] == true,
       semesters: out,

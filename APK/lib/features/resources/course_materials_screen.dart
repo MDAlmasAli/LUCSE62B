@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_colors.dart';
-import '../../core/worker_api.dart';
-import '../../data/download_service.dart';
-import '../../shared/app_toast.dart';
-import '../../shared/glass_card.dart';
+import '../../core/sheets_api.dart';
+import 'drive_file_list_view.dart';
 import 'resources_screen.dart';
 
-/// File browser for a course's Mid / Final material folders (Google Drive).
+/// File browser for a course's Mid / Final material folders (Google Drive),
+/// with the course Mark Distribution on top. Files and sub-folders are handled
+/// by [DriveFileListView].
 class CourseMaterialsScreen extends StatefulWidget {
   final CourseMaterial course;
   const CourseMaterialsScreen({super.key, required this.course});
@@ -19,33 +18,39 @@ class CourseMaterialsScreen extends StatefulWidget {
 
 class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> {
   String _tab = 'mid';
-  late Future<List<Map<String, dynamic>>> _future = _load();
-  Set<String> _downloaded = {};
-  final Map<String, double> _progress = {}; // fileId → download progress
+  List<({String component, String marks})> _marks = [];
+
+  String get _folderId =>
+      _tab == 'mid' ? widget.course.midFolderId : widget.course.finalFolderId;
 
   @override
   void initState() {
     super.initState();
-    _refreshDownloaded();
+    _loadMarks();
   }
 
-  Future<void> _refreshDownloaded() async {
-    final ids = await DownloadService.instance.downloadedIds();
-    if (mounted) setState(() => _downloaded = ids);
-  }
-
-  Future<List<Map<String, dynamic>>> _load() {
-    final id = _tab == 'mid' ? widget.course.midFolderId : widget.course.finalFolderId;
-    if (id.isEmpty) return Future.value([]);
-    return WorkerApi.instance.driveFolder(id);
+  /// Mark distribution from the "Marks" sheet (CourseCode | Component | Marks).
+  Future<void> _loadMarks() async {
+    try {
+      final rows = await SheetsApi.instance.sheet('Marks');
+      final code = widget.course.code.trim().toLowerCase();
+      final out = <({String component, String marks})>[];
+      for (final r in rows) {
+        if (r.length < 3) continue;
+        final c = r[0].trim();
+        if (c.isEmpty || c.toLowerCase() == 'coursecode') continue;
+        if (c.toLowerCase() != code) continue;
+        final comp = r[1].trim();
+        if (comp.isEmpty) continue;
+        out.add((component: comp, marks: r[2].trim()));
+      }
+      if (mounted) setState(() => _marks = out);
+    } catch (_) {}
   }
 
   void _switch(String tab) {
     if (_tab == tab) return;
-    setState(() {
-      _tab = tab;
-      _future = _load();
-    });
+    setState(() => _tab = tab);
   }
 
   @override
@@ -63,36 +68,32 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-            child: Text(widget.course.name,
-                style: const TextStyle(
-                    color: AppColors.textSecondary, fontSize: 12.5)),
+            child: Text(
+              widget.course.name,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12.5,
+              ),
+            ),
           ),
+          if (_marks.isNotEmpty) _marksSection(),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
             child: _toggle(),
           ),
           Expanded(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _future,
-              builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                      child: CircularProgressIndicator(color: AppColors.accent));
-                }
-                final files = snap.data ?? [];
-                if (files.isEmpty) {
-                  return const Center(
-                    child: Text('No files in this folder yet.',
-                        style: TextStyle(color: AppColors.muted, fontSize: 14)),
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
-                  itemCount: files.length,
-                  itemBuilder: (_, i) => _fileCard(files[i]),
-                );
-              },
-            ),
+            child: _folderId.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No files in this folder yet.',
+                      style: TextStyle(color: AppColors.muted, fontSize: 14),
+                    ),
+                  )
+                : DriveFileListView(
+                    key: ValueKey(_folderId),
+                    folderId: _folderId,
+                    courseCode: widget.course.code,
+                  ),
           ),
         ],
       ),
@@ -112,12 +113,15 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> {
               gradient: sel ? AppColors.accentGradient : null,
               borderRadius: BorderRadius.circular(9),
             ),
-            child: Text(label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: sel ? Colors.white : AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13)),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: sel ? Colors.white : AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
           ),
         ),
       );
@@ -134,167 +138,101 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> {
     );
   }
 
-  Widget _fileCard(Map<String, dynamic> f) {
-    final name = (f['name'] ?? 'File').toString();
-    final id = (f['id'] ?? '').toString();
-    final mime = (f['mimeType'] ?? '').toString();
-    final (icon, color, label) = _typeMeta(mime);
-    final isDown = _downloaded.contains(id);
-    final downloading = _progress.containsKey(id);
-
+  Widget _marksSection() {
+    const palette = [
+      Color(0xFFA78BFA),
+      Color(0xFF38BDF8),
+      Color(0xFF34D399),
+      Color(0xFFF87171),
+      Color(0xFFFBBF24),
+      Color(0xFFF472B6),
+      Color(0xFF22D3EE),
+    ];
+    final total = _marks.fold<double>(
+      0,
+      (s, m) => s + (double.tryParse(m.marks) ?? 0),
+    );
     return Padding(
-      padding: const EdgeInsets.only(bottom: 9),
-      child: GlassCard(
-        onTap: downloading ? null : () => _onTap(id, name, mime),
-        padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.border),
+        ),
         child: Row(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 19),
+            const Icon(
+              Icons.pie_chart_rounded,
+              size: 13,
+              color: Color(0xFFFBBF24),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 5),
+            Text(
+              total > 0 ? 'Marks · ${_fmt(total)}' : 'Marks',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 7),
+            Container(width: 1, height: 20, color: AppColors.border),
+            const SizedBox(width: 7),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: AppColors.text,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13)),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(label, style: TextStyle(color: color, fontSize: 11)),
-                      if (isDown) ...[
-                        const SizedBox(width: 8),
-                        const Icon(Icons.offline_pin_rounded, size: 12, color: Color(0xFF34D399)),
-                        const SizedBox(width: 3),
-                        const Text('Saved offline',
-                            style: TextStyle(color: Color(0xFF34D399), fontSize: 10.5, fontWeight: FontWeight.w600)),
-                      ],
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (var i = 0; i < _marks.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 5),
+                      _markPill(_marks[i], palette[i % palette.length]),
                     ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-            _trailing(id, isDown, downloading),
           ],
         ),
       ),
     );
   }
 
-  Widget _trailing(String id, bool isDown, bool downloading) {
-    if (downloading) {
-      final p = _progress[id] ?? 0;
-      return SizedBox(
-        width: 26,
-        height: 26,
-        child: CircularProgressIndicator(
-          strokeWidth: 2.4,
-          value: p > 0 ? p : null,
-          color: AppColors.accentBright,
-        ),
-      );
-    }
-    if (isDown) {
-      return PopupMenuButton<String>(
-        icon: const Icon(Icons.more_vert_rounded, size: 20, color: AppColors.muted),
-        color: AppColors.card,
-        onSelected: (v) {
-          if (v == 'open') _open(id);
-          if (v == 'drive') _openInDrive(id);
-          if (v == 'delete') _deleteDownload(id);
-        },
-        itemBuilder: (_) => const [
-          PopupMenuItem(value: 'open', child: Text('Open', style: TextStyle(color: AppColors.text))),
-          PopupMenuItem(value: 'drive', child: Text('Open in Drive', style: TextStyle(color: AppColors.text))),
-          PopupMenuItem(value: 'delete', child: Text('Delete download', style: TextStyle(color: AppColors.red))),
+  Widget _markPill(({String component, String marks}) m, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            m.marks,
+            style: TextStyle(
+              color: color,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            m.component,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
-      );
-    }
-    return const Icon(Icons.download_rounded, size: 20, color: AppColors.muted);
-  }
-
-  (IconData, Color, String) _typeMeta(String mime) {
-    if (mime == 'application/pdf') {
-      return (Icons.picture_as_pdf_rounded, const Color(0xFFF87171), 'PDF');
-    }
-    if (mime.startsWith('video/')) {
-      return (Icons.play_circle_rounded, const Color(0xFF38BDF8), 'Video');
-    }
-    if (mime.contains('powerpoint') || mime.contains('presentation')) {
-      return (Icons.slideshow_rounded, const Color(0xFFD97706), 'Presentation');
-    }
-    if (mime.contains('zip') || mime.contains('rar') || mime.contains('octet-stream')) {
-      return (Icons.folder_zip_rounded, const Color(0xFFFBBF24), 'Archive');
-    }
-    if (mime.startsWith('image/')) {
-      return (Icons.image_rounded, const Color(0xFF34D399), 'Image');
-    }
-    if (mime.contains('word') || mime.contains('document')) {
-      return (Icons.description_rounded, const Color(0xFF60A5FA), 'Document');
-    }
-    return (Icons.insert_drive_file_rounded, AppColors.accentBright, 'File');
-  }
-
-  /// Tapping a file: open the local copy if we have it, otherwise download it
-  /// once (saved for offline) and open it with the device's default viewer.
-  Future<void> _onTap(String id, String name, String mime) async {
-    if (id.isEmpty || _progress.containsKey(id)) return;
-    if (_downloaded.contains(id)) {
-      await _open(id);
-      return;
-    }
-    setState(() => _progress[id] = 0);
-    final ent = await DownloadService.instance.download(
-      id,
-      name,
-      mime: mime,
-      source: widget.course.code,
-      onProgress: (p) {
-        if (mounted) setState(() => _progress[id] = p);
-      },
+      ),
     );
-    if (!mounted) return;
-    setState(() {
-      _progress.remove(id);
-      if (ent != null) _downloaded.add(id);
-    });
-    if (ent != null) {
-      AppToast.show(context, 'Saved for offline · opening…');
-      await _open(id);
-    } else {
-      // Large file / Drive confirm page — fall back to the Drive viewer.
-      AppToast.show(context, 'Opening in Drive…');
-      await _openInDrive(id);
-    }
   }
 
-  Future<void> _open(String id) async {
-    final ok = await DownloadService.instance.open(id);
-    if (!ok && mounted) await _openInDrive(id);
-  }
-
-  Future<void> _openInDrive(String id) async {
-    if (id.isEmpty) return;
-    final uri = Uri.parse('https://drive.google.com/file/d/$id/view');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
-
-  Future<void> _deleteDownload(String id) async {
-    await DownloadService.instance.delete(id);
-    if (mounted) setState(() => _downloaded.remove(id));
-  }
+  static String _fmt(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toString();
 }

@@ -49,7 +49,14 @@ const List<SearchDest> appDestinations = [
     icon: Icons.description_rounded,
     color: Color(0xFFA78BFA),
     route: '/cover-page',
-    keywords: ['cover', 'assignment cover', 'lab report cover', 'pdf', 'front page', 'title page'],
+    keywords: [
+      'cover',
+      'assignment cover',
+      'lab report cover',
+      'pdf',
+      'front page',
+      'title page',
+    ],
     popular: true,
   ),
   SearchDest(
@@ -58,7 +65,15 @@ const List<SearchDest> appDestinations = [
     icon: Icons.bar_chart_rounded,
     color: Color(0xFF34D399),
     route: '/results',
-    keywords: ['cgpa', 'gpa', 'result', 'grade', 'marks', 'transcript', 'semester result'],
+    keywords: [
+      'cgpa',
+      'gpa',
+      'result',
+      'grade',
+      'marks',
+      'transcript',
+      'semester result',
+    ],
     popular: true,
   ),
   SearchDest(
@@ -67,7 +82,13 @@ const List<SearchDest> appDestinations = [
     icon: Icons.calendar_month_rounded,
     color: Color(0xFF7C3AED),
     route: '/info/routine',
-    keywords: ['routine', 'schedule', 'timetable', 'class times', 'today class'],
+    keywords: [
+      'routine',
+      'schedule',
+      'timetable',
+      'class times',
+      'today class',
+    ],
     popular: true,
   ),
   SearchDest(
@@ -76,7 +97,13 @@ const List<SearchDest> appDestinations = [
     icon: Icons.co_present_rounded,
     color: Color(0xFF0EA5E9),
     route: '/info/teacher-routine',
-    keywords: ['teacher', 'faculty', 'instructor', 'teacher schedule', 'teacher routine'],
+    keywords: [
+      'teacher',
+      'faculty',
+      'instructor',
+      'teacher schedule',
+      'teacher routine',
+    ],
   ),
   SearchDest(
     label: 'Classwork',
@@ -93,7 +120,15 @@ const List<SearchDest> appDestinations = [
     icon: Icons.sports_esports_rounded,
     color: Color(0xFFFB923C),
     route: '/games',
-    keywords: ['game', 'games', 'imposter', 'draw', 'skribbl', 'play', 'multiplayer'],
+    keywords: [
+      'game',
+      'games',
+      'imposter',
+      'draw',
+      'skribbl',
+      'play',
+      'multiplayer',
+    ],
   ),
   // Classwork categories — searchable on their own so typing "presentation",
   // "viva", "lab test" etc. jumps straight to that category browser.
@@ -176,7 +211,13 @@ const List<SearchDest> appDestinations = [
     icon: Icons.groups_rounded,
     color: Color(0xFF6366F1),
     route: '/students',
-    keywords: ['directory', 'classmates', 'contacts', 'whatsapp', 'phone number'],
+    keywords: [
+      'directory',
+      'classmates',
+      'contacts',
+      'whatsapp',
+      'phone number',
+    ],
     popular: true,
   ),
 
@@ -206,12 +247,18 @@ const List<SearchDest> appDestinations = [
     keywords: ['course teacher', 'who teaches', 'teacher course', 'initials'],
   ),
   SearchDest(
-    label: 'Course List',
+    label: 'Course Offer',
     subtitle: 'All-batch course offer',
     icon: Icons.format_list_bulleted_rounded,
     color: Color(0xFF6366F1),
     route: '/info/courses',
-    keywords: ['course list', 'course offer', 'all courses', 'credits', 'prerequisite'],
+    keywords: [
+      'course list',
+      'course offer',
+      'all courses',
+      'credits',
+      'prerequisite',
+    ],
   ),
   SearchDest(
     label: 'Retake & Improve',
@@ -442,11 +489,18 @@ class _SearchSheetState extends State<_SearchSheet> {
                   onChanged: (v) => setState(() => _query = v),
                   decoration: InputDecoration(
                     hintText: 'Search anything — cover page, results, routine…',
-                    prefixIcon: const Icon(Icons.search_rounded, color: AppColors.accentBright),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.accentBright,
+                    ),
                     suffixIcon: _query.isEmpty
                         ? null
                         : IconButton(
-                            icon: const Icon(Icons.close_rounded, color: AppColors.muted, size: 20),
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              color: AppColors.muted,
+                              size: 20,
+                            ),
                             onPressed: () {
                               _controller.clear();
                               setState(() => _query = '');
@@ -473,15 +527,23 @@ class _SearchSheetState extends State<_SearchSheet> {
                 padding: const EdgeInsets.fromLTRB(18, 0, 18, 6),
                 child: Row(
                   children: [
-                    Icon(empty ? Icons.star_rounded : Icons.manage_search_rounded,
-                        size: 14, color: AppColors.muted),
+                    Icon(
+                      empty ? Icons.star_rounded : Icons.manage_search_rounded,
+                      size: 14,
+                      color: AppColors.muted,
+                    ),
                     const SizedBox(width: 6),
-                    Text(empty ? 'MOST USED' : '${results.length} RESULT${results.length == 1 ? '' : 'S'}',
-                        style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.6)),
+                    Text(
+                      empty
+                          ? 'MOST USED'
+                          : '${results.length} RESULT${results.length == 1 ? '' : 'S'}',
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -533,20 +595,32 @@ class _SearchSheetState extends State<_SearchSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(d.label,
-                        style: const TextStyle(
-                            color: AppColors.textBright,
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w700)),
+                    Text(
+                      d.label,
+                      style: const TextStyle(
+                        color: AppColors.textBright,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(d.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                    Text(
+                      d.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const Icon(Icons.north_east_rounded, color: AppColors.muted, size: 18),
+              const Icon(
+                Icons.north_east_rounded,
+                color: AppColors.muted,
+                size: 18,
+              ),
             ],
           ),
         ),
@@ -555,20 +629,24 @@ class _SearchSheetState extends State<_SearchSheet> {
   }
 
   Widget _noResults() => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.search_off_rounded, color: AppColors.muted, size: 40),
-              SizedBox(height: 12),
-              Text('Nothing matched your search.',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-              SizedBox(height: 4),
-              Text('Try “results”, “routine”, “cover” or “bus”.',
-                  style: TextStyle(color: AppColors.muted, fontSize: 12)),
-            ],
+    child: Padding(
+      padding: EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.search_off_rounded, color: AppColors.muted, size: 40),
+          SizedBox(height: 12),
+          Text(
+            'Nothing matched your search.',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
-        ),
-      );
+          SizedBox(height: 4),
+          Text(
+            'Try “results”, “routine”, “cover” or “bus”.',
+            style: TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+        ],
+      ),
+    ),
+  );
 }

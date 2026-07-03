@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/app_colors.dart';
+import '../../core/name_format.dart';
 import '../../core/sheets_api.dart';
 import '../../data/connectivity_service.dart';
 import '../../data/routine_grid_repository.dart';
@@ -21,7 +22,13 @@ class _NavItem {
   final String subtitle;
   final Color accent;
   final String? route;
-  const _NavItem(this.icon, this.title, this.subtitle, this.accent, [this.route]);
+  const _NavItem(
+    this.icon,
+    this.title,
+    this.subtitle,
+    this.accent, [
+    this.route,
+  ]);
 }
 
 class HomeScreen extends StatelessWidget {
@@ -32,10 +39,34 @@ class HomeScreen extends StatelessWidget {
   // holds the Presentation / Tutorial / Lab Report / Viva / Lab Final / Project
   // categories.
   static const _items = <_NavItem>[
-    _NavItem(Icons.assignment_rounded, 'Classwork', 'Tasks, categories & deadlines', Color(0xFF059669), '/classwork'),
-    _NavItem(Icons.description_rounded, 'Cover Page', 'Generate assignment covers', Color(0xFF8B5CF6), '/cover-page'),
-    _NavItem(Icons.menu_book_rounded, 'Resources', 'Lectures, notes & PDFs', Color(0xFFEC4899), '/resources'),
-    _NavItem(Icons.sports_esports_rounded, 'Games', 'Imposter & Draw — multiplayer', Color(0xFFFB923C), '/games'),
+    _NavItem(
+      Icons.assignment_rounded,
+      'Classwork',
+      'Tasks, categories & deadlines',
+      Color(0xFF059669),
+      '/classwork',
+    ),
+    _NavItem(
+      Icons.description_rounded,
+      'Cover Page',
+      'Generate assignment covers',
+      Color(0xFF8B5CF6),
+      '/cover-page',
+    ),
+    _NavItem(
+      Icons.menu_book_rounded,
+      'Resources',
+      'Lectures, notes & PDFs',
+      Color(0xFFEC4899),
+      '/resources',
+    ),
+    _NavItem(
+      Icons.sports_esports_rounded,
+      'Games',
+      'Imposter & Draw — multiplayer',
+      Color(0xFFFB923C),
+      '/games',
+    ),
   ];
 
   // The website's header/navbar pages — surfaced in the slide-out drawer.
@@ -45,8 +76,16 @@ class HomeScreen extends StatelessWidget {
     (label: 'Results', icon: Icons.bar_chart_rounded, route: '/results'),
     (label: 'Gallery', icon: Icons.photo_library_rounded, route: '/gallery'),
     (label: 'Students', icon: Icons.groups_rounded, route: '/students'),
-    (label: 'Downloads', icon: Icons.download_done_rounded, route: '/downloads'),
-    (label: 'User Guide', icon: Icons.help_outline_rounded, route: '/user-guide'),
+    (
+      label: 'Downloads',
+      icon: Icons.download_done_rounded,
+      route: '/downloads',
+    ),
+    (
+      label: 'User Guide',
+      icon: Icons.help_outline_rounded,
+      route: '/user-guide',
+    ),
   ];
 
   @override
@@ -66,17 +105,23 @@ class HomeScreen extends StatelessWidget {
               titleSpacing: 4,
               leading: Builder(
                 builder: (ctx) => IconButton(
-                  icon: const Icon(Icons.menu_rounded, color: AppColors.textSecondary),
+                  icon: const Icon(
+                    Icons.menu_rounded,
+                    color: AppColors.textSecondary,
+                  ),
                   tooltip: 'Menu',
                   onPressed: () => Scaffold.of(ctx).openDrawer(),
                 ),
               ),
-              title: const Text('CSE 62B · PORTAL',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                      color: AppColors.accentBright)),
+              title: const Text(
+                'CSE 62B · PORTAL',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: AppColors.accentBright,
+                ),
+              ),
               actions: [
                 ListenableBuilder(
                   listenable: ConnectivityService.instance,
@@ -86,8 +131,15 @@ class HomeScreen extends StatelessWidget {
                       padding: const EdgeInsets.only(right: 2),
                       child: Tooltip(
                         message: on ? 'Online' : 'Offline — showing saved data',
-                        child: Icon(on ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
-                            size: 18, color: on ? const Color(0xFF34D399) : const Color(0xFFFBBF24)),
+                        child: Icon(
+                          on
+                              ? Icons.cloud_done_rounded
+                              : Icons.cloud_off_rounded,
+                          size: 18,
+                          color: on
+                              ? const Color(0xFF34D399)
+                              : const Color(0xFFFBBF24),
+                        ),
                       ),
                     );
                   },
@@ -98,8 +150,10 @@ class HomeScreen extends StatelessWidget {
                   child: GestureDetector(
                     onTap: () => context.push('/profile'),
                     child: student == null
-                        ? const Icon(Icons.account_circle_outlined,
-                            color: AppColors.textSecondary)
+                        ? const Icon(
+                            Icons.account_circle_outlined,
+                            color: AppColors.textSecondary,
+                          )
                         : AvatarBadge(name: student.name, size: 32, radius: 10),
                   ),
                 ),
@@ -112,56 +166,88 @@ class HomeScreen extends StatelessWidget {
                     ? const SizedBox.shrink()
                     : Container(
                         margin: const EdgeInsets.fromLTRB(14, 6, 14, 0),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFBBF24).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFFBBF24).withValues(alpha: 0.35)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
                         ),
-                        child: const Row(children: [
-                          Icon(Icons.cloud_off_rounded, size: 15, color: Color(0xFFFBBF24)),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text("You're offline — showing saved data. Downloads still open.",
-                                style: TextStyle(color: Color(0xFFFBBF24), fontSize: 12, fontWeight: FontWeight.w600)),
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            0xFFFBBF24,
+                          ).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(
+                              0xFFFBBF24,
+                            ).withValues(alpha: 0.35),
                           ),
-                        ]),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              Icons.cloud_off_rounded,
+                              size: 15,
+                              color: Color(0xFFFBBF24),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "You're offline — showing saved data. Downloads still open.",
+                                style: TextStyle(
+                                  color: Color(0xFFFBBF24),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
               ),
             ),
             SliverToBoxAdapter(child: _greeting(student?.name)),
             if (student != null && !Session.instance.isDemo)
               const SliverToBoxAdapter(child: _ClassStatusCard()),
+            const SliverToBoxAdapter(child: _DeadlineStrip()),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(14, 6, 14, 28),
               sliver: SliverGrid(
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                   childAspectRatio: 1.18,
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) {
-                    final it = _items[i];
-                    return FolderCard(
-                      icon: it.icon,
-                      title: it.title,
-                      subtitle: it.subtitle,
-                      accent: it.accent,
-                      index: i,
-                      onTap: () {
-                        if (it.route != null) {
-                          context.push(it.route!);
-                        } else {
-                          AppToast.show(context, '${it.title} — coming soon');
-                        }
-                      },
+                delegate: SliverChildBuilderDelegate((context, i) {
+                  final it = _items[i];
+                  final card = FolderCard(
+                    icon: it.icon,
+                    title: it.title,
+                    subtitle: it.subtitle,
+                    accent: it.accent,
+                    index: i,
+                    onTap: () {
+                      if (it.route != null) {
+                        context.push(it.route!);
+                      } else {
+                        AppToast.show(context, '${it.title} — coming soon');
+                      }
+                    },
+                  );
+                  // Live "running classwork" count badge on the Classwork card.
+                  if (it.route == '/classwork') {
+                    return Stack(
+                      children: [
+                        Positioned.fill(child: card),
+                        const Positioned(
+                          top: 8,
+                          right: 8,
+                          child: IgnorePointer(child: _ClassworkBadge()),
+                        ),
+                      ],
                     );
-                  },
-                  childCount: _items.length,
-                ),
+                  }
+                  return card;
+                }, childCount: _items.length),
               ),
             ),
           ],
@@ -175,23 +261,28 @@ class HomeScreen extends StatelessWidget {
     final part = hour < 12
         ? 'Good morning'
         : hour < 17
-            ? 'Good afternoon'
-            : 'Good evening';
+        ? 'Good afternoon'
+        : 'Good evening';
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(part,
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 13)),
+          Text(
+            part,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+            ),
+          ),
           const SizedBox(height: 2),
           Text(
-            name != null ? name.split(' ').first : 'Welcome',
+            name != null ? friendlyFirstName(name) : 'Welcome',
             style: const TextStyle(
-                color: AppColors.textBright,
-                fontSize: 24,
-                fontWeight: FontWeight.w700),
+              color: AppColors.textBright,
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ).animate().fadeIn(duration: 300.ms).moveY(begin: 8, end: 0),
@@ -221,23 +312,35 @@ class HomeScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.search_rounded, color: AppColors.accentBright, size: 20),
+                  const Icon(
+                    Icons.search_rounded,
+                    color: AppColors.accentBright,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   const Expanded(
-                    child: Text('Search anything in the portal…',
-                        style: TextStyle(color: AppColors.muted, fontSize: 13.5)),
+                    child: Text(
+                      'Search anything in the portal…',
+                      style: TextStyle(color: AppColors.muted, fontSize: 13.5),
+                    ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.accent.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text('Search',
-                        style: TextStyle(
-                            color: AppColors.accentBright,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700)),
+                    child: const Text(
+                      'Search',
+                      style: TextStyle(
+                        color: AppColors.accentBright,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -262,6 +365,8 @@ class _ClassStatusCard extends StatefulWidget {
 class _ClassStatusCardState extends State<_ClassStatusCard> {
   RoutineGridData? _data;
   bool _loading = true;
+  bool _refreshing = false;
+  DateTime? _lastLoaded;
   Timer? _ticker;
 
   // Today's regular bus times (minutes-from-midnight), per direction.
@@ -287,7 +392,14 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
     super.initState();
     _load();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      setState(() {});
+      final last = _lastLoaded;
+      if (!_refreshing &&
+          last != null &&
+          DateTime.now().difference(last) >= const Duration(minutes: 5)) {
+        _load();
+      }
     });
   }
 
@@ -298,16 +410,39 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
   }
 
   Future<void> _load() async {
+    if (_refreshing) return;
+    _refreshing = true;
     // Routine (cached) + bus, in parallel. Bus failing must not block classes.
+    final repo = RoutineGridRepository.instance;
+    final routine = () async {
+      var data = await repo.load();
+      final student = Session.instance.student;
+      if (student != null && !student.isDemo) {
+        final personal = await Future.wait([
+          repo.loadCustomCourses(student.id),
+          repo.loadEnrollmentCourses(student.id),
+        ]);
+        final courses = [...personal[0], ...personal[1]];
+        if (courses.isNotEmpty) {
+          data = repo.buildFor('62', 'B', customs: courses);
+        }
+      }
+      return data;
+    }();
     final results = await Future.wait([
-      RoutineGridRepository.instance.load().then<Object?>((d) => d).catchError((_) => null),
+      routine.then<Object?>((d) => d).catchError((_) => null),
       SheetsApi.instance.sheet('Bus').catchError((_) => <List<String>>[]),
     ]);
-    if (!mounted) return;
+    if (!mounted) {
+      _refreshing = false;
+      return;
+    }
     setState(() {
       _data = results[0] as RoutineGridData?;
       _parseBus(results[1] as List<List<String>>);
       _loading = false;
+      _lastLoaded = DateTime.now();
+      _refreshing = false;
     });
   }
 
@@ -319,7 +454,9 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
     final wd = DateTime.now().weekday;
     final isFri = wd == DateTime.friday;
     final isSat = wd == DateTime.saturday;
-    final start = (rows.isNotEmpty && rows[0].isNotEmpty &&
+    final start =
+        (rows.isNotEmpty &&
+            rows[0].isNotEmpty &&
             rows[0][0].toLowerCase().trim() == 'schedule')
         ? 1
         : 0;
@@ -330,9 +467,12 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
       if (sched != 'Regular') continue;
       final gl = r[1].trim().toLowerCase();
       final dir = r[2].trim();
-      final match = (isFri && gl.contains('fri')) ||
+      final match =
+          (isFri && gl.contains('fri')) ||
           (isSat && gl == 'saturday') ||
-          (!isFri && !isSat && (gl.contains('sun') || gl.contains('sat') || gl.contains('mon')));
+          (!isFri &&
+              !isSat &&
+              (gl.contains('sun') || gl.contains('sat') || gl.contains('mon')));
       if (!match) continue;
       final t = _toMinAmPm(r[3].trim());
       if (t < 0) continue;
@@ -360,7 +500,10 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
 
   // "7:30 AM" → minutes from midnight.
   static int _toMinAmPm(String s) {
-    final m = RegExp(r'(\d{1,2}):(\d{2})\s*(AM|PM)', caseSensitive: false).firstMatch(s);
+    final m = RegExp(
+      r'(\d{1,2}):(\d{2})\s*(AM|PM)',
+      caseSensitive: false,
+    ).firstMatch(s);
     if (m == null) return -1;
     var h = int.parse(m[1]!);
     final mi = int.parse(m[2]!);
@@ -378,34 +521,64 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
     final dayName = _weekdayName[now.weekday] ?? '';
     final nowMin = now.hour * 60 + now.minute;
 
-    // Today's 62B non-break slots, sorted by start time.
-    final slots = <({String code, String name, String time, String room, int start})>[];
+    // Include BREAK boundaries when resolving class end. Otherwise a class
+    // incorrectly appears to keep running until the next class starts.
+    final slots =
+        <
+          ({
+            String code,
+            String name,
+            String time,
+            String room,
+            int start,
+            int end,
+          })
+        >[];
     final today = _data?.schedule[dayName];
     if (today != null) {
+      final boundaries =
+          today
+              .map((s) => _toMin(s.time))
+              .where((m) => m < 9999)
+              .toSet()
+              .toList()
+            ..sort();
       for (final s in today) {
         if (s.isBreak || s.code.isEmpty) continue;
+        final start = _toMin(s.time);
+        final times = RegExp(
+          r'(\d{1,2}):(\d{2})',
+        ).allMatches(s.time).map((m) => _toMin(m.group(0)!)).toList();
+        var end = times.length > 1 ? times[1] : start + 90;
+        if (times.length < 2) {
+          for (final boundary in boundaries) {
+            if (boundary > start) {
+              end = boundary;
+              break;
+            }
+          }
+        }
         slots.add((
           code: s.code,
           name: _data!.nameFor(s),
           time: s.time,
           room: s.room,
-          start: _toMin(s.time),
+          start: start,
+          end: end,
         ));
       }
       slots.sort((a, b) => a.start.compareTo(b.start));
     }
 
     // Resolve current + next.
-    ({String code, String name, String time, String room, int start})? current;
-    ({String code, String name, String time, String room, int start})? next;
-    int? currentEnd;
-    for (var i = 0; i < slots.length; i++) {
-      final s = slots[i];
+    ({String code, String name, String time, String room, int start, int end})?
+    current;
+    ({String code, String name, String time, String room, int start, int end})?
+    next;
+    for (final s in slots) {
       if (s.start > nowMin && next == null) next = s;
-      final end = i + 1 < slots.length ? slots[i + 1].start : s.start + 90;
-      if (s.start <= nowMin && nowMin < end) {
+      if (s.start <= nowMin && nowMin < s.end) {
         current = s;
-        currentEnd = end;
       }
     }
 
@@ -416,7 +589,10 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [_accent.withValues(alpha: 0.10), _green.withValues(alpha: 0.06)],
+          colors: [
+            _accent.withValues(alpha: 0.10),
+            _green.withValues(alpha: 0.06),
+          ],
         ),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.borderAccent),
@@ -428,65 +604,95 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
             children: [
               const Icon(Icons.bolt_rounded, size: 16, color: _accent),
               const SizedBox(width: 6),
-              Text(_loading ? 'CLASS STATUS' : (dayName.isEmpty ? 'TODAY' : dayName),
-                  style: const TextStyle(
-                      color: AppColors.accentBright,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6)),
+              Text(
+                _loading
+                    ? 'CLASS STATUS'
+                    : (dayName.isEmpty ? 'TODAY' : dayName),
+                style: const TextStyle(
+                  color: AppColors.accentBright,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.6,
+                ),
+              ),
               const Spacer(),
-              Text(clock,
-                  style: const TextStyle(
-                      color: AppColors.textBright,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      fontFeatures: [FontFeature.tabularFigures()])),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (_loading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('Loading today’s schedule…',
-                  style: TextStyle(color: AppColors.muted, fontSize: 12.5)),
-            )
-          else ...[
-            _statusRow(
-              dot: _green,
-              label: 'NOW RUNNING',
-              value: current != null
-                  ? (current.name.isNotEmpty ? '${current.code} · ${current.name}' : current.code)
-                  : (today == null ? 'No class today' : 'No class right now'),
-              trailing: current != null && currentEnd != null
-                  ? _fmt('ends ', currentEnd - nowMin)
-                  : null,
-              muted: current == null,
-            ),
-            const SizedBox(height: 10),
-            _statusRow(
-              dot: _accent,
-              label: 'NEXT CLASS',
-              value: next != null
-                  ? (next.name.isNotEmpty ? '${next.code} · ${next.name}' : next.code)
-                  : 'No more classes',
-              trailing: next != null ? _fmt('', next.start - nowMin) : null,
-              muted: next == null,
-            ),
-            if (next != null) ...[
-              const SizedBox(height: 9),
-              Padding(
-                padding: const EdgeInsets.only(left: 18),
-                child: Row(
-                  children: [
-                    _infoChip(Icons.schedule_rounded, 'Time', next.time, _accent),
-                    const SizedBox(width: 8),
-                    _infoChip(Icons.meeting_room_rounded, 'Room',
-                        next.room.isEmpty ? '—' : next.room, _accent),
-                  ],
+              Text(
+                clock,
+                style: const TextStyle(
+                  color: AppColors.textBright,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: [FontFeature.tabularFigures()],
                 ),
               ),
             ],
-            _busSection(nowMin),
+          ),
+          const SizedBox(height: 12),
+          if (_loading) ...[
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Loading today’s schedule…',
+                style: TextStyle(color: AppColors.muted, fontSize: 12.5),
+              ),
+            ),
+          ] else ...[
+            // Class rows only on days that actually have classes. The bus always
+            // shows (below).
+            if (slots.isNotEmpty) ...[
+              _statusRow(
+                dot: _green,
+                label: 'NOW RUNNING',
+                value: current != null
+                    ? (current.name.isNotEmpty
+                          ? '${current.code} · ${current.name}'
+                          : current.code)
+                    : 'No class right now',
+                subtitle: current != null
+                    ? 'Room: ${current.room.isEmpty ? '—' : current.room} · ${current.time}'
+                    : null,
+                trailing: current != null
+                    ? _fmt('ends ', current.end - nowMin)
+                    : null,
+                muted: current == null,
+              ),
+              const SizedBox(height: 10),
+              _statusRow(
+                dot: _accent,
+                label: 'NEXT CLASS',
+                value: next != null
+                    ? (next.name.isNotEmpty
+                          ? '${next.code} · ${next.name}'
+                          : next.code)
+                    : 'No more classes',
+                trailing: next != null ? _fmt('', next.start - nowMin) : null,
+                muted: next == null,
+              ),
+              if (next != null) ...[
+                const SizedBox(height: 9),
+                Padding(
+                  padding: const EdgeInsets.only(left: 18),
+                  child: Row(
+                    children: [
+                      _infoChip(
+                        Icons.schedule_rounded,
+                        'Time',
+                        next.time,
+                        _accent,
+                      ),
+                      const SizedBox(width: 8),
+                      _infoChip(
+                        Icons.meeting_room_rounded,
+                        'Room',
+                        next.room.isEmpty ? '—' : next.room,
+                        _accent,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+            _busSection(nowMin, showDivider: slots.isNotEmpty),
           ],
         ],
       ),
@@ -494,28 +700,45 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
   }
 
   /// Next Bus — To LU / From LU with live "in Xm" countdowns, like the website.
-  Widget _busSection(int nowMin) {
+  Widget _busSection(
+    int nowMin, {
+    bool showDivider = true,
+    bool loading = false,
+  }) {
     final nextTo = _toLU.where((b) => b.t >= nowMin).firstOrNull;
     final nextFrom = _fromLU.where((b) => b.t >= nowMin).firstOrNull;
-    if (_toLU.isEmpty && _fromLU.isEmpty) return const SizedBox.shrink();
+    if (!loading && nextTo == null && nextFrom == null) {
+      return const SizedBox.shrink();
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(top: 12, bottom: 8),
-          child: Divider(height: 1, color: AppColors.border),
-        ),
+        if (showDivider)
+          const Padding(
+            padding: EdgeInsets.only(top: 12, bottom: 8),
+            child: Divider(height: 1, color: AppColors.border),
+          ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Padding(
               padding: EdgeInsets.only(top: 1),
-              child: Icon(Icons.directions_bus_rounded, size: 15, color: _busColor),
+              child: Icon(
+                Icons.directions_bus_rounded,
+                size: 15,
+                color: _busColor,
+              ),
             ),
             const SizedBox(width: 10),
-            const Text('NEXT BUS',
-                style: TextStyle(
-                    color: AppColors.muted, fontSize: 9.5, fontWeight: FontWeight.w800, letterSpacing: 0.6)),
+            const Text(
+              'NEXT BUS',
+              style: TextStyle(
+                color: AppColors.muted,
+                fontSize: 9.5,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.6,
+              ),
+            ),
             const Spacer(),
           ],
         ),
@@ -524,9 +747,18 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
           padding: const EdgeInsets.only(left: 25),
           child: Row(
             children: [
-              Expanded(child: _busCol('To LU', nextTo, nowMin)),
-              Container(width: 1, height: 30, color: AppColors.border, margin: const EdgeInsets.symmetric(horizontal: 10)),
-              Expanded(child: _busCol('From LU', nextFrom, nowMin)),
+              Expanded(
+                child: _busCol('To LU', nextTo, nowMin, loading: loading),
+              ),
+              Container(
+                width: 1,
+                height: 30,
+                color: AppColors.border,
+                margin: const EdgeInsets.symmetric(horizontal: 10),
+              ),
+              Expanded(
+                child: _busCol('From LU', nextFrom, nowMin, loading: loading),
+              ),
             ],
           ),
         ),
@@ -534,24 +766,45 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
     );
   }
 
-  Widget _busCol(String dir, ({String time, int t})? bus, int nowMin) {
+  Widget _busCol(
+    String dir,
+    ({String time, int t})? bus,
+    int nowMin, {
+    bool loading = false,
+  }) {
     final cd = bus != null ? _fmt('', bus.t - nowMin) : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(dir,
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
+        Text(
+          dir,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const SizedBox(height: 1),
         Row(
           children: [
-            Text(bus?.time ?? 'No more',
-                style: TextStyle(
-                    color: bus != null ? AppColors.textBright : AppColors.muted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700)),
+            Text(
+              loading ? 'Loading…' : (bus?.time ?? 'No more'),
+              style: TextStyle(
+                color: bus != null ? AppColors.textBright : AppColors.muted,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             if (cd != null) ...[
               const SizedBox(width: 6),
-              Text(cd, style: const TextStyle(color: _busColor, fontSize: 10.5, fontWeight: FontWeight.w700)),
+              Text(
+                cd,
+                style: const TextStyle(
+                  color: _busColor,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ],
         ),
@@ -573,11 +826,22 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
         children: [
           Icon(icon, size: 13, color: color),
           const SizedBox(width: 5),
-          Text('$label ',
-              style: const TextStyle(color: AppColors.muted, fontSize: 10.5, fontWeight: FontWeight.w600)),
-          Text(value,
-              style: const TextStyle(
-                  color: AppColors.textBright, fontSize: 12, fontWeight: FontWeight.w700)),
+          Text(
+            '$label ',
+            style: const TextStyle(
+              color: AppColors.muted,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: AppColors.textBright,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -604,7 +868,13 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
               shape: BoxShape.circle,
               boxShadow: muted
                   ? null
-                  : [BoxShadow(color: dot.withValues(alpha: 0.6), blurRadius: 6, spreadRadius: 1)],
+                  : [
+                      BoxShadow(
+                        color: dot.withValues(alpha: 0.6),
+                        blurRadius: 6,
+                        spreadRadius: 1,
+                      ),
+                    ],
             ),
           ),
         ),
@@ -613,21 +883,35 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: const TextStyle(
-                      color: AppColors.muted, fontSize: 9.5, fontWeight: FontWeight.w800, letterSpacing: 0.6)),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.6,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(value,
-                  style: TextStyle(
-                      color: muted ? AppColors.textSecondary : AppColors.textBright,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      height: 1.25)),
+              Text(
+                value,
+                style: TextStyle(
+                  color: muted ? AppColors.textSecondary : AppColors.textBright,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  height: 1.25,
+                ),
+              ),
               if (subtitle != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: Text(subtitle,
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11.5)),
+                  child: Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11.5,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -640,8 +924,14 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
               color: dot.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(trailing,
-                style: TextStyle(color: dot, fontSize: 11, fontWeight: FontWeight.w700)),
+            child: Text(
+              trailing,
+              style: TextStyle(
+                color: dot,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ],
@@ -656,6 +946,369 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
     if (diffMin < 60) return '${prefix}in ${diffMin}m';
     final h = diffMin ~/ 60, m = diffMin % 60;
     return m > 0 ? '${prefix}in ${h}h ${m}m' : '${prefix}in ${h}h';
+  }
+}
+
+class _Dl {
+  final String course, type, title;
+  final DateTime? due;
+  const _Dl(this.course, this.type, this.title, this.due);
+}
+
+/// Compact "Closest Deadline(s)" strip on the home page. Shows the soonest
+/// upcoming deadline with a live countdown; if several fall on that same nearest
+/// day it shows them together. Hidden entirely when nothing is upcoming.
+class _DeadlineStrip extends StatefulWidget {
+  const _DeadlineStrip();
+  @override
+  State<_DeadlineStrip> createState() => _DeadlineStripState();
+}
+
+class _DeadlineStripState extends State<_DeadlineStrip> {
+  List<_Dl> _items = const [];
+  bool _loading = true;
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final rows = await SheetsApi.instance.botSheetRaw('Deadlines');
+      final out = <_Dl>[];
+      for (final r in rows) {
+        String at(int n) => n < r.length ? r[n].trim() : '';
+        final course = at(0), type = at(1), title = at(2);
+        if (title.isEmpty) continue;
+        if (course.toLowerCase() == 'course' || type.toLowerCase() == 'type') {
+          continue;
+        }
+        out.add(_Dl(course, type, title, _parseGvizDate(at(3))));
+      }
+      if (!mounted) return;
+      setState(() {
+        _items = out;
+        _loading = false;
+      });
+      _ticker ??= Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  static DateTime? _parseGvizDate(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return null;
+    final m = RegExp(
+      r'^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+)(?:,(\d+))?)?\)$',
+    ).firstMatch(t);
+    if (m != null) {
+      return DateTime(
+        int.parse(m[1]!),
+        int.parse(m[2]!) + 1,
+        int.parse(m[3]!),
+        int.parse(m[4] ?? '0'),
+        int.parse(m[5] ?? '0'),
+        int.parse(m[6] ?? '0'),
+      );
+    }
+    return DateTime.tryParse(t.replaceFirst(' ', 'T'));
+  }
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return const SizedBox.shrink();
+    final now = DateTime.now();
+    final upcoming =
+        _items.where((i) => i.due != null && i.due!.isAfter(now)).toList()
+          ..sort((a, b) => a.due!.compareTo(b.due!));
+    if (upcoming.isEmpty) return const SizedBox.shrink();
+    // The closest deadline, plus any others sharing that same (nearest) day.
+    final nearest = upcoming.first.due!;
+    final cluster = upcoming
+        .where((i) => _sameDay(i.due!, nearest))
+        .take(4)
+        .toList();
+
+    return GestureDetector(
+      onTap: () => context.push('/classwork'),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(14, 2, 14, 8),
+        padding: const EdgeInsets.fromLTRB(14, 11, 14, 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFFF87171).withValues(alpha: 0.10),
+              const Color(0xFFFBBF24).withValues(alpha: 0.06),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.borderAccent),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.alarm_rounded,
+                  size: 16,
+                  color: Color(0xFFF87171),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  cluster.length > 1 ? 'CLOSEST DEADLINES' : 'CLOSEST DEADLINE',
+                  style: const TextStyle(
+                    color: AppColors.accentBright,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const Spacer(),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.muted,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (var i = 0; i < cluster.length; i++) ...[
+              if (i > 0)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Divider(height: 1, color: AppColors.border),
+                ),
+              _row(cluster[i], now),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _row(_Dl it, DateTime now) {
+    final color = _typeColor(it.type);
+    final diff = it.due!.difference(now);
+    final cd = diff.inHours < 24
+        ? AppColors.red
+        : diff.inDays < 3
+        ? const Color(0xFFFBBF24)
+        : const Color(0xFF34D399);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (it.type.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  it.type,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 7),
+            ],
+            Expanded(
+              child: Text(
+                it.course.isEmpty ? it.title : it.course,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 3),
+        Text(
+          it.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: AppColors.textBright,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            height: 1.25,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Icon(Icons.schedule_rounded, size: 13, color: cd),
+            const SizedBox(width: 5),
+            Text(
+              _countdown(diff),
+              style: TextStyle(
+                color: cd,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '· ${_fmtDue(it.due!)}',
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: AppColors.muted, fontSize: 11),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static String _countdown(Duration diff) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    final d = diff.inDays,
+        h = diff.inHours % 24,
+        m = diff.inMinutes % 60,
+        s = diff.inSeconds % 60;
+    if (d > 0) return '${d}d ${two(h)}h ${two(m)}m ${two(s)}s';
+    if (h > 0) return '${two(h)}h ${two(m)}m ${two(s)}s';
+    return '${two(m)}m ${two(s)}s';
+  }
+
+  static String _fmtDue(DateTime d) {
+    const mo = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final h12 = d.hour % 12 == 0 ? 12 : d.hour % 12;
+    final ap = d.hour >= 12 ? 'PM' : 'AM';
+    final timePart = (d.hour == 0 && d.minute == 0)
+        ? ''
+        : ', $h12:${d.minute.toString().padLeft(2, '0')} $ap';
+    return '${mo[d.month - 1]} ${d.day}$timePart';
+  }
+
+  static Color _typeColor(String type) {
+    final t = type.toLowerCase();
+    if (t.contains('lab final') || t.contains('lab exam')) {
+      return const Color(0xFFF87171);
+    }
+    if (t.contains('lab test')) return const Color(0xFF2DD4BF);
+    if (t.contains('lab report') || t.contains('lab')) {
+      return const Color(0xFF34D399);
+    }
+    if (t.contains('assign')) return const Color(0xFFA78BFA);
+    if (t.contains('quiz') || t.contains('tutorial')) {
+      return const Color(0xFF38BDF8);
+    }
+    if (t.contains('present')) return const Color(0xFF818CF8);
+    if (t.contains('viva')) return const Color(0xFFFBBF24);
+    if (t.contains('exam') || t.contains('mid') || t.contains('final')) {
+      return const Color(0xFFF87171);
+    }
+    if (t.contains('project')) return const Color(0xFFF472B6);
+    return AppColors.accentBright;
+  }
+}
+
+/// Small red badge on the Classwork card showing how many classworks are
+/// currently active (upcoming, not-yet-past deadlines), so users can see at a
+/// glance that something is running.
+class _ClassworkBadge extends StatefulWidget {
+  const _ClassworkBadge();
+  @override
+  State<_ClassworkBadge> createState() => _ClassworkBadgeState();
+}
+
+class _ClassworkBadgeState extends State<_ClassworkBadge> {
+  int _count = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final rows = await SheetsApi.instance.botSheetRaw('Deadlines');
+      final now = DateTime.now();
+      var n = 0;
+      for (final r in rows) {
+        String at(int i) => i < r.length ? r[i].trim() : '';
+        final course = at(0), type = at(1), title = at(2);
+        if (title.isEmpty) continue;
+        if (course.toLowerCase() == 'course' || type.toLowerCase() == 'type') {
+          continue;
+        }
+        final due = _DeadlineStripState._parseGvizDate(at(3));
+        if (due != null && due.isAfter(now)) n++;
+      }
+      if (mounted) setState(() => _count = n);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_count <= 0) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      constraints: const BoxConstraints(minWidth: 18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF87171),
+        borderRadius: BorderRadius.circular(9),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFF87171).withValues(alpha: 0.5),
+            blurRadius: 6,
+          ),
+        ],
+      ),
+      child: Text(
+        '$_count',
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
   }
 }
 
@@ -680,27 +1333,44 @@ class _HomeDrawer extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: EdgeInsets.fromLTRB(18, MediaQuery.of(context).padding.top + 18, 18, 18),
+            padding: EdgeInsets.fromLTRB(
+              18,
+              MediaQuery.of(context).padding.top + 18,
+              18,
+              18,
+            ),
             decoration: const BoxDecoration(gradient: AppColors.accentGradient),
             child: Row(
               children: [
-                if (student != null) AvatarBadge(name: student.name, size: 46, radius: 14),
+                if (student != null)
+                  AvatarBadge(name: student.name, size: 46, radius: 14),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(student != null ? student.name : 'CSE 62B · PORTAL',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+                      Text(
+                        student != null ? student.name : 'CSE 62B · PORTAL',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       if (student != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 2),
-                          child: Text(student.id,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          child: Text(
+                            student.id,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                     ],
                   ),
@@ -712,12 +1382,17 @@ class _HomeDrawer extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
-                for (final p in pages) _tile(p.icon, p.label, () => open(p.route)),
+                for (final p in pages)
+                  _tile(p.icon, p.label, () => open(p.route)),
               ],
             ),
           ),
           const Divider(height: 1, color: AppColors.border),
-          _tile(Icons.person_outline_rounded, 'Profile', () => open('/profile')),
+          _tile(
+            Icons.person_outline_rounded,
+            'Profile',
+            () => open('/profile'),
+          ),
           _tile(Icons.logout_rounded, 'Sign Out', () async {
             Scaffold.of(context).closeDrawer();
             await Session.instance.signOut();
@@ -729,7 +1404,12 @@ class _HomeDrawer extends StatelessWidget {
     );
   }
 
-  Widget _tile(IconData icon, String label, VoidCallback onTap, {bool danger = false}) {
+  Widget _tile(
+    IconData icon,
+    String label,
+    VoidCallback onTap, {
+    bool danger = false,
+  }) {
     final color = danger ? AppColors.red : AppColors.accentBright;
     return InkWell(
       onTap: onTap,
@@ -740,13 +1420,21 @@ class _HomeDrawer extends StatelessWidget {
             Container(
               width: 38,
               height: 38,
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(11)),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(11),
+              ),
               child: Icon(icon, size: 20, color: color),
             ),
             const SizedBox(width: 14),
-            Text(label,
-                style: TextStyle(
-                    color: danger ? AppColors.red : AppColors.text, fontSize: 15, fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: TextStyle(
+                color: danger ? AppColors.red : AppColors.text,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),

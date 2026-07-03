@@ -1,6 +1,7 @@
 import '../core/sheets_api.dart';
 import '../core/supa.dart';
 import '../core/worker_api.dart';
+import 'routine_grid_repository.dart';
 import 'routine_repository.dart';
 
 /// One slot of a course in some section's routine.
@@ -38,7 +39,8 @@ class RetakeData {
   Set<String> manualImprove;
   final Map<String, String> courseNameMap; // normCode → title
   final Map<String, double> creditMap; // normCode → credit
-  final Map<String, Map<String, List<RetakeSlot>>> sectionCourseSlots; // "batch-section" → code → slots
+  final Map<String, Map<String, List<RetakeSlot>>>
+  sectionCourseSlots; // "batch-section" → code → slots
   final Map<String, Map<String, String>> busy62B; // day → time → code
   final bool resultLive;
 
@@ -63,9 +65,9 @@ class RetakeData {
   /// retake/improve class on one of these is ideal (a free day, no clash).
   /// Mirrors the website's `offDays` set.
   Set<String> get offDays => {
-        for (final d in RoutineRepository.days)
-          if ((busy62B[d]?.isEmpty ?? true)) d,
-      };
+    for (final d in RoutineRepository.days)
+      if ((busy62B[d]?.isEmpty ?? true)) d,
+  };
 
   bool isApi(String code, bool retake) =>
       (retake ? apiRetake : apiImprove).contains(code.toUpperCase());
@@ -89,7 +91,8 @@ class RetakeData {
       }).toList();
       final clashCourses = <String>{
         for (final s in clashSlots)
-          courseNameMap[busy62B[s.day]?[s.time]] ?? (busy62B[s.day]?[s.time] ?? '')
+          courseNameMap[busy62B[s.day]?[s.time]] ??
+              (busy62B[s.day]?[s.time] ?? ''),
       }..removeWhere((e) => e.isEmpty);
 
       final initCount = <String, int>{};
@@ -100,18 +103,21 @@ class RetakeData {
       }
       final initials = initCount.isEmpty
           ? ''
-          : (initCount.entries.toList()..sort((a, b) => b.value.compareTo(a.value)))
-              .first
-              .key;
+          : (initCount.entries.toList()
+                  ..sort((a, b) => b.value.compareTo(a.value)))
+                .first
+                .key;
 
-      out.add(RetakeSection(
-        batch: batch,
-        section: section,
-        slots: slots,
-        hasConflict: clashSlots.isNotEmpty,
-        clashCourses: clashCourses.toList(),
-        initials: initials,
-      ));
+      out.add(
+        RetakeSection(
+          batch: batch,
+          section: section,
+          slots: slots,
+          hasConflict: clashSlots.isNotEmpty,
+          clashCourses: clashCourses.toList(),
+          initials: initials,
+        ),
+      );
     });
     out.sort((a, b) {
       if (a.hasConflict != b.hasConflict) return a.hasConflict ? 1 : -1;
@@ -128,7 +134,14 @@ class RetakeData {
 /// One enrollment row from `student_retake_enrollments` (Profile → My Courses /
 /// the website's My List & Classmates tabs).
 class RetakeEnrollment {
-  final String studentId, studentName, courseCode, courseName, batch, section, teacher, type;
+  final String studentId,
+      studentName,
+      courseCode,
+      courseName,
+      batch,
+      section,
+      teacher,
+      type;
   const RetakeEnrollment({
     required this.studentId,
     required this.studentName,
@@ -141,15 +154,29 @@ class RetakeEnrollment {
   });
 
   static RetakeEnrollment fromRow(Map row) => RetakeEnrollment(
-        studentId: (row['student_id'] ?? '').toString(),
-        studentName: (row['student_name'] ?? '').toString(),
-        courseCode: (row['course_code'] ?? '').toString(),
-        courseName: (row['course_name'] ?? '').toString(),
-        batch: (row['batch'] ?? '').toString(),
-        section: (row['section'] ?? '').toString(),
-        teacher: (row['teacher'] ?? '').toString(),
-        type: (row['type'] ?? 'retake').toString(),
-      );
+    studentId: (row['student_id'] ?? '').toString(),
+    studentName: (row['student_name'] ?? '').toString(),
+    courseCode: (row['course_code'] ?? '').toString(),
+    courseName: (row['course_name'] ?? '').toString(),
+    batch: (row['batch'] ?? '').toString(),
+    section: (row['section'] ?? '').toString(),
+    teacher: (row['teacher'] ?? '').toString(),
+    type: (row['type'] ?? 'retake').toString(),
+  );
+
+  RetakeEnrollment withFreshInfo({
+    required String freshName,
+    required String freshTeacher,
+  }) => RetakeEnrollment(
+    studentId: studentId,
+    studentName: studentName,
+    courseCode: courseCode,
+    courseName: freshName.isEmpty ? courseName : freshName,
+    batch: batch,
+    section: section,
+    teacher: freshTeacher.isEmpty ? teacher : freshTeacher,
+    type: type,
+  );
 }
 
 class RetakeRepository {
@@ -162,8 +189,22 @@ class RetakeRepository {
   // routine + course maps) so repeat visits to Retake/Improve are instant.
   Future<_Routine>? _routineCache;
   Future<_Maps>? _mapsCache;
+  DateTime? _routineCachedAt;
+  DateTime? _mapsCachedAt;
+  static const _cacheTtl = Duration(minutes: 5);
 
-  static const _gradeOrder = ['F', 'D', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+'];
+  static const _gradeOrder = [
+    'F',
+    'D',
+    'C',
+    'C+',
+    'B-',
+    'B',
+    'B+',
+    'A-',
+    'A',
+    'A+',
+  ];
   static const _improveGrades = {'B-', 'C+', 'C', 'D'};
 
   static int _gradeRank(String g) => _gradeOrder.indexOf(g.trim());
@@ -181,15 +222,40 @@ class RetakeRepository {
   void invalidateCache() {
     _routineCache = null;
     _mapsCache = null;
+    _routineCachedAt = null;
+    _mapsCachedAt = null;
+    RoutineGridRepository.instance.invalidate();
     SheetsApi.instance.clearCache();
     WorkerApi.instance.clearResultCache();
+  }
+
+  Future<_Routine> _freshRoutine() {
+    final stale =
+        _routineCachedAt == null ||
+        DateTime.now().difference(_routineCachedAt!) >= _cacheTtl;
+    if (_routineCache == null || stale) {
+      _routineCachedAt = DateTime.now();
+      _routineCache = _buildRoutine();
+    }
+    return _routineCache!;
+  }
+
+  Future<_Maps> _freshMaps() {
+    final stale =
+        _mapsCachedAt == null ||
+        DateTime.now().difference(_mapsCachedAt!) >= _cacheTtl;
+    if (_mapsCache == null || stale) {
+      _mapsCachedAt = DateTime.now();
+      _mapsCache = _courseMaps();
+    }
+    return _mapsCache!;
   }
 
   Future<RetakeData> load(String? studentId, String? dob) async {
     final results = await Future.wait([
       _bucketFromResult(studentId, dob),
-      _routineCache ??= _buildRoutine(),
-      _mapsCache ??= _courseMaps(),
+      _freshRoutine(),
+      _freshMaps(),
       _loadManual(studentId),
     ]);
     final graded = results[0] as _Graded;
@@ -209,8 +275,12 @@ class RetakeRepository {
     var manualRetake = manual.retake;
     var manualImprove = manual.improve;
     if (graded.live && graded.resolved.isNotEmpty) {
-      manualRetake = manualRetake.where((c) => !graded.resolved.contains(_normCode(c))).toSet();
-      manualImprove = manualImprove.where((c) => !graded.resolved.contains(_normCode(c))).toSet();
+      manualRetake = manualRetake
+          .where((c) => !graded.resolved.contains(_normCode(c)))
+          .toSet();
+      manualImprove = manualImprove
+          .where((c) => !graded.resolved.contains(_normCode(c)))
+          .toSet();
     }
 
     return RetakeData(
@@ -227,7 +297,11 @@ class RetakeRepository {
   }
 
   /// Persist the manual lists to Supabase (best-effort).
-  Future<void> saveManual(String studentId, Iterable<String> retake, Iterable<String> improve) async {
+  Future<void> saveManual(
+    String studentId,
+    Iterable<String> retake,
+    Iterable<String> improve,
+  ) async {
     try {
       await Supa.client.from('student_manual_courses').upsert({
         'student_id': studentId,
@@ -248,7 +322,9 @@ class RetakeRepository {
           .from('student_retake_enrollments')
           .select(_enrollCols)
           .eq('student_id', studentId);
-      return (rows as List).map((r) => RetakeEnrollment.fromRow(r as Map)).toList();
+      return _refreshEnrollmentInfo(
+        (rows as List).map((r) => RetakeEnrollment.fromRow(r as Map)).toList(),
+      );
     } catch (_) {
       return [];
     }
@@ -256,12 +332,45 @@ class RetakeRepository {
 
   Future<List<RetakeEnrollment>> allEnrollments() async {
     try {
-      final rows =
-          await Supa.client.from('student_retake_enrollments').select(_enrollCols);
-      return (rows as List).map((r) => RetakeEnrollment.fromRow(r as Map)).toList();
+      final rows = await Supa.client
+          .from('student_retake_enrollments')
+          .select(_enrollCols);
+      return _refreshEnrollmentInfo(
+        (rows as List).map((r) => RetakeEnrollment.fromRow(r as Map)).toList(),
+      );
     } catch (_) {
       return [];
     }
+  }
+
+  Future<List<RetakeEnrollment>> _refreshEnrollmentInfo(
+    List<RetakeEnrollment> enrollments,
+  ) async {
+    if (enrollments.isEmpty) return enrollments;
+    final routine = await _freshRoutine();
+    final maps = await _freshMaps();
+    return enrollments.map((e) {
+      final key = '${e.batch}-${e.section.toUpperCase()}';
+      final slots =
+          routine.sectionCourseSlots[key]?[_normCode(e.courseCode)] ??
+          const <RetakeSlot>[];
+      final counts = <String, int>{};
+      for (final slot in slots) {
+        if (slot.initials.isNotEmpty) {
+          counts[slot.initials] = (counts[slot.initials] ?? 0) + 1;
+        }
+      }
+      final teacher = counts.isEmpty
+          ? ''
+          : (counts.entries.toList()
+                  ..sort((a, b) => b.value.compareTo(a.value)))
+                .first
+                .key;
+      return e.withFreshInfo(
+        freshName: maps.names[_normCode(e.courseCode)] ?? '',
+        freshTeacher: teacher,
+      );
+    }).toList();
   }
 
   /// Enroll in (or move to) a section for a course. Replaces any existing
@@ -326,10 +435,13 @@ class RetakeRepository {
       final creditMap = <String, double>{};
       final results = (raw['results'] as Map?) ?? const {};
       for (final yv in results.values) {
-        final sems = yv is List ? yv : (yv is Map ? yv.values.toList() : const []);
+        final sems = yv is List
+            ? yv
+            : (yv is Map ? yv.values.toList() : const []);
         for (final sem in sems) {
           if (sem is! Map) continue;
-          for (final c in ((sem['courses'] as List?) ?? const []).whereType<Map>()) {
+          for (final c
+              in ((sem['courses'] as List?) ?? const []).whereType<Map>()) {
             final code = _normCode((c['course_code'] ?? '').toString());
             final grade = (c['grade'] ?? '').toString().trim();
             final rank = _gradeRank(grade);
@@ -363,6 +475,44 @@ class RetakeRepository {
 
   // ── All-section routine + 62B busy map ──
   Future<_Routine> _buildRoutine() async {
+    try {
+      return await _buildRoutineFromGrid();
+    } catch (_) {
+      return _buildRoutineLegacy();
+    }
+  }
+
+  /// Build retake choices from the same parsed routine used everywhere else.
+  /// This keeps room, teacher and time changes consistent across every screen.
+  Future<_Routine> _buildRoutineFromGrid() async {
+    final sectionCourseSlots = <String, Map<String, List<RetakeSlot>>>{};
+    final busy62B = <String, Map<String, String>>{};
+    final repo = RoutineGridRepository.instance;
+    final root = await repo.load();
+    final sections = {...root.available, (batch: '62', section: 'B')};
+    for (final selected in sections) {
+      final data = repo.buildFor(selected.batch, selected.section);
+      final key = '${selected.batch}-${selected.section}';
+      for (final day in data.schedule.entries) {
+        for (final slot in day.value) {
+          if (slot.isBreak || slot.code.isEmpty) continue;
+          final code = _normCode(slot.code);
+          sectionCourseSlots.putIfAbsent(key, () => {});
+          final list = sectionCourseSlots[key]!.putIfAbsent(code, () => []);
+          if (!list.any((s) => s.day == day.key && s.time == slot.time)) {
+            list.add(RetakeSlot(day.key, slot.time, slot.initials, slot.room));
+          }
+          if (selected.batch == '62' && selected.section == 'B') {
+            busy62B.putIfAbsent(day.key, () => {});
+            busy62B[day.key]![slot.time] = code;
+          }
+        }
+      }
+    }
+    return _Routine(sectionCourseSlots, busy62B);
+  }
+
+  Future<_Routine> _buildRoutineLegacy() async {
     final sectionCourseSlots = <String, Map<String, List<RetakeSlot>>>{};
     final busy62B = <String, Map<String, String>>{};
     final ids = await _routineSheetIds();
@@ -376,9 +526,13 @@ class RetakeRepository {
       }
       if (tables.isEmpty) continue;
       // Merge: base cols from widest table, concat all rows.
-      final valid = tables.where((t) => t.rows.isNotEmpty || t.cols.isNotEmpty).toList();
+      final valid = tables
+          .where((t) => t.rows.isNotEmpty || t.cols.isNotEmpty)
+          .toList();
       if (valid.isEmpty) continue;
-      final base = valid.reduce((a, b) => b.cols.length > a.cols.length ? b : a);
+      final base = valid.reduce(
+        (a, b) => b.cols.length > a.cols.length ? b : a,
+      );
       final rows = <List<String>>[for (final t in valid) ...t.rows];
 
       var timeSlots = base.cols.length > 3 ? base.cols.sublist(3) : <String>[];
@@ -386,7 +540,8 @@ class RetakeRepository {
       if (!timeSlots.any((s) => RegExp(r'\d+:\d+').hasMatch(s))) {
         for (var r = 0; r < rows.length && r < 3; r++) {
           final cells = rows[r];
-          if (cells.length > 3 && cells.sublist(3).any((c) => RegExp(r'\d+:\d+').hasMatch(c))) {
+          if (cells.length > 3 &&
+              cells.sublist(3).any((c) => RegExp(r'\d+:\d+').hasMatch(c))) {
             timeSlots = cells.sublist(3);
             dataStart = r + 1;
             break;
@@ -397,7 +552,9 @@ class RetakeRepository {
 
       for (var r = dataStart; r < rows.length; r++) {
         final cells = rows[r];
-        final batch = cells.length > 1 ? cells[1].replaceAll(RegExp(r'\.0+$'), '').trim() : '';
+        final batch = cells.length > 1
+            ? cells[1].replaceAll(RegExp(r'\.0+$'), '').trim()
+            : '';
         final section = cells.length > 2 ? cells[2].trim().toUpperCase() : '';
         if (batch.isEmpty || section.isEmpty) continue;
         final key = '$batch-$section';
@@ -407,7 +564,10 @@ class RetakeRepository {
           if (time.isEmpty || !RegExp(r'\d+:\d+').hasMatch(time)) continue;
           final ci = i + 3;
           final cell = ci < cells.length ? cells[ci].trim() : '';
-          if (cell.isEmpty || RegExp(r'break', caseSensitive: false).hasMatch(cell)) continue;
+          if (cell.isEmpty ||
+              RegExp(r'break', caseSensitive: false).hasMatch(cell)) {
+            continue;
+          }
           final parsed = _parseCell(cell);
           if (parsed == null) continue;
           final code = _normCode(parsed.$1);
@@ -449,7 +609,9 @@ class RetakeRepository {
     final c = cell.trim();
     if (c.isEmpty || c == '--' || c == '–') return null;
     final parts = c.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.length >= 3) return (parts[0], parts[1], parts.sublist(2).join(' '));
+    if (parts.length >= 3) {
+      return (parts[0], parts[1], parts.sublist(2).join(' '));
+    }
     if (parts.length == 2) return (parts[0], '', parts[1]);
     if (parts.length == 1) return (parts[0], '', '');
     return null;
@@ -468,7 +630,10 @@ class RetakeRepository {
       if (r.length < 2) continue;
       final title = r[0].trim();
       final code = _normCode(r[1].trim());
-      if (code.isEmpty || ['code', 'title', 'course'].contains(r[1].trim().toLowerCase())) continue;
+      if (code.isEmpty ||
+          ['code', 'title', 'course'].contains(r[1].trim().toLowerCase())) {
+        continue;
+      }
       if (title.isNotEmpty) names[code] = title;
     }
     // LU_Course_Offer: code col1, title col2, credit col3
@@ -480,7 +645,9 @@ class RetakeRepository {
       if (code.isEmpty) continue;
       final title = r.length > 2 ? r[2].trim() : '';
       if (title.isNotEmpty) names[code] = title;
-      final double cr = r.length > 3 ? (double.tryParse(r[3].trim()) ?? 0.0) : 0.0;
+      final double cr = r.length > 3
+          ? (double.tryParse(r[3].trim()) ?? 0.0)
+          : 0.0;
       if (cr > 0) credits[code] = cr;
     }
     return _Maps(names, credits);
@@ -512,7 +679,14 @@ class _Graded {
   final Map<String, String> nameMap;
   final Map<String, double> creditMap;
   final bool live;
-  _Graded(this.retake, this.improve, this.resolved, this.nameMap, this.creditMap, this.live);
+  _Graded(
+    this.retake,
+    this.improve,
+    this.resolved,
+    this.nameMap,
+    this.creditMap,
+    this.live,
+  );
 }
 
 class _Routine {

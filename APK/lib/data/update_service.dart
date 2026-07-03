@@ -20,15 +20,18 @@ class UpdateService {
       final rows = await Supa.client
           .from('app_updates')
           .select(
-              'version_name,version_code,min_version_code,apk_url,features,fixes')
+            'version_name,version_code,min_version_code,apk_url,features,fixes',
+          )
           .order('version_code', ascending: false)
-          .limit(1);
+          .limit(1)
+          .timeout(const Duration(seconds: 4));
       if (rows.isEmpty) {
         return UpdateStatus(
-            latest: null,
-            currentCode: current,
-            updateAvailable: false,
-            forced: false);
+          latest: null,
+          currentCode: current,
+          updateAvailable: false,
+          forced: false,
+        );
       }
       final latest = AppVersion.fromJson(rows.first);
       final available = latest.versionCode > current;

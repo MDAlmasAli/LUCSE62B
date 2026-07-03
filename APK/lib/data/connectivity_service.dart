@@ -13,7 +13,9 @@ class ConnectivityService extends ChangeNotifier {
   ConnectivityService._();
   static final instance = ConnectivityService._();
 
-  bool _online = true;
+  // Start pessimistically. On an offline launch this prevents startup services
+  // from attempting long network calls before connectivity is known.
+  bool _online = false;
   bool get online => _online;
 
   StreamSubscription<List<ConnectivityResult>>? _sub;
@@ -22,7 +24,9 @@ class ConnectivityService extends ChangeNotifier {
     try {
       _set(_isOnline(await Connectivity().checkConnectivity()));
     } catch (_) {}
-    _sub ??= Connectivity().onConnectivityChanged.listen((r) => _set(_isOnline(r)));
+    _sub ??= Connectivity().onConnectivityChanged.listen(
+      (r) => _set(_isOnline(r)),
+    );
   }
 
   static bool _isOnline(List<ConnectivityResult> r) =>

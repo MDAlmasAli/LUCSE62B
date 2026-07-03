@@ -1047,7 +1047,7 @@ function updateLobbyStartBtn() {
 async function startGame() {
   if (!G.isHost || G.players.length < 2) return;
   const order = shuffle([...activePlayers().map(p => p.player_id)]);
-  const choices = pickWords(3, []);
+  const choices = pickWords(3, await getRecentWords());
   await sb.from('draw_players').update({ score: 0, has_guessed: false }).eq('room_code', G.roomCode);
   await sb.from('draw_rooms').update({
     status: 'word_pick',
@@ -1144,6 +1144,7 @@ async function pickWord(word) {
     phase_ends_at: phaseEnd
   }).eq('room_code', G.roomCode);
   await sb.from('draw_players').update({ has_guessed: false }).eq('room_code', G.roomCode);
+  markWordUsed(word); // global 30-day de-dup (shared with the app)
   G.history = []; updateUndoBtn();
   clearCanvasLocal();
   G.channel.send({ type: 'broadcast', event: 'clear', payload: {} });
@@ -1260,6 +1261,7 @@ async function nextTurn() {
   const activeIds = new Set(activePlayers().map(p => p.player_id));
 
   await sb.from('draw_players').update({ has_guessed: false }).eq('room_code', G.roomCode);
+  const recent = await getRecentWords();
 
   // Advance to the next index whose player is still in the game (skip those who left)
   let nextIndex = (G.room.draw_index || 0) + 1;
@@ -1271,7 +1273,7 @@ async function nextTurn() {
     } else {
       const newOrder = shuffle([...activeIds]);
       if (newOrder.length === 0) { await sb.from('draw_rooms').update({ status: 'game_over' }).eq('room_code', G.roomCode); return; }
-      const choices = pickWords(3);
+      const choices = pickWords(3, recent);
       await sb.from('draw_rooms').update({
         status: 'word_pick',
         round_current: G.room.round_current + 1,
@@ -1285,7 +1287,7 @@ async function nextTurn() {
       }).eq('room_code', G.roomCode);
     }
   } else {
-    const choices = pickWords(3);
+    const choices = pickWords(3, recent);
     await sb.from('draw_rooms').update({
       status: 'word_pick',
       draw_index: nextIndex,
@@ -1627,37 +1629,28 @@ function activePlayers() {
 
 const ALL_WORDS = [...new Set(WORDS)];    // de-duplicated pool
 
-// Persistent "shuffle bag": the whole pool is shuffled, then words are drawn one by
-// one. A word can't reappear until every other word in the pool has been shown — so
-// no repeats for a full cycle (~all 300 words), surviving reloads via localStorage.
-const WORD_BAG_KEY = 'dg_word_bag';
-function getBag() {
+// A word that comes up anywhere (app or web) is held for 30 days via the shared
+// `draw_recent_words` table, so the same word won't reappear for a month.
+async function getRecentWords() {
   try {
-    const b = JSON.parse(localStorage.getItem(WORD_BAG_KEY) || '[]');
-    return Array.isArray(b) ? b.filter(w => ALL_WORDS.includes(w)) : [];
-  } catch(e) { return []; }
+    const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const { data } = await sb.from('draw_recent_words').select('word').gte('used_at', since);
+    return (data || []).map(r => r.word);
+  } catch (e) { return []; }
 }
-function saveBag(bag) { try { localStorage.setItem(WORD_BAG_KEY, JSON.stringify(bag)); } catch(e) {} }
+async function markWordUsed(word) {
+  try { await sb.from('draw_recent_words').upsert({ word, used_at: new Date().toISOString() }, { onConflict: 'word' }); } catch (e) {}
+}
 
-function pickWords(n, used) {
-  const roomUsed = new Set(used || G.room?.used_words || []); // words already drawn this game
-  let bag = getBag();
-  if (!bag.length) bag = shuffle([...ALL_WORDS]);
-  const picked = [], skipped = [];
-  let guard = 0;
-  while (picked.length < n && guard++ < ALL_WORDS.length * 2 + 10) {
-    if (!bag.length) bag = shuffle([...ALL_WORDS]); // bag empty → reshuffle a fresh cycle
-    const w = bag.shift();
-    if (w === undefined) break;
-    if (roomUsed.has(w) || picked.includes(w)) { skipped.push(w); continue; } // hold, don't burn
-    picked.push(w);
-  }
-  // Safety net: if somehow short, top up from the pool
+// Pick n words, excluding the words passed in (recent 30-day list) plus the
+// words already drawn this game. Falls back to the full pool only if too few.
+function pickWords(n, exclude) {
+  const ex = new Set([...(exclude || []), ...(G.room?.used_words || [])]);
+  const avail = shuffle(ALL_WORDS.filter(w => !ex.has(w)));
+  const picked = avail.slice(0, n);
   if (picked.length < n) {
-    for (const w of ALL_WORDS) { if (picked.length >= n) break; if (!picked.includes(w)) picked.push(w); }
+    for (const w of shuffle([...ALL_WORDS])) { if (picked.length >= n) break; if (!picked.includes(w)) picked.push(w); }
   }
-  // Words skipped (already used this game) go back to the front so they're not lost
-  saveBag([...skipped, ...bag]);
   return picked;
 }
 

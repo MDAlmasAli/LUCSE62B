@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'constants.dart';
 
 /// Thin client for the Cloudflare Worker REST endpoints
@@ -55,16 +57,57 @@ class WorkerApi {
     }
   }
 
-  /// GET /drive?folder= → list of files { id, name, mimeType }.
+  /// GET /drive?folder= → list of files { id, name, mimeType }. The listing is
+  /// cached to disk so the materials browser (and its "Saved offline" files)
+  /// still appears when there's no internet.
   Future<List<Map<String, dynamic>>> driveFolder(String folderId) async {
     try {
       final r = await http
           .get(_u('/drive?folder=${Uri.encodeComponent(folderId)}'), headers: _origin)
           .timeout(const Duration(seconds: 20));
-      if (r.statusCode != 200) return [];
+      if (r.statusCode != 200) return _diskFolder(folderId);
       final data = jsonDecode(r.body) as Map<String, dynamic>;
-      if (data['error'] != null) return [];
-      return ((data['files'] as List?) ?? const []).cast<Map<String, dynamic>>();
+      if (data['error'] != null) return _diskFolder(folderId);
+      final files = ((data['files'] as List?) ?? const []).cast<Map<String, dynamic>>();
+      await _persistFolder(folderId, files);
+      return files;
+    } catch (_) {
+      return _diskFolder(folderId);
+    }
+  }
+
+  // ── Tiny on-disk cache for Drive folder listings (offline fallback) ──
+  Directory? _diskDir;
+  Future<Directory?> _cacheDir() async {
+    if (_diskDir != null) return _diskDir;
+    try {
+      final base = await getApplicationDocumentsDirectory();
+      final d = Directory('${base.path}/drive_cache');
+      if (!await d.exists()) await d.create(recursive: true);
+      return _diskDir = d;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _folderKey(String id) => id.replaceAll(RegExp(r'[^A-Za-z0-9]'), '_');
+
+  Future<void> _persistFolder(String id, List<Map<String, dynamic>> files) async {
+    try {
+      final d = await _cacheDir();
+      if (d == null) return;
+      await File('${d.path}/${_folderKey(id)}.json').writeAsString(jsonEncode(files));
+    } catch (_) {}
+  }
+
+  Future<List<Map<String, dynamic>>> _diskFolder(String id) async {
+    try {
+      final d = await _cacheDir();
+      if (d == null) return [];
+      final f = File('${d.path}/${_folderKey(id)}.json');
+      if (!await f.exists()) return [];
+      final list = jsonDecode(await f.readAsString()) as List;
+      return list.cast<Map<String, dynamic>>();
     } catch (_) {
       return [];
     }

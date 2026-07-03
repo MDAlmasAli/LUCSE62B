@@ -4,6 +4,9 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../data/exam_repository.dart';
+import '../../shared/app_toast.dart';
+import 'routine_export.dart';
+import 'routine_template.dart';
 
 /// Mid / Final term exam routine — searchable by batch/section, with rich exam
 /// cards (day, weekday, date, course code + title, time, Today/past states).
@@ -23,8 +26,11 @@ class _ExamScreenState extends State<ExamScreen> {
   String _sectionVal = 'B';
   late Future<List<ExamItem>> _future = _load();
 
-  Future<List<ExamItem>> _load() =>
-      ExamRepository.instance.load(_type, batch: _batchVal, section: _sectionVal);
+  Future<List<ExamItem>> _load() => ExamRepository.instance.load(
+    _type,
+    batch: _batchVal,
+    section: _sectionVal,
+  );
 
   @override
   void dispose() {
@@ -61,8 +67,16 @@ class _ExamScreenState extends State<ExamScreen> {
         title: const Text('Exam Schedule'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.canPop() ? context.pop() : context.go('/info'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/info'),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Download',
+            icon: const Icon(Icons.download_rounded, size: 22),
+            onPressed: _download,
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -79,7 +93,9 @@ class _ExamScreenState extends State<ExamScreen> {
               future: _future,
               builder: (context, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.accent),
+                  );
                 }
                 final items = snap.data ?? [];
                 if (items.isEmpty) {
@@ -115,12 +131,15 @@ class _ExamScreenState extends State<ExamScreen> {
               gradient: sel ? AppColors.accentGradient : null,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text(label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: sel ? Colors.white : AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13.5)),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: sel ? Colors.white : AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13.5,
+              ),
+            ),
           ),
         ),
       );
@@ -133,16 +152,18 @@ class _ExamScreenState extends State<ExamScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(children: [seg('Mid Term', 'mid'), seg('Final Term', 'final')]),
+      child: Row(
+        children: [seg('Mid Term', 'mid'), seg('Final Term', 'final')],
+      ),
     );
   }
 
   Widget _searchRow() {
     InputDecoration dec(String label) => InputDecoration(
-          labelText: label,
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        );
+      labelText: label,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    );
     return Row(
       children: [
         SizedBox(
@@ -174,7 +195,9 @@ class _ExamScreenState extends State<ExamScreen> {
               backgroundColor: AppColors.accent,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
         ),
@@ -188,13 +211,20 @@ class _ExamScreenState extends State<ExamScreen> {
         Container(
           width: 7,
           height: 7,
-          decoration: const BoxDecoration(color: Color(0xFF34D399), shape: BoxShape.circle),
+          decoration: const BoxDecoration(
+            color: Color(0xFF34D399),
+            shape: BoxShape.circle,
+          ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             '${_type == 'final' ? 'Final Term' : 'Mid Term'}  ·  Batch $_batchVal, Section $_sectionVal',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         Container(
@@ -203,8 +233,14 @@ class _ExamScreenState extends State<ExamScreen> {
             color: AppColors.accent.withValues(alpha: 0.14),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Text('$total exam${total == 1 ? '' : 's'}',
-              style: const TextStyle(color: AppColors.accentBright, fontSize: 11.5, fontWeight: FontWeight.w700)),
+          child: Text(
+            '$total exam${total == 1 ? '' : 's'}',
+            style: const TextStyle(
+              color: AppColors.accentBright,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
       ],
     );
@@ -219,7 +255,11 @@ class _ExamScreenState extends State<ExamScreen> {
   bool _isPast(DateTime? d) {
     if (d == null) return false;
     final n = DateTime.now();
-    return DateTime(d.year, d.month, d.day).isBefore(DateTime(n.year, n.month, n.day));
+    return DateTime(
+      d.year,
+      d.month,
+      d.day,
+    ).isBefore(DateTime(n.year, n.month, n.day));
   }
 
   Widget _card(ExamItem e) {
@@ -234,10 +274,19 @@ class _ExamScreenState extends State<ExamScreen> {
           color: today ? color.withValues(alpha: 0.06) : AppColors.card,
           borderRadius: BorderRadius.circular(14),
           border: Border(
-            left: BorderSide(color: today ? color : color.withValues(alpha: 0.55), width: 4),
-            top: BorderSide(color: today ? color.withValues(alpha: 0.4) : AppColors.border),
-            right: BorderSide(color: today ? color.withValues(alpha: 0.4) : AppColors.border),
-            bottom: BorderSide(color: today ? color.withValues(alpha: 0.4) : AppColors.border),
+            left: BorderSide(
+              color: today ? color : color.withValues(alpha: 0.55),
+              width: 4,
+            ),
+            top: BorderSide(
+              color: today ? color.withValues(alpha: 0.4) : AppColors.border,
+            ),
+            right: BorderSide(
+              color: today ? color.withValues(alpha: 0.4) : AppColors.border,
+            ),
+            bottom: BorderSide(
+              color: today ? color.withValues(alpha: 0.4) : AppColors.border,
+            ),
           ),
         ),
         child: Padding(
@@ -251,16 +300,46 @@ class _ExamScreenState extends State<ExamScreen> {
                 child: Column(
                   children: [
                     if (e.dayLabel.isNotEmpty)
-                      Text(e.dayLabel.toUpperCase(),
-                          style: const TextStyle(
-                              color: AppColors.muted, fontSize: 8.5, fontWeight: FontWeight.w800, letterSpacing: 0.4)),
-                    Text(e.dateObj != null ? DateFormat('dd').format(e.dateObj!) : '--',
-                        style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 22, height: 1.1)),
-                    Text(e.dateObj != null ? DateFormat('MMM').format(e.dateObj!) : '',
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w600)),
+                      Text(
+                        e.dayLabel.toUpperCase(),
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    Text(
+                      e.dateObj != null
+                          ? DateFormat('dd').format(e.dateObj!)
+                          : '--',
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 22,
+                        height: 1.1,
+                      ),
+                    ),
+                    Text(
+                      e.dateObj != null
+                          ? DateFormat('MMM').format(e.dateObj!)
+                          : '',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     if (e.weekday.isNotEmpty)
-                      Text(e.weekday.length > 3 ? e.weekday.substring(0, 3) : e.weekday,
-                          style: const TextStyle(color: AppColors.muted, fontSize: 9)),
+                      Text(
+                        e.weekday.length > 3
+                            ? e.weekday.substring(0, 3)
+                            : e.weekday,
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 9,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -274,41 +353,77 @@ class _ExamScreenState extends State<ExamScreen> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.16),
                             borderRadius: BorderRadius.circular(5),
                           ),
-                          child: Text(e.course,
-                              style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 13)),
+                          child: Text(
+                            e.course,
+                            style: TextStyle(
+                              color: color,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                            ),
+                          ),
                         ),
                         if (today) ...[
                           const SizedBox(width: 7),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF34D399).withValues(alpha: 0.16),
+                              color: const Color(
+                                0xFF34D399,
+                              ).withValues(alpha: 0.16),
                               borderRadius: BorderRadius.circular(5),
                             ),
-                            child: const Text('TODAY',
-                                style: TextStyle(color: Color(0xFF34D399), fontSize: 9, fontWeight: FontWeight.w800)),
+                            child: const Text(
+                              'TODAY',
+                              style: TextStyle(
+                                color: Color(0xFF34D399),
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ),
                         ],
                       ],
                     ),
                     if (e.courseName.isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      Text(e.courseName,
-                          style: const TextStyle(color: AppColors.text, fontSize: 12.5, fontWeight: FontWeight.w600, height: 1.3)),
+                      Text(
+                        e.courseName,
+                        style: const TextStyle(
+                          color: AppColors.text,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          height: 1.3,
+                        ),
+                      ),
                     ],
                     if (e.time.isNotEmpty) ...[
                       const SizedBox(height: 5),
                       Row(
                         children: [
-                          const Icon(Icons.schedule_rounded, size: 12, color: AppColors.muted),
+                          const Icon(
+                            Icons.schedule_rounded,
+                            size: 12,
+                            color: AppColors.muted,
+                          ),
                           const SizedBox(width: 5),
-                          Text(e.time,
-                              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11.5)),
+                          Text(
+                            e.time,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 11.5,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -322,32 +437,82 @@ class _ExamScreenState extends State<ExamScreen> {
     );
   }
 
+  Future<void> _download() async {
+    final items = await _future;
+    if (!mounted) return;
+    if (items.isEmpty) {
+      AppToast.show(context, 'No exams to download.');
+      return;
+    }
+    final rows = <List<String>>[];
+    for (var i = 0; i < items.length; i++) {
+      final e = items[i];
+      final date = e.dateObj != null
+          ? DateFormat('dd MMM yyyy').format(e.dateObj!)
+          : '--';
+      final wd = e.weekday.isNotEmpty ? e.weekday : e.dayLabel;
+      rows.add([date, wd, e.course, e.courseName, e.time]);
+    }
+    final label = _type == 'final' ? 'Final Term' : 'Mid Term';
+    if (!mounted) return;
+    RoutineExport.showImageSheet(
+      context,
+      baseName: 'exam-$_type-$_batchVal-$_sectionVal',
+      build: () => InfoTablePrintTemplate(
+        title: '$label Exam Routine',
+        subtitle:
+            'Batch $_batchVal · Section $_sectionVal · ${items.length} exam${items.length == 1 ? '' : 's'}',
+        headers: const ['Date', 'Day', 'Course', 'Title', 'Time'],
+        rows: rows,
+        columnFlex: const [1.2, 0.9, 1.0, 2.2, 1.1],
+        accentColumn: 2,
+      ),
+    );
+  }
+
   Widget _empty() => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.event_busy_rounded, color: AppColors.muted, size: 44),
-              const SizedBox(height: 14),
-              Text(
-                _type == 'final'
-                    ? 'No final-term exams for Batch $_batchVal, Section $_sectionVal yet.'
-                    : 'No mid-term exams for Batch $_batchVal, Section $_sectionVal yet.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13.5, height: 1.5),
-              ),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.event_busy_rounded,
+            color: AppColors.muted,
+            size: 44,
           ),
-        ),
-      );
+          const SizedBox(height: 14),
+          Text(
+            _type == 'final'
+                ? 'No final-term exams for Batch $_batchVal, Section $_sectionVal yet.'
+                : 'No mid-term exams for Batch $_batchVal, Section $_sectionVal yet.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13.5,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   /// Deterministic colour from a course code (mirrors the site's courseColor).
   static Color _courseColor(String code) {
     const palette = [
-      Color(0xFF7C3AED), Color(0xFF2563EB), Color(0xFF059669), Color(0xFFDC2626),
-      Color(0xFFD97706), Color(0xFFDB2777), Color(0xFF0891B2), Color(0xFF9333EA),
-      Color(0xFF0D9488), Color(0xFFE11D48), Color(0xFF4F46E5), Color(0xFFCA8A04),
+      Color(0xFF7C3AED),
+      Color(0xFF2563EB),
+      Color(0xFF059669),
+      Color(0xFFDC2626),
+      Color(0xFFD97706),
+      Color(0xFFDB2777),
+      Color(0xFF0891B2),
+      Color(0xFF9333EA),
+      Color(0xFF0D9488),
+      Color(0xFFE11D48),
+      Color(0xFF4F46E5),
+      Color(0xFFCA8A04),
     ];
     var h = 0;
     for (var i = 0; i < code.length; i++) {

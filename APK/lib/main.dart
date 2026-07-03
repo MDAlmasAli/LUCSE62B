@@ -16,20 +16,28 @@ Future<void> main() async {
   await Supa.init();
   await Session.instance.load();
 
+  // Resolve connectivity before optional startup network work. This makes an
+  // offline launch immediate instead of waiting for Supabase/Firebase timeouts.
+  await ConnectivityService.instance.start().timeout(
+    const Duration(seconds: 2),
+    onTimeout: () {},
+  );
+
   // Push notifications (FCM). Runs in the background; re-link the device token
   // whenever the login state changes so pushes target the right student.
   PushService.instance.init();
   Session.instance.addListener(() => PushService.instance.onAuthChanged());
 
-  // Watch online/offline (drives the home indicator + auto-refresh on reconnect).
-  ConnectivityService.instance.start();
-
   // Check for updates before anything else. A FORCED update blocks the whole
   // app; an optional one is surfaced on the home screen.
   UpdateStatus update = UpdateStatus.none;
-  try {
-    update = await UpdateService.instance.check();
-  } catch (_) {}
+  if (ConnectivityService.instance.online) {
+    try {
+      update = await UpdateService.instance.check().timeout(
+        const Duration(seconds: 5),
+      );
+    } catch (_) {}
+  }
 
   runApp(LucseApp(update: update));
 }

@@ -86,7 +86,44 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
               children: _categories.map(_categoryCard).toList(),
             ),
             const SizedBox(height: 20),
-            _sectionLabel('Deadlines'),
+            FutureBuilder<List<_Item>>(
+              future: _future,
+              builder: (context, snap) {
+                final running = (snap.data ?? [])
+                    .where((i) => i.deadline != null && i.deadline!.isAfter(DateTime.now()))
+                    .length;
+                return Row(
+                  children: [
+                    _sectionLabel('Deadlines'),
+                    if (running > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF87171).withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFF87171).withValues(alpha: 0.45)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 7,
+                              height: 7,
+                              decoration: const BoxDecoration(color: Color(0xFFF87171), shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 6),
+                            Text('$running running',
+                                style: const TextStyle(
+                                    color: Color(0xFFF87171), fontSize: 11.5, fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
             const SizedBox(height: 10),
             FutureBuilder<List<_Item>>(
               future: _future,
