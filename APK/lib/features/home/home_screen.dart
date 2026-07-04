@@ -1021,7 +1021,7 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
       }
       final widgetDeadline = upcoming.isEmpty
           ? 'No upcoming deadline'
-          : 'Due: ${dueCounts.entries.map((entry) => '${entry.key} ${entry.value}').join(' · ')}';
+          : _widgetDueSummary(dueCounts, upcoming.length);
       await HomeWidgetService.instance.saveDeadline(widgetDeadline);
       if (!mounted) return;
       setState(() {
@@ -1069,6 +1069,31 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
         )
         .toList();
     return words.isEmpty ? 'Task' : words.join(' ');
+  }
+
+  static String _widgetDueSummary(Map<String, int> counts, int total) {
+    final visible = counts.entries
+        .take(3)
+        .map((entry) => '${_shortDeadlineType(entry.key)} ${entry.value}');
+    final hiddenTypes = counts.length - 3;
+    final suffix = hiddenTypes > 0 ? ' · +$hiddenTypes types' : '';
+    return 'Due $total: ${visible.join(' · ')}$suffix';
+  }
+
+  static String _shortDeadlineType(String value) {
+    switch (value.toLowerCase()) {
+      case 'assignment':
+        return 'Assign';
+      case 'tutorial':
+        return 'Tut';
+      case 'presentation':
+        return 'Pres';
+      case 'lab report':
+      case 'labreport':
+        return 'Lab';
+      default:
+        return value.length > 8 ? value.substring(0, 8) : value;
+    }
   }
 
   static bool _sameDay(DateTime a, DateTime b) =>
@@ -1208,24 +1233,37 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
         ),
         const SizedBox(height: 4),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.schedule_rounded, size: 13, color: cd),
-            const SizedBox(width: 5),
-            Text(
-              _countdown(diff),
-              style: TextStyle(
-                color: cd,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(Icons.schedule_rounded, size: 13, color: cd),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 5),
             Expanded(
-              child: Text(
-                '· ${_fmtDue(it.due!)}',
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: _countdown(diff),
+                      style: TextStyle(
+                        color: cd,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    TextSpan(
+                      text: '  ·  ${_fmtDue(it.due!)}',
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: AppColors.muted, fontSize: 11),
               ),
             ),
           ],
