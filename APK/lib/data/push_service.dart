@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../core/supa.dart';
 import '../core/worker_api.dart';
+import 'notification_preferences.dart';
 import 'session.dart';
 
 /// Background isolate handler — must be a top-level function.
@@ -119,7 +120,16 @@ class PushService {
 
   Future<void> _subscribeToBroadcasts() async {
     try {
-      await FirebaseMessaging.instance.subscribeToTopic('all_users');
+      // Older APKs listen to all_users. This version uses category topics so
+      // users can opt out without disabling every notification.
+      await FirebaseMessaging.instance.unsubscribeFromTopic('all_users');
+      for (final item in NotificationPreferences.items) {
+        if (NotificationPreferences.instance.enabled(item.id)) {
+          await FirebaseMessaging.instance.subscribeToTopic(item.topic);
+        } else {
+          await FirebaseMessaging.instance.unsubscribeFromTopic(item.topic);
+        }
+      }
     } catch (e) {
       debugPrint('FCM topic subscription failed: $e');
     }
@@ -128,6 +138,9 @@ class PushService {
   Future<void> _unsubscribeFromBroadcasts() async {
     try {
       await FirebaseMessaging.instance.unsubscribeFromTopic('all_users');
+      for (final item in NotificationPreferences.items) {
+        await FirebaseMessaging.instance.unsubscribeFromTopic(item.topic);
+      }
     } catch (e) {
       debugPrint('FCM topic unsubscribe failed: $e');
     }
@@ -168,6 +181,12 @@ class PushService {
   /// Re-link or remove the token after login/logout/access revocation.
   Future<void> onAuthChanged() async {
     if (_ready) await _syncForSession();
+  }
+
+  Future<void> syncPreferences() async {
+    if (_ready && Session.instance.isLoggedIn) {
+      await _subscribeToBroadcasts();
+    }
   }
 
   void _showForeground(RemoteMessage m) {

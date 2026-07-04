@@ -5,6 +5,7 @@ import 'core/router.dart';
 import 'core/supa.dart';
 import 'data/connectivity_service.dart';
 import 'data/models/app_version.dart';
+import 'data/notification_preferences.dart';
 import 'data/push_service.dart';
 import 'data/session.dart';
 import 'data/session_validator.dart';
@@ -16,6 +17,7 @@ Future<void> main() async {
 
   await Supa.init();
   await Session.instance.load();
+  await NotificationPreferences.instance.load();
 
   // Resolve connectivity before optional startup network work. This makes an
   // offline launch immediate instead of waiting for Supabase/Firebase timeouts.

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
+import '../../data/calendar_service.dart';
 import '../../data/exam_repository.dart';
 import '../../shared/app_toast.dart';
 import 'routine_export.dart';
@@ -430,6 +431,31 @@ class _ExamScreenState extends State<ExamScreen> {
                   ],
                 ),
               ),
+              if (!past && e.dateObj != null)
+                IconButton(
+                  tooltip: 'Add to calendar',
+                  icon: const Icon(
+                    Icons.event_available_rounded,
+                    color: AppColors.accentBright,
+                    size: 20,
+                  ),
+                  onPressed: () async {
+                    final ok = await CalendarService.addExam(
+                      course: e.course,
+                      courseName: e.courseName,
+                      date: e.dateObj!,
+                      time: e.time,
+                    );
+                    if (!mounted) return;
+                    if (!ok) {
+                      AppToast.show(
+                        context,
+                        'Could not open calendar.',
+                        error: true,
+                      );
+                    }
+                  },
+                ),
             ],
           ),
         ),

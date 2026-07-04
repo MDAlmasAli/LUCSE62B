@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Notification Preferences · CSE 62B</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .np{max-width:680px;margin:auto;padding:82px 16px 40px}.np-head{display:flex;gap:12px;align-items:center;margin-bottom:16px}.np-back{color:var(--text);background:var(--card);border:1px solid var(--border);padding:10px 13px;border-radius:10px}
+    .np-info,.np-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px}.np-info{color:var(--muted);font-size:.84rem;line-height:1.55;margin-bottom:12px}
+    .np-list{display:grid;gap:9px}.np-item{display:flex;align-items:center;gap:12px}.np-item div{flex:1}.np-item b{display:block}.np-item small{color:var(--muted);line-height:1.4}.np-item input{width:22px;height:22px;accent-color:#8b5cf6}
+    .np-save{width:100%;border:0;border-radius:11px;padding:12px;margin-top:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;font-weight:800;cursor:pointer}.np-msg{text-align:center;color:var(--muted);font-size:.8rem;margin-top:9px}
+  </style>
+  <script>if(!localStorage.getItem('lu62b_student')&&!sessionStorage.getItem('lu62b_student'))location.replace('login.html')</script>
+</head>
+<body>
+  <main class="np">
+    <div class="np-head"><a class="np-back" href="profile.html"><i class="fa-solid fa-arrow-left"></i></a><div><h1 style="font-size:1.35rem;margin:0">Notification Preferences</h1><small style="color:var(--muted)">Choose the updates you want</small></div></div>
+    <div class="np-info">Disabled categories are hidden from the notification list. If browser push is enabled, the same choices are applied to push delivery.</div>
+    <div class="np-list" id="prefList"></div>
+    <button class="np-save" onclick="savePreferences()">Save Preferences</button><div class="np-msg" id="prefMsg"></div>
+  </main>
+  <script>
+    const WORKER='https://lucse62b-api.sy164425.workers.dev';
+    const options=[
+      ['notices','Notices','University and class announcements'],
+      ['classwork','Classwork & deadlines','Assignments, presentations and reminders'],
+      ['routine','Routine & exams','Routine and exam schedule changes'],
+      ['updates','App updates','New APK versions and important fixes'],
+      ['general','General','Other portal announcements']
+    ];
+    let prefs={};try{prefs=JSON.parse(localStorage.getItem('lu62b_notif_preferences')||'{}')}catch(e){}
+    document.getElementById('prefList').innerHTML=options.map(x=>`<label class="np-item"><div><b>${x[1]}</b><small>${x[2]}</small></div><input id="pref_${x[0]}" type="checkbox" ${prefs[x[0]]!==false?'checked':''}></label>`).join('');
+    async function savePreferences(){for(const x of options)prefs[x[0]]=document.getElementById('pref_'+x[0]).checked;localStorage.setItem('lu62b_notif_preferences',JSON.stringify(prefs));const msg=document.getElementById('prefMsg');msg.textContent='Saved locally.';try{const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();if(sub){const r=await fetch(WORKER+'/push-preferences',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:sub.endpoint,preferences:prefs})});if(r.ok)msg.textContent='Preferences saved and push delivery updated.'}}catch(e){}}
+  </script>
+  <script src="../assets/js/auth.js"></script>
+</body>
+</html>

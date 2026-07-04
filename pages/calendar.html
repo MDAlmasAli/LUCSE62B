@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Calendar · CSE 62B</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .cal{max-width:700px;margin:auto;padding:82px 16px 40px}.cal-head{display:flex;gap:12px;align-items:center;margin-bottom:16px}.cal-back{color:var(--text);background:var(--card);border:1px solid var(--border);padding:10px 13px;border-radius:10px}
+    .cal-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:11px}.cal-card i{font-size:1.4rem;color:var(--accent-bright)}.cal-card p{color:var(--muted);font-size:.85rem;line-height:1.55}
+    .cal-btn{display:inline-flex;gap:8px;align-items:center;text-decoration:none;border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:9px}.cal-note{color:var(--muted);font-size:.8rem;line-height:1.5}
+  </style>
+  <script>if(!localStorage.getItem('lu62b_student')&&!sessionStorage.getItem('lu62b_student'))location.replace('login.html')</script>
+</head>
+<body>
+  <main class="cal">
+    <div class="cal-head"><a class="cal-back" href="profile.html"><i class="fa-solid fa-arrow-left"></i></a><div><h1 style="font-size:1.35rem;margin:0">Calendar</h1><small style="color:var(--muted)">Add academic events in one click</small></div></div>
+    <section class="cal-card"><i class="fa-solid fa-list-check"></i><h2>Classwork deadlines</h2><p>Each upcoming deadline now has an Add to Calendar button with its title, category and due time.</p><a class="cal-btn" href="classwork.html"><i class="fa-solid fa-arrow-right"></i> Open Classwork</a></section>
+    <section class="cal-card"><i class="fa-solid fa-calendar-days"></i><h2>Exam schedule</h2><p>Open Mid or Final routine and add any upcoming exam directly to Google Calendar.</p><a class="cal-btn" href="info.html#exam"><i class="fa-solid fa-arrow-right"></i> Open Exam Schedule</a></section>
+    <p class="cal-note"><i class="fa-brands fa-android"></i> The Android APK also includes a Home Screen widget for current/next class, room and nearest deadline.</p>
+  </main>
+  <script src="../assets/js/auth.js"></script>
+</body>
+</html>

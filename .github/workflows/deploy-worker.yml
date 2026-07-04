@@ -24,7 +24,9 @@ jobs:
             FIREBASE_CLIENT_EMAIL
             FIREBASE_PRIVATE_KEY
             RELEASE_PUBLISH_KEY
+            ADMIN_SESSION_SECRET
         env:
           FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
           FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
           RELEASE_PUBLISH_KEY: ${{ secrets.RELEASE_PUBLISH_KEY }}
+          ADMIN_SESSION_SECRET: ${{ secrets.ADMIN_SESSION_SECRET }}

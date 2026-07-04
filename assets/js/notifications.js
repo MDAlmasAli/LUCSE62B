@@ -170,6 +170,21 @@
     catch { return null; }
   }
 
+  function notificationCategory(type) {
+    const value = String(type || '').toLowerCase();
+    if (value.includes('notice')) return 'notices';
+    if (value.includes('classwork') || value.includes('deadline')) return 'classwork';
+    if (value.includes('routine') || value.includes('exam')) return 'routine';
+    if (value.includes('app_update')) return 'updates';
+    return 'general';
+  }
+
+  function notificationPreferences() {
+    try {
+      return JSON.parse(localStorage.getItem('lu62b_notif_preferences') || '{}');
+    } catch { return {}; }
+  }
+
   /* ── Fetch public + personal notifications ── */
   async function fetchNotifs() {
     try {
@@ -183,7 +198,9 @@
       const r = await fetch(url, {
         headers: { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}` },
       });
-      return r.ok ? await r.json() : [];
+      if (!r.ok) return [];
+      const prefs = notificationPreferences();
+      return (await r.json()).filter(n => prefs[notificationCategory(n.type)] !== false);
     } catch { return []; }
   }
 
@@ -248,7 +265,8 @@
         <button class="nd-mark" onclick="window._notifMarkAll()">Mark all read</button>
       </div>
       <div class="nd-list">${items}</div>
-      ${pushRow}`;
+      ${pushRow}
+      <div class="nd-push-row"><a class="nd-push-btn" href="${location.pathname.includes('/pages/') ? '' : 'pages/'}notification-preferences.html"><i class="fa-solid fa-sliders"></i> Notification Preferences</a></div>`;
 
     document.body.appendChild(drop);
     positionDrop(drop, btn);
@@ -307,6 +325,14 @@
           student_id: studentId || undefined,
         }),
       });
+      await fetch(`${WORKER}/push-preferences`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoint: sub.endpoint,
+          preferences: notificationPreferences(),
+        }),
+      }).catch(() => {});
       document.getElementById('notif-dropdown')?.remove();
       _toast('Push notifications enabled!');
     } catch (e) {

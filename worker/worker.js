@@ -1,6 +1,7 @@
 
 
 const SUPA_URL = 'https://ftvtlqxpalwvyserujuh.supabase.co';
+const ADMIN_STUDENT_ID = '0182320012101068';
 
 const ALLOWED_ORIGINS = [
   'https://lucse62b.xyz',
@@ -20,8 +21,8 @@ export default {
     const isLocalOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
     const cors   = {
       'Access-Control-Allow-Origin':  (ALLOWED_ORIGINS.includes(origin) || isLocalOrigin) ? origin : ALLOWED_ORIGINS[0],
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Range',
+      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Range, Authorization',
       'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, Content-Type',
       'Access-Control-Max-Age':       '86400',
     };
@@ -676,6 +677,24 @@ export default {
         return jsonResp(cors, { ok: true });
       }
 
+      if (p === '/push-preferences' && request.method === 'POST') {
+        if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
+        if (!env.SMS_RATE) return errResp(cors, 500, 'Not configured');
+        const { endpoint, preferences } = await request.json().catch(() => ({}));
+        if (!endpoint || !preferences || typeof preferences !== 'object') {
+          return errResp(cors, 400, 'Missing fields');
+        }
+        const safe = {};
+        for (const key of ['notices', 'classwork', 'routine', 'updates', 'general']) {
+          safe[key] = preferences[key] !== false;
+        }
+        const hash = await sha256(String(endpoint));
+        await env.SMS_RATE.put(`push-pref:${hash}`, JSON.stringify(safe), {
+          expirationTtl: 31536000,
+        });
+        return jsonResp(cors, { ok: true, preferences: safe });
+      }
+
       // ── GET /notifications ────────────────────────────────────────────
       if (p === '/notifications') {
         if (!env.SUPA_KEY) return errResp(cors, 500, 'Not configured');
@@ -854,6 +873,128 @@ export default {
       }
 
       // ── GET /attendance — today's attendance records ──────────────────
+      // Secure admin sign-in. The portal password is verified server-side and
+      // exchanged for a short-lived HMAC token; the password is never stored.
+      if (p === '/admin/login' && request.method === 'POST') {
+        if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
+        if (!env.SUPA_KEY || !env.ADMIN_SESSION_SECRET) {
+          return errResp(cors, 500, 'Admin control is not configured');
+        }
+        const { student_id, password } = await request.json().catch(() => ({}));
+        if (String(student_id || '') !== ADMIN_STUDENT_ID || !password) {
+          return errResp(cors, 403, 'Invalid admin credentials');
+        }
+        if (env.SMS_RATE) {
+          const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+          const key = `admin-login:${ip}:${Math.floor(Date.now() / 900000)}`;
+          const attempts = Number(await env.SMS_RATE.get(key) || 0);
+          if (attempts >= 8) return errResp(cors, 429, 'Too many attempts');
+          await env.SMS_RATE.put(key, String(attempts + 1), { expirationTtl: 900 });
+        }
+        const verified = await fetch(`${SUPA_URL}/rest/v1/rpc/verify_student_password`, {
+          method: 'POST',
+          headers: {
+            'apikey': env.SUPA_KEY,
+            'Authorization': `Bearer ${env.SUPA_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            p_student_id: ADMIN_STUDENT_ID,
+            p_password: String(password),
+          }),
+        }).catch(() => null);
+        if (!verified?.ok || await verified.json() !== true) {
+          return errResp(cors, 403, 'Invalid admin credentials');
+        }
+        return jsonResp(cors, {
+          ok: true,
+          token: await createAdminToken(env),
+          expires_in: 3600,
+        });
+      }
+
+      if (p.startsWith('/admin/')) {
+        const authorized = await verifyAdminRequest(request, env);
+        if (!authorized) return errResp(cors, 401, 'Admin session expired');
+
+        if (p === '/admin/status' && request.method === 'GET') {
+          const roster = await getActiveStudentRoster(env);
+          const authHeaders = {
+            'apikey': env.SUPA_KEY,
+            'Authorization': `Bearer ${env.SUPA_KEY}`,
+          };
+          const [notifications, webPush, fcm, heartbeat, latest] = await Promise.all([
+            supabaseCount(env, 'notifications'),
+            supabaseCount(env, 'push_subscriptions'),
+            supabaseCount(env, 'fcm_tokens'),
+            fetch(`${SUPA_URL}/rest/v1/monitor_state?key=eq.cron_fast_heartbeat&select=last_checked,state_data&limit=1`,
+              { headers: authHeaders }).then(r => r.ok ? r.json() : []).catch(() => []),
+            fetch(`${SUPA_URL}/rest/v1/app_updates?select=version_name,version_code,created_at&order=version_code.desc&limit=1`,
+              { headers: authHeaders }).then(r => r.ok ? r.json() : []).catch(() => []),
+          ]);
+          return jsonResp(cors, {
+            ok: true,
+            students: roster?.ids?.length || 0,
+            notifications,
+            web_push_subscriptions: webPush,
+            fcm_tokens: fcm,
+            heartbeat: heartbeat[0] || null,
+            latest_app: latest[0] || null,
+            main_sheet_url: env.MAIN_SHEET_ID
+              ? `https://docs.google.com/spreadsheets/d/${env.MAIN_SHEET_ID}/edit`
+              : '',
+          });
+        }
+
+        if (p === '/admin/notifications' && request.method === 'GET') {
+          const r = await fetch(
+            `${SUPA_URL}/rest/v1/notifications?student_id=is.null&select=id,type,title,body,link,created_at&order=created_at.desc&limit=20`,
+            { headers: {
+              'apikey': env.SUPA_KEY,
+              'Authorization': `Bearer ${env.SUPA_KEY}`,
+            } },
+          );
+          if (!r.ok) return errResp(cors, 502, 'Could not load notifications');
+          return jsonResp(cors, { items: await r.json() });
+        }
+
+        if (p === '/admin/announcement' && request.method === 'POST') {
+          const body = await request.json().catch(() => ({}));
+          const category = ['notice', 'classwork', 'routine', 'app_update', 'general']
+            .includes(body.category) ? body.category : 'general';
+          const title = String(body.title || '').trim().slice(0, 100);
+          const message = String(body.body || '').trim().slice(0, 500);
+          const link = String(body.link || '/').trim().slice(0, 300);
+          if (!title || !message) return errResp(cors, 400, 'Title and message are required');
+          await insertNotification(env, `admin_${category}`, title, message, link);
+          const delivery = await sendPushToAll(env);
+          return jsonResp(cors, { ok: true, delivery });
+        }
+
+        const notificationDelete = p.match(/^\/admin\/notifications\/([0-9a-f-]+)$/i);
+        if (notificationDelete && request.method === 'DELETE') {
+          const r = await fetch(
+            `${SUPA_URL}/rest/v1/notifications?id=eq.${encodeURIComponent(notificationDelete[1])}&student_id=is.null`,
+            {
+              method: 'DELETE',
+              headers: {
+                'apikey': env.SUPA_KEY,
+                'Authorization': `Bearer ${env.SUPA_KEY}`,
+              },
+            },
+          );
+          if (!r.ok) return errResp(cors, 502, 'Delete failed');
+          return jsonResp(cors, { ok: true });
+        }
+
+        if (p === '/admin/run-monitor' && request.method === 'POST') {
+          ctx.waitUntil(runFastMonitor(env).catch(() => {}));
+          return jsonResp(cors, { ok: true, triggered: true });
+        }
+
+        return errResp(cors, 404, 'Admin action not found');
+      }
+
       if (p === '/attendance' && request.method === 'GET') {
         if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
         const today = new Date().toISOString().slice(0, 10);
@@ -936,6 +1077,84 @@ export default {
    Tries v4 first (instant updates). Falls back to GVIZ if v4 fails or the
    API key doesn't have Sheets API enabled.
    ─────────────────────────────────────────────────────────────────────────── */
+function bytesToBase64Url(bytes) {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function textToBase64Url(text) {
+  return bytesToBase64Url(new TextEncoder().encode(text));
+}
+
+async function adminHmacKey(env) {
+  return crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(env.ADMIN_SESSION_SECRET || ''),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify'],
+  );
+}
+
+async function createAdminToken(env) {
+  const payload = textToBase64Url(JSON.stringify({
+    sub: ADMIN_STUDENT_ID,
+    role: 'admin',
+    exp: Math.floor(Date.now() / 1000) + 3600,
+  }));
+  const signature = await crypto.subtle.sign(
+    'HMAC',
+    await adminHmacKey(env),
+    new TextEncoder().encode(payload),
+  );
+  return `${payload}.${bytesToBase64Url(new Uint8Array(signature))}`;
+}
+
+function base64UrlToBytes(value) {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/')
+    .padEnd(Math.ceil(value.length / 4) * 4, '=');
+  const binary = atob(base64);
+  return Uint8Array.from(binary, c => c.charCodeAt(0));
+}
+
+async function verifyAdminRequest(request, env) {
+  if (!env.ADMIN_SESSION_SECRET) return false;
+  const auth = request.headers.get('Authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  const [payload, signature, extra] = token.split('.');
+  if (!payload || !signature || extra) return false;
+  try {
+    const valid = await crypto.subtle.verify(
+      'HMAC',
+      await adminHmacKey(env),
+      base64UrlToBytes(signature),
+      new TextEncoder().encode(payload),
+    );
+    if (!valid) return false;
+    const claims = JSON.parse(new TextDecoder().decode(base64UrlToBytes(payload)));
+    return claims.sub === ADMIN_STUDENT_ID &&
+      claims.role === 'admin' &&
+      Number(claims.exp) > Math.floor(Date.now() / 1000);
+  } catch {
+    return false;
+  }
+}
+
+async function supabaseCount(env, table) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?select=*&limit=1`, {
+    headers: {
+      'apikey': env.SUPA_KEY,
+      'Authorization': `Bearer ${env.SUPA_KEY}`,
+      'Prefer': 'count=exact',
+      'Range': '0-0',
+    },
+  }).catch(() => null);
+  if (!r?.ok) return 0;
+  const range = r.headers.get('content-range') || '';
+  return Number(range.split('/').pop() || 0);
+}
+
 function v4ToTable(values) {
   if (!values || values.length < 1) return { cols: [], rows: [] };
   const headers = values[0] || [];
@@ -2723,7 +2942,7 @@ async function firebaseAccessToken(env) {
 
 async function latestPublicNotification(env) {
   const r = await fetch(
-    `${SUPA_URL}/rest/v1/notifications?student_id=is.null&select=title,body,link&order=created_at.desc&limit=1`,
+    `${SUPA_URL}/rest/v1/notifications?student_id=is.null&select=type,title,body,link&order=created_at.desc&limit=1`,
     { headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` } }
   ).catch(() => null);
   if (!r || !r.ok) return null;
@@ -2743,7 +2962,8 @@ async function sendFcmToAll(env, notification) {
     const title = String(notification?.title || 'CSE 62B Portal');
     const body = String(notification?.body || 'New update available.');
     const link = String(notification?.link || '/');
-    const r = await fetch(
+    const category = notificationCategory(notification?.type);
+    const sendTopic = topic => fetch(
       `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(env.FIREBASE_PROJECT_ID)}/messages:send`,
       {
         method: 'POST',
@@ -2753,9 +2973,15 @@ async function sendFcmToAll(env, notification) {
         },
         body: JSON.stringify({
           message: {
-            topic: 'all_users',
+            topic,
             notification: { title, body },
-            data: { title, body, link },
+            data: {
+              title,
+              body,
+              link,
+              type: String(notification?.type || 'general'),
+              category,
+            },
             android: {
               priority: 'HIGH',
               notification: {
@@ -2768,16 +2994,39 @@ async function sendFcmToAll(env, notification) {
         }),
       },
     );
-    if (r.ok) return { status: 'sent', code: r.status };
-    return { status: 'failed', code: r.status };
+    // all_users keeps older APKs working; new APKs unsubscribe from it and
+    // receive only the categories enabled in Notification Preferences.
+    const [legacy, preferred] = await Promise.all([
+      sendTopic('all_users'),
+      sendTopic(`notif_${category}`),
+    ]);
+    if (legacy.ok && preferred.ok) {
+      return { status: 'sent', code: preferred.status, category };
+    }
+    return {
+      status: 'partial',
+      legacy_code: legacy.status,
+      category_code: preferred.status,
+      category,
+    };
   } catch {
     return { status: 'error' };
   }
 }
 
+function notificationCategory(type) {
+  const value = String(type || '').toLowerCase();
+  if (value.includes('notice')) return 'notices';
+  if (value.includes('classwork') || value.includes('deadline')) return 'classwork';
+  if (value.includes('routine') || value.includes('exam')) return 'routine';
+  if (value.includes('app_update')) return 'updates';
+  return 'general';
+}
+
 async function sendPushToAll(env) {
   if (!env.SUPA_KEY) return { web: { status: 'not_configured' }, fcm: { status: 'not_configured' } };
   const notification = await latestPublicNotification(env);
+  const category = notificationCategory(notification?.type);
   const fcmPromise = sendFcmToAll(env, notification);
   if (!env.VAPID_PRIVATE_KEY) {
     return { web: { status: 'not_configured' }, fcm: await fcmPromise };
@@ -2791,7 +3040,18 @@ async function sendPushToAll(env) {
   const subs = await r.json();
   const expired = [];
   let delivered = 0;
+  let skipped = 0;
   await Promise.allSettled(subs.map(async sub => {
+    if (env.SMS_RATE) {
+      try {
+        const hash = await sha256(String(sub.endpoint));
+        const raw = await env.SMS_RATE.get(`push-pref:${hash}`);
+        if (raw && JSON.parse(raw)[category] === false) {
+          skipped++;
+          return;
+        }
+      } catch {}
+    }
     const status = await sendWebPush(sub.endpoint, env);
     if (status >= 200 && status < 300) delivered++;
     if (status === 410) expired.push(sub.endpoint);
@@ -2803,7 +3063,13 @@ async function sendPushToAll(env) {
     }).catch(() => {});
   }
   return {
-    web: { status: 'sent', delivered, total: subs.length, expired: expired.length },
+    web: {
+      status: 'sent',
+      delivered,
+      total: subs.length,
+      skipped,
+      expired: expired.length,
+    },
     fcm: await fcmPromise,
   };
 }

@@ -2,9 +2,11 @@ import 'package:go_router/go_router.dart';
 
 import '../data/models/app_version.dart';
 import '../data/session.dart';
+import '../features/admin/admin_control_screen.dart';
 import '../features/auth/dob_gate_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/classwork/classwork_screen.dart';
+import '../features/calendar/calendar_widget_screen.dart';
 import '../features/cover_page/cover_page_screen.dart';
 import '../features/gallery/gallery_screen.dart';
 import '../features/home/home_screen.dart';
@@ -20,6 +22,7 @@ import '../features/info/teacher_routine_screen.dart';
 import '../features/info/semester_screen.dart';
 import '../features/info/teachers_screen.dart';
 import '../features/notice/notice_screen.dart';
+import '../features/notifications/notification_preferences_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/resources/resources_screen.dart';
 import '../features/resources/category_screen.dart';
@@ -48,6 +51,7 @@ GoRouter buildRouter() {
 
       if (loc == '/update') return null; // always reachable
       if (!s.isLoggedIn) return loc == '/login' ? null : '/login';
+      if (loc == '/admin' && s.student?.id != '0182320012101068') return '/';
       if (!s.dobOk) return loc == '/dob' ? null : '/dob';
       if (loc == '/login' || loc == '/dob') return '/';
       return null;
@@ -59,20 +63,38 @@ GoRouter buildRouter() {
       GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
       GoRoute(path: '/info', builder: (_, _) => const InfoHubScreen()),
       GoRoute(path: '/info/bus', builder: (_, _) => const BusScreen()),
-      GoRoute(path: '/info/semester', builder: (_, _) => const SemesterScreen()),
+      GoRoute(
+        path: '/info/semester',
+        builder: (_, _) => const SemesterScreen(),
+      ),
       GoRoute(path: '/info/bkash', builder: (_, _) => const BkashScreen()),
       GoRoute(path: '/info/routine', builder: (_, _) => const RoutineScreen()),
-      GoRoute(path: '/info/teacher-routine', builder: (_, _) => const TeacherRoutineScreen()),
+      GoRoute(
+        path: '/info/teacher-routine',
+        builder: (_, _) => const TeacherRoutineScreen(),
+      ),
       GoRoute(path: '/info/exam', builder: (_, _) => const ExamScreen()),
-      GoRoute(path: '/info/teachers', builder: (_, _) => const TeachersScreen()),
-      GoRoute(path: '/info/course-teachers', builder: (_, _) => const CourseTeachersScreen()),
-      GoRoute(path: '/info/courses', builder: (_, _) => const CourseListScreen()),
+      GoRoute(
+        path: '/info/teachers',
+        builder: (_, _) => const TeachersScreen(),
+      ),
+      GoRoute(
+        path: '/info/course-teachers',
+        builder: (_, _) => const CourseTeachersScreen(),
+      ),
+      GoRoute(
+        path: '/info/courses',
+        builder: (_, _) => const CourseListScreen(),
+      ),
       GoRoute(path: '/info/retake', builder: (_, _) => const RetakeScreen()),
       GoRoute(path: '/info/links', builder: (_, _) => const GroupLinksScreen()),
       GoRoute(path: '/students', builder: (_, _) => const StudentsScreen()),
       GoRoute(path: '/gallery', builder: (_, _) => const GalleryScreen()),
       GoRoute(path: '/games', builder: (_, _) => const GamesHubScreen()),
-      GoRoute(path: '/games/imposter', builder: (_, _) => const ImposterScreen()),
+      GoRoute(
+        path: '/games/imposter',
+        builder: (_, _) => const ImposterScreen(),
+      ),
       GoRoute(path: '/games/draw', builder: (_, _) => const DrawScreen()),
       GoRoute(path: '/classwork', builder: (_, _) => const ClassworkScreen()),
       GoRoute(path: '/resources', builder: (_, _) => const ResourcesScreen()),
@@ -87,6 +109,15 @@ GoRouter buildRouter() {
       GoRoute(path: '/notice', builder: (_, _) => const NoticeScreen()),
       GoRoute(path: '/user-guide', builder: (_, _) => const UserGuideScreen()),
       GoRoute(path: '/attendance', builder: (_, _) => const AttendanceScreen()),
+      GoRoute(path: '/admin', builder: (_, _) => const AdminControlScreen()),
+      GoRoute(
+        path: '/notification-preferences',
+        builder: (_, _) => const NotificationPreferencesScreen(),
+      ),
+      GoRoute(
+        path: '/calendar-widget',
+        builder: (_, _) => const CalendarWidgetScreen(),
+      ),
       GoRoute(path: '/results', builder: (_, _) => const ResultsScreen()),
       GoRoute(
         path: '/update',

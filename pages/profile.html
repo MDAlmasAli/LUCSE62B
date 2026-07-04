@@ -144,14 +144,14 @@
 
     /* Profile action strip */
     .profile-action-strip {
-      display: flex; gap: 10px; margin-top: 20px; padding-top: 18px;
+      display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; padding-top: 18px;
       border-top: 1px solid rgba(255,255,255,0.07);
     }
     .btn-action-primary {
       flex: 1; background: linear-gradient(135deg, var(--accent), var(--accent2));
       color: #fff; border: none; padding: 11px 16px; border-radius: 12px;
       font-weight: 600; font-family: 'Inter', sans-serif; font-size: 0.88rem;
-      cursor: pointer; transition: all 0.25s; display: flex; align-items: center; justify-content: center; gap: 7px;
+      cursor: pointer; transition: all 0.25s; display: flex; align-items: center; justify-content: center; gap: 7px; min-width: 145px;
     }
     .btn-action-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(124,58,237,0.35); }
     .btn-action-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -1597,6 +1597,15 @@
 
         <!-- Action Buttons -->
         <div class="profile-action-strip">
+          <a class="btn-action-primary" id="btnAdminControl" href="admin.html" style="display:none;text-decoration:none;">
+            <i class="fa-solid fa-shield-halved"></i> Admin Control
+          </a>
+          <a class="btn-action-primary" href="notification-preferences.html" style="text-decoration:none;">
+            <i class="fa-solid fa-sliders"></i> Notifications
+          </a>
+          <a class="btn-action-primary" href="calendar.html" style="text-decoration:none;">
+            <i class="fa-solid fa-calendar-plus"></i> Calendar
+          </a>
           <button class="btn-action-primary" id="btnChangePassword" onclick="openChangePasswordModal()">
             <i class="fa-solid fa-key"></i> Change Password
           </button>
@@ -1890,6 +1899,9 @@
     } else {
       currentUser = JSON.parse(userData);
       isDemoUser = !!(currentUser.isDemo || String(currentUser.id || '').toUpperCase() === 'DEMO');
+      if (String(currentUser.id || '') === '0182320012101068') {
+        document.getElementById('btnAdminControl').style.display = 'inline-flex';
+      }
 
       document.getElementById('userName').innerText = currentUser.name || 'Student';
       document.getElementById('userId').innerText = 'ID: ' + currentUser.id;

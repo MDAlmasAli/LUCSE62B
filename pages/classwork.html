@@ -246,11 +246,26 @@
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:2px;">
                 <span style="font-size:0.82rem;color:${urg.color};font-weight:600;"><i class="fa-regular fa-clock" style="font-size:0.75rem;margin-right:4px;"></i>${escapeHtml(formatDeadline(item.deadline))}</span>
                 <span style="font-size:0.73rem;padding:2px 9px;border-radius:100px;background:${urg.bg};border:1px solid ${urg.border};color:${urg.color};font-weight:600;">${timeLeft(item.deadline)}</span>
+                ${ms >= 0 ? '<button class="calendar-add" style="border:1px solid var(--border);background:var(--card);color:var(--accent-bright);border-radius:8px;padding:5px 9px;cursor:pointer"><i class="fa-solid fa-calendar-plus"></i> Calendar</button>' : ''}
               </div>` : '<div style="font-size:0.8rem;color:var(--text-secondary);margin-top:2px;">No deadline set</div>'}
           </div>
         `;
+        card.querySelector('.calendar-add')?.addEventListener('click', () => addDeadlineToCalendar(item));
         container.appendChild(card);
       });
+    }
+
+    function addDeadlineToCalendar(item) {
+      const end = item.deadline;
+      const start = new Date(end.getTime() - 30 * 60000);
+      const stamp = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+      const title = `Deadline: ${item.course || item.title}`;
+      const details = [item.type, item.title].filter(Boolean).join(' · ');
+      const url = 'https://calendar.google.com/calendar/render?action=TEMPLATE' +
+        `&text=${encodeURIComponent(title)}` +
+        `&details=${encodeURIComponent(details)}` +
+        `&dates=${stamp(start)}/${stamp(end)}`;
+      window.open(url, '_blank', 'noopener');
     }
 
     function setSyncText(text, ok = true) {

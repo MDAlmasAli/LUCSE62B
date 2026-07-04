@@ -388,6 +388,12 @@ function _examBuildCards(exams, courseInfo, showBadge) {
     const dObj    = examDateObj(exam.date);
     const isPast  = dObj && dObj < today;
     const isToday = dObj && dObj.getTime() === today.getTime();
+    const calendarPayload = dObj ? encodeURIComponent(JSON.stringify({
+      course: exam.course,
+      name: info.name || '',
+      date: dObj.toISOString(),
+      time: exam.time || '',
+    })) : '';
 
     let borderC = color + '88';
     let badgeHtml = '';
@@ -413,6 +419,7 @@ function _examBuildCards(exams, courseInfo, showBadge) {
         </div>
         ${info.name ? `<div class="exam-card-name">${escH(info.name)}</div>` : ''}
         <div class="exam-card-time"><i class="fa-regular fa-clock" style="margin-right:5px;"></i>${escH(exam.time)}</div>
+        ${dObj && !isPast ? `<button onclick="_examAddCalendar('${calendarPayload}')" style="margin-top:7px;border:1px solid var(--border);background:var(--card);color:var(--accent-bright);border-radius:7px;padding:5px 9px;cursor:pointer;font-size:.68rem;"><i class="fa-solid fa-calendar-plus"></i> Add to Calendar</button>` : ''}
         ${showBadge && exam.enrolledBatch ? `
         <div style="font-size:0.65rem;color:var(--text-secondary);margin-top:3px;opacity:0.7;">
           Batch ${escH(exam.enrolledBatch)}, Section ${escH(exam.enrolledSection)}
@@ -421,6 +428,30 @@ function _examBuildCards(exams, courseInfo, showBadge) {
     </div>`;
   });
   return cards;
+}
+
+function _examAddCalendar(encoded) {
+  const item = JSON.parse(decodeURIComponent(encoded));
+  const date = new Date(item.date);
+  const matches = [...String(item.time).matchAll(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/gi)];
+  const at = (m, fallback) => {
+    let hour = m ? Number(m[1]) : fallback;
+    const minute = m ? Number(m[2] || 0) : 0;
+    const suffix = m ? String(m[3] || '').toUpperCase() : '';
+    if (suffix === 'PM' && hour < 12) hour += 12;
+    if (suffix === 'AM' && hour === 12) hour = 0;
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute);
+  };
+  const start = at(matches[0], 9);
+  let end = at(matches[1], start.getHours() + 2);
+  if (end <= start) end = new Date(start.getTime() + 2 * 3600000);
+  const stamp = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const url = 'https://calendar.google.com/calendar/render?action=TEMPLATE' +
+    `&text=${encodeURIComponent('Exam: ' + item.course)}` +
+    `&details=${encodeURIComponent(item.name)}` +
+    `&location=${encodeURIComponent('Leading University')}` +
+    `&dates=${stamp(start)}/${stamp(end)}`;
+  window.open(url, '_blank', 'noopener');
 }
 
 /* ── Regular search (62B Exams tab) ── */

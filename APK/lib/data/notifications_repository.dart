@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
 import '../core/supa.dart';
 import 'models/app_notification.dart';
+import 'notification_preferences.dart';
 import 'session.dart';
 
 /// Reads notifications from Supabase. Mirrors notifications.js:
@@ -21,6 +22,7 @@ class NotificationsRepository {
     final rows = await q.order('created_at', ascending: false).limit(20);
     return (rows as List)
         .map((e) => AppNotification.fromJson(e as Map<String, dynamic>))
+        .where((item) => NotificationPreferences.instance.allowsType(item.type))
         .toList();
   }
 
@@ -32,7 +34,10 @@ class NotificationsRepository {
 
   Future<void> markAllSeen() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(K.ssNotifLastSeen, DateTime.now().toUtc().toIso8601String());
+    await prefs.setString(
+      K.ssNotifLastSeen,
+      DateTime.now().toUtc().toIso8601String(),
+    );
   }
 
   int unreadCount(List<AppNotification> list, DateTime seen) =>

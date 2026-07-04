@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/sheets_api.dart';
+import '../../data/calendar_service.dart';
+import '../../shared/app_toast.dart';
 import '../../shared/glass_card.dart';
 
 /// Classwork hub — the Presentation / Tutorial / Lab Report / Viva / Lab Final /
@@ -20,15 +22,51 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
   late Future<List<_Item>> _future = _load();
   Timer? _ticker;
 
-  static const _categories = <({IconData icon, String label, Color color, String slug})>[
-    (icon: Icons.slideshow_rounded, label: 'Presentation', color: Color(0xFF818CF8), slug: 'presentation'),
-    (icon: Icons.school_rounded, label: 'Tutorial', color: Color(0xFF38BDF8), slug: 'tutorial'),
-    (icon: Icons.science_rounded, label: 'Lab Report', color: Color(0xFF34D399), slug: 'lab-report'),
-    (icon: Icons.biotech_rounded, label: 'Lab Test', color: Color(0xFF2DD4BF), slug: 'lab-test'),
-    (icon: Icons.mic_rounded, label: 'Viva', color: Color(0xFFFBBF24), slug: 'viva'),
-    (icon: Icons.local_fire_department_rounded, label: 'Lab Final', color: Color(0xFFF87171), slug: 'lab-final'),
-    (icon: Icons.account_tree_rounded, label: 'Project', color: Color(0xFFF472B6), slug: 'project'),
-  ];
+  static const _categories =
+      <({IconData icon, String label, Color color, String slug})>[
+        (
+          icon: Icons.slideshow_rounded,
+          label: 'Presentation',
+          color: Color(0xFF818CF8),
+          slug: 'presentation',
+        ),
+        (
+          icon: Icons.school_rounded,
+          label: 'Tutorial',
+          color: Color(0xFF38BDF8),
+          slug: 'tutorial',
+        ),
+        (
+          icon: Icons.science_rounded,
+          label: 'Lab Report',
+          color: Color(0xFF34D399),
+          slug: 'lab-report',
+        ),
+        (
+          icon: Icons.biotech_rounded,
+          label: 'Lab Test',
+          color: Color(0xFF2DD4BF),
+          slug: 'lab-test',
+        ),
+        (
+          icon: Icons.mic_rounded,
+          label: 'Viva',
+          color: Color(0xFFFBBF24),
+          slug: 'viva',
+        ),
+        (
+          icon: Icons.local_fire_department_rounded,
+          label: 'Lab Final',
+          color: Color(0xFFF87171),
+          slug: 'lab-final',
+        ),
+        (
+          icon: Icons.account_tree_rounded,
+          label: 'Project',
+          color: Color(0xFFF472B6),
+          slug: 'project',
+        ),
+      ];
 
   @override
   void dispose() {
@@ -43,7 +81,9 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
     final items = _parse(rows);
     // Tick every second while there are upcoming deadlines.
     _ticker?.cancel();
-    if (items.any((i) => i.deadline != null && i.deadline!.isAfter(DateTime.now()))) {
+    if (items.any(
+      (i) => i.deadline != null && i.deadline!.isAfter(DateTime.now()),
+    )) {
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() {});
       });
@@ -90,7 +130,11 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
               future: _future,
               builder: (context, snap) {
                 final running = (snap.data ?? [])
-                    .where((i) => i.deadline != null && i.deadline!.isAfter(DateTime.now()))
+                    .where(
+                      (i) =>
+                          i.deadline != null &&
+                          i.deadline!.isAfter(DateTime.now()),
+                    )
                     .length;
                 return Row(
                   children: [
@@ -98,11 +142,20 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
                     if (running > 0) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF87171).withValues(alpha: 0.16),
+                          color: const Color(
+                            0xFFF87171,
+                          ).withValues(alpha: 0.16),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFF87171).withValues(alpha: 0.45)),
+                          border: Border.all(
+                            color: const Color(
+                              0xFFF87171,
+                            ).withValues(alpha: 0.45),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -110,12 +163,20 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
                             Container(
                               width: 7,
                               height: 7,
-                              decoration: const BoxDecoration(color: Color(0xFFF87171), shape: BoxShape.circle),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF87171),
+                                shape: BoxShape.circle,
+                              ),
                             ),
                             const SizedBox(width: 6),
-                            Text('$running running',
-                                style: const TextStyle(
-                                    color: Color(0xFFF87171), fontSize: 11.5, fontWeight: FontWeight.w800)),
+                            Text(
+                              '$running running',
+                              style: const TextStyle(
+                                color: Color(0xFFF87171),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -131,7 +192,9 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
                 if (snap.connectionState == ConnectionState.waiting) {
                   return const Padding(
                     padding: EdgeInsets.only(top: 24),
-                    child: Center(child: CircularProgressIndicator(color: AppColors.accent)),
+                    child: Center(
+                      child: CircularProgressIndicator(color: AppColors.accent),
+                    ),
                   );
                 }
                 final items = snap.data ?? [];
@@ -139,8 +202,13 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 24),
                     child: Center(
-                      child: Text('No deadlines posted right now.',
-                          style: TextStyle(color: AppColors.muted, fontSize: 13.5)),
+                      child: Text(
+                        'No deadlines posted right now.',
+                        style: TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 13.5,
+                        ),
+                      ),
                     ),
                   );
                 }
@@ -153,11 +221,19 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
     );
   }
 
-  Widget _sectionLabel(String s) => Text(s.toUpperCase(),
-      style: const TextStyle(
-          color: AppColors.accentBright, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.6));
+  Widget _sectionLabel(String s) => Text(
+    s.toUpperCase(),
+    style: const TextStyle(
+      color: AppColors.accentBright,
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.6,
+    ),
+  );
 
-  Widget _categoryCard(({IconData icon, String label, Color color, String slug}) c) {
+  Widget _categoryCard(
+    ({IconData icon, String label, Color color, String slug}) c,
+  ) {
     return GestureDetector(
       onTap: () => context.push('/category/${c.slug}'),
       child: Container(
@@ -181,11 +257,17 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
             ),
             const SizedBox(width: 11),
             Expanded(
-              child: Text(c.label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      color: AppColors.text, fontSize: 13.5, fontWeight: FontWeight.w700, height: 1.15)),
+              child: Text(
+                c.label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  height: 1.15,
+                ),
+              ),
             ),
           ],
         ),
@@ -199,8 +281,17 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
       String at(int n) => n < r.length ? r[n].trim() : '';
       final course = at(0), type = at(1), title = at(2);
       if (title.isEmpty) continue;
-      if (course.toLowerCase() == 'course' || type.toLowerCase() == 'type') continue;
-      out.add(_Item(course: course, type: type, title: title, deadline: _parseGvizDate(at(3))));
+      if (course.toLowerCase() == 'course' || type.toLowerCase() == 'type') {
+        continue;
+      }
+      out.add(
+        _Item(
+          course: course,
+          type: type,
+          title: title,
+          deadline: _parseGvizDate(at(3)),
+        ),
+      );
     }
     final now = DateTime.now();
     out.sort((a, b) {
@@ -218,7 +309,9 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
   static DateTime? _parseGvizDate(String s) {
     final t = s.trim();
     if (t.isEmpty) return null;
-    final m = RegExp(r'^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+)(?:,(\d+))?)?\)$').firstMatch(t);
+    final m = RegExp(
+      r'^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+)(?:,(\d+))?)?\)$',
+    ).firstMatch(t);
     if (m != null) {
       return DateTime(
         int.parse(m[1]!),
@@ -241,12 +334,12 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
     final Color cd = (diff == null)
         ? AppColors.muted
         : isPast
-            ? AppColors.muted
-            : diff.inHours < 24
-                ? AppColors.red
-                : diff.inDays < 3
-                    ? const Color(0xFFFBBF24)
-                    : const Color(0xFF34D399);
+        ? AppColors.muted
+        : diff.inHours < 24
+        ? AppColors.red
+        : diff.inDays < 3
+        ? const Color(0xFFFBBF24)
+        : const Color(0xFF34D399);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -261,12 +354,23 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
-                      color: typeColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
-                  child: Text(it.type,
-                      style: TextStyle(
-                          color: typeColor, fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.2)),
+                    color: typeColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    it.type,
+                    style: TextStyle(
+                      color: typeColor,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
                 ),
               ),
             // Full course name + code — wraps to as many lines as needed
@@ -278,42 +382,93 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(top: 1.5),
-                    child: Icon(Icons.menu_book_rounded, size: 14, color: typeColor),
+                    child: Icon(
+                      Icons.menu_book_rounded,
+                      size: 14,
+                      color: typeColor,
+                    ),
                   ),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(it.course,
-                        softWrap: true,
-                        style: TextStyle(
-                            color: typeColor, fontWeight: FontWeight.w700, fontSize: 13, height: 1.3)),
+                    child: Text(
+                      it.course,
+                      softWrap: true,
+                      style: TextStyle(
+                        color: typeColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        height: 1.3,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ],
             const SizedBox(height: 8),
-            Text(it.title,
-                softWrap: true,
-                style: const TextStyle(
-                    color: AppColors.textBright, fontWeight: FontWeight.w600, fontSize: 14, height: 1.4)),
+            Text(
+              it.title,
+              softWrap: true,
+              style: const TextStyle(
+                color: AppColors.textBright,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                height: 1.4,
+              ),
+            ),
             if (due != null) ...[
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(isPast ? Icons.event_busy_rounded : Icons.schedule_rounded, size: 14, color: cd),
+                  Icon(
+                    isPast ? Icons.event_busy_rounded : Icons.schedule_rounded,
+                    size: 14,
+                    color: cd,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(_countdownText(diff!),
-                        style: TextStyle(
-                            color: cd,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            fontFeatures: const [FontFeature.tabularFigures()])),
+                    child: Text(
+                      _countdownText(diff!),
+                      style: TextStyle(
+                        color: cd,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
                   ),
+                  if (!isPast)
+                    IconButton(
+                      tooltip: 'Add to calendar',
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(
+                        Icons.event_available_rounded,
+                        color: AppColors.accentBright,
+                        size: 20,
+                      ),
+                      onPressed: () async {
+                        final ok = await CalendarService.addDeadline(
+                          course: it.course,
+                          type: it.type,
+                          title: it.title,
+                          deadline: due,
+                        );
+                        if (!mounted) return;
+                        if (!ok) {
+                          AppToast.show(
+                            context,
+                            'Could not open calendar.',
+                            error: true,
+                          );
+                        }
+                      },
+                    ),
                 ],
               ),
               const SizedBox(height: 3),
-              Text('Due: ${_fmtDue(due)}',
-                  style: const TextStyle(color: AppColors.muted, fontSize: 11.5)),
+              Text(
+                'Due: ${_fmtDue(due)}',
+                style: const TextStyle(color: AppColors.muted, fontSize: 11.5),
+              ),
             ],
           ],
         ),
@@ -326,14 +481,29 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
     if (diff.isNegative) return 'Past due';
     String two(int n) => n.toString().padLeft(2, '0');
     final d = diff.inDays;
-    final h = diff.inHours % 24, m = diff.inMinutes % 60, s = diff.inSeconds % 60;
+    final h = diff.inHours % 24,
+        m = diff.inMinutes % 60,
+        s = diff.inSeconds % 60;
     if (d > 0) return '${d}d ${two(h)}h ${two(m)}m ${two(s)}s';
     if (h > 0) return '${two(h)}h ${two(m)}m ${two(s)}s';
     return '${two(m)}m ${two(s)}s';
   }
 
   static String _fmtDue(DateTime d) {
-    const mo = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const mo = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     final h12 = d.hour % 12 == 0 ? 12 : d.hour % 12;
     final ap = d.hour >= 12 ? 'PM' : 'AM';
     final timePart = (d.hour == 0 && d.minute == 0)
@@ -345,14 +515,22 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
   Color _typeColor(String type) {
     final t = type.toLowerCase();
     // Order matters: check the multi-word "lab …" types before bare "lab".
-    if (t.contains('lab final') || t.contains('lab exam')) return const Color(0xFFF87171);
+    if (t.contains('lab final') || t.contains('lab exam')) {
+      return const Color(0xFFF87171);
+    }
     if (t.contains('lab test')) return const Color(0xFF2DD4BF);
-    if (t.contains('lab report') || t.contains('lab')) return const Color(0xFF34D399);
+    if (t.contains('lab report') || t.contains('lab')) {
+      return const Color(0xFF34D399);
+    }
     if (t.contains('assign')) return const Color(0xFFA78BFA);
-    if (t.contains('quiz') || t.contains('tutorial')) return const Color(0xFF38BDF8);
+    if (t.contains('quiz') || t.contains('tutorial')) {
+      return const Color(0xFF38BDF8);
+    }
     if (t.contains('present')) return const Color(0xFF818CF8);
     if (t.contains('viva')) return const Color(0xFFFBBF24);
-    if (t.contains('exam') || t.contains('mid') || t.contains('final')) return const Color(0xFFF87171);
+    if (t.contains('exam') || t.contains('mid') || t.contains('final')) {
+      return const Color(0xFFF87171);
+    }
     if (t.contains('project')) return const Color(0xFFF472B6);
     return AppColors.accentBright;
   }
@@ -361,5 +539,10 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
 class _Item {
   final String course, type, title;
   final DateTime? deadline;
-  _Item({required this.course, required this.type, required this.title, this.deadline});
+  _Item({
+    required this.course,
+    required this.type,
+    required this.title,
+    this.deadline,
+  });
 }

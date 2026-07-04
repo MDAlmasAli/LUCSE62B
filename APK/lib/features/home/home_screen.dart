@@ -8,6 +8,7 @@ import '../../core/app_colors.dart';
 import '../../core/name_format.dart';
 import '../../core/sheets_api.dart';
 import '../../data/connectivity_service.dart';
+import '../../data/home_widget_service.dart';
 import '../../data/routine_grid_repository.dart';
 import '../../data/session.dart';
 import '../../shared/app_toast.dart';
@@ -368,6 +369,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
   bool _refreshing = false;
   DateTime? _lastLoaded;
   Timer? _ticker;
+  String _lastWidgetSignature = '';
 
   // Today's regular bus times (minutes-from-midnight), per direction.
   List<({String time, int t})> _toLU = const [];
@@ -580,6 +582,32 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
       if (s.start <= nowMin && nowMin < s.end) {
         current = s;
       }
+    }
+
+    final widgetItem = current ?? next;
+    final widgetLabel = current != null
+        ? 'NOW RUNNING'
+        : next != null
+        ? 'NEXT CLASS'
+        : 'TODAY';
+    final widgetTitle = widgetItem == null
+        ? 'No more classes'
+        : widgetItem.name.isEmpty
+        ? widgetItem.code
+        : '${widgetItem.code} · ${widgetItem.name}';
+    final widgetDetails = widgetItem == null
+        ? dayName
+        : 'Room ${widgetItem.room.isEmpty ? '—' : widgetItem.room} · ${widgetItem.time}';
+    final widgetSignature = '$widgetLabel|$widgetTitle|$widgetDetails';
+    if (_lastWidgetSignature != widgetSignature) {
+      _lastWidgetSignature = widgetSignature;
+      scheduleMicrotask(
+        () => HomeWidgetService.instance.saveClassStatus(
+          label: widgetLabel,
+          title: widgetTitle,
+          details: widgetDetails,
+        ),
+      );
     }
 
     return Container(
@@ -994,6 +1022,15 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
         }
         out.add(_Dl(course, type, title, _parseGvizDate(at(3))));
       }
+      final upcoming =
+          out
+              .where((item) => item.due?.isAfter(DateTime.now()) == true)
+              .toList()
+            ..sort((a, b) => a.due!.compareTo(b.due!));
+      final widgetDeadline = upcoming.isEmpty
+          ? 'No upcoming deadline'
+          : 'Due: ${upcoming.first.course} · ${upcoming.first.title}';
+      await HomeWidgetService.instance.saveDeadline(widgetDeadline);
       if (!mounted) return;
       setState(() {
         _items = out;

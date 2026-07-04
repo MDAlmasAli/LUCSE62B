@@ -13,7 +13,13 @@ import '../../shared/glass_card.dart';
 /// Academic info pulled from the LU result payload (row_data.student), mirroring
 /// the website's profile "Academic Information" card.
 class _Academic {
-  final String degree, bloodGroup, waiver, fatherName, motherName, address, phone;
+  final String degree,
+      bloodGroup,
+      waiver,
+      fatherName,
+      motherName,
+      address,
+      phone;
   const _Academic({
     this.degree = '',
     this.bloodGroup = '',
@@ -138,30 +144,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
           : ListView(
               padding: const EdgeInsets.all(18),
               children: [
-                Center(child: AvatarBadge(name: s.name, size: 84, radius: 24, fontSize: 34)),
+                Center(
+                  child: AvatarBadge(
+                    name: s.name,
+                    size: 84,
+                    radius: 24,
+                    fontSize: 34,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 Center(
-                  child: Text(s.name,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: AppColors.textBright,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700)),
+                  child: Text(
+                    s.name,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.textBright,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Center(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.accent.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(s.isDemo ? 'Demo session' : 'ID: ${s.id}',
-                        style: const TextStyle(
-                            color: AppColors.accentBright,
-                            fontSize: 12.5,
-                            fontFamily: 'monospace',
-                            fontWeight: FontWeight.w600)),
+                    child: Text(
+                      s.isDemo ? 'Demo session' : 'ID: ${s.id}',
+                      style: const TextStyle(
+                        color: AppColors.accentBright,
+                        fontSize: 12.5,
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -173,9 +195,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     if (_phone.isNotEmpty)
                       _badge(Icons.phone_rounded, _phone, AppColors.green),
-                    _badge(Icons.school_rounded, 'Section 62B', AppColors.accentBright),
-                    _badge(Icons.account_balance_rounded, 'Leading University',
-                        const Color(0xFF38BDF8)),
+                    _badge(
+                      Icons.school_rounded,
+                      'Section 62B',
+                      AppColors.accentBright,
+                    ),
+                    _badge(
+                      Icons.account_balance_rounded,
+                      'Leading University',
+                      const Color(0xFF38BDF8),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -200,8 +229,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       _row(Icons.badge_outlined, 'Student ID', s.id),
                       const Divider(height: 18, color: AppColors.border),
-                      _row(Icons.verified_user_outlined, 'Status',
-                          s.isDemo ? 'Guest demo' : 'Verified student'),
+                      _row(
+                        Icons.verified_user_outlined,
+                        'Status',
+                        s.isDemo ? 'Guest demo' : 'Verified student',
+                      ),
                       const Divider(height: 18, color: AppColors.border),
                       _row(Icons.info_outline, 'App version', _version),
                     ],
@@ -212,42 +244,168 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: () => context.push('/results'),
                   child: Row(
                     children: [
-                      const Icon(Icons.bar_chart_rounded, size: 18, color: AppColors.accentBright),
+                      const Icon(
+                        Icons.bar_chart_rounded,
+                        size: 18,
+                        color: AppColors.accentBright,
+                      ),
                       const SizedBox(width: 12),
-                      const Text('My Results',
-                          style: TextStyle(color: AppColors.text, fontSize: 13, fontWeight: FontWeight.w600)),
+                      const Text(
+                        'My Results',
+                        style: TextStyle(
+                          color: AppColors.text,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       const Spacer(),
-                      const Icon(Icons.chevron_right, color: AppColors.muted, size: 20),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.muted,
+                        size: 20,
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 10),
                 if (s.id == K.attendanceAdminId) ...[
                   GlassCard(
+                    onTap: () => context.push('/admin'),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.admin_panel_settings_rounded,
+                          size: 18,
+                          color: AppColors.accentBright,
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Admin Control Center',
+                          style: TextStyle(
+                            color: AppColors.text,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Spacer(),
+                        const Icon(
+                          Icons.chevron_right,
+                          color: AppColors.muted,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  GlassCard(
                     onTap: () => context.push('/attendance'),
                     child: Row(
                       children: [
-                        const Icon(Icons.how_to_reg_rounded, size: 18, color: AppColors.accentBright),
+                        const Icon(
+                          Icons.how_to_reg_rounded,
+                          size: 18,
+                          color: AppColors.accentBright,
+                        ),
                         const SizedBox(width: 12),
-                        const Text('Attendance (Admin)',
-                            style: TextStyle(color: AppColors.text, fontSize: 13, fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Attendance (Admin)',
+                          style: TextStyle(
+                            color: AppColors.text,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const Spacer(),
-                        const Icon(Icons.chevron_right, color: AppColors.muted, size: 20),
+                        const Icon(
+                          Icons.chevron_right,
+                          color: AppColors.muted,
+                          size: 20,
+                        ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 10),
                 ],
                 GlassCard(
+                  onTap: () => context.push('/notification-preferences'),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.tune_rounded,
+                        size: 18,
+                        color: AppColors.accentBright,
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Notification Preferences',
+                        style: TextStyle(
+                          color: AppColors.text,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.muted,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                GlassCard(
+                  onTap: () => context.push('/calendar-widget'),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_month_rounded,
+                        size: 18,
+                        color: AppColors.accentBright,
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Calendar & Home Widget',
+                        style: TextStyle(
+                          color: AppColors.text,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.muted,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                GlassCard(
                   onTap: () => context.push('/user-guide'),
                   child: Row(
                     children: [
-                      const Icon(Icons.menu_book_rounded, size: 18, color: AppColors.accentBright),
+                      const Icon(
+                        Icons.menu_book_rounded,
+                        size: 18,
+                        color: AppColors.accentBright,
+                      ),
                       const SizedBox(width: 12),
-                      const Text('User Guide',
-                          style: TextStyle(color: AppColors.text, fontSize: 13, fontWeight: FontWeight.w600)),
+                      const Text(
+                        'User Guide',
+                        style: TextStyle(
+                          color: AppColors.text,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       const Spacer(),
-                      const Icon(Icons.chevron_right, color: AppColors.muted, size: 20),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.muted,
+                        size: 20,
+                      ),
                     ],
                   ),
                 ),
@@ -258,13 +416,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     if (context.mounted) context.go('/login');
                   },
                   icon: const Icon(Icons.logout, color: AppColors.red),
-                  label: const Text('Sign Out',
-                      style: TextStyle(color: AppColors.red)),
+                  label: const Text(
+                    'Sign Out',
+                    style: TextStyle(color: AppColors.red),
+                  ),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: BorderSide(color: AppColors.red.withValues(alpha: 0.4)),
+                    side: BorderSide(
+                      color: AppColors.red.withValues(alpha: 0.4),
+                    ),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(11)),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
                   ),
                 ),
               ],
@@ -273,38 +436,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _badge(IconData icon, String text, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    decoration: BoxDecoration(
+      color: AppColors.card,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppColors.border),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 7),
+        Text(
+          text,
+          style: const TextStyle(
+            color: AppColors.text,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 7),
-            Text(text,
-                style: const TextStyle(
-                    color: AppColors.text, fontSize: 12.5, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      );
+      ],
+    ),
+  );
 
   Widget _academicCard(_Academic a) {
     final rows = <Widget>[];
     void add(IconData icon, Color color, String label, String value) {
       if (value.isEmpty) return;
-      if (rows.isNotEmpty) rows.add(const Divider(height: 18, color: AppColors.border));
+      if (rows.isNotEmpty) {
+        rows.add(const Divider(height: 18, color: AppColors.border));
+      }
       rows.add(_row(icon, label, value, color: color));
     }
 
     add(Icons.school_rounded, AppColors.accentBright, 'Programme', a.degree);
-    add(Icons.bloodtype_rounded, const Color(0xFFF87171), 'Blood Group', a.bloodGroup);
+    add(
+      Icons.bloodtype_rounded,
+      const Color(0xFFF87171),
+      'Blood Group',
+      a.bloodGroup,
+    );
     add(Icons.percent_rounded, AppColors.green, 'Waiver', a.waiver);
-    add(Icons.man_rounded, const Color(0xFFA78BFA), "Father's Name", a.fatherName);
-    add(Icons.woman_rounded, const Color(0xFFF472B6), "Mother's Name", a.motherName);
-    add(Icons.location_on_rounded, const Color(0xFF38BDF8), 'Address', a.address);
+    add(
+      Icons.man_rounded,
+      const Color(0xFFA78BFA),
+      "Father's Name",
+      a.fatherName,
+    );
+    add(
+      Icons.woman_rounded,
+      const Color(0xFFF472B6),
+      "Mother's Name",
+      a.motherName,
+    );
+    add(
+      Icons.location_on_rounded,
+      const Color(0xFF38BDF8),
+      'Address',
+      a.address,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,34 +507,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _academicLoading() => Container(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+    padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+    decoration: BoxDecoration(
+      color: AppColors.card,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AppColors.border),
+    ),
+    child: const Row(
+      children: [
+        SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppColors.accent,
+          ),
         ),
-        child: const Row(
-          children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text('Loading academic information from LU…',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5)),
-            ),
-          ],
+        SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            'Loading academic information from LU…',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
+          ),
         ),
-      );
+      ],
+    ),
+  );
 
-  Widget _sectionLabel(String s) => Text(s.toUpperCase(),
-      style: const TextStyle(
-          color: AppColors.accentBright,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.6));
+  Widget _sectionLabel(String s) => Text(
+    s.toUpperCase(),
+    style: const TextStyle(
+      color: AppColors.accentBright,
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.6,
+    ),
+  );
 
   Widget _row(IconData icon, String label, String value, {Color? color}) {
     return Row(
@@ -352,14 +550,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         Icon(icon, size: 18, color: color ?? AppColors.accentBright),
         const SizedBox(width: 12),
-        Text(label,
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+        ),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(value,
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                  color: AppColors.text, fontSize: 13, fontWeight: FontWeight.w600)),
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              color: AppColors.text,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ],
     );
