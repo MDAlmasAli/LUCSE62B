@@ -397,9 +397,15 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
       if (!mounted) return;
       setState(() {});
       final last = _lastLoaded;
+      final now = DateTime.now();
+      final dayChanged =
+          last != null &&
+          (last.year != now.year ||
+              last.month != now.month ||
+              last.day != now.day);
       if (!_refreshing &&
           last != null &&
-          DateTime.now().difference(last) >= const Duration(minutes: 5)) {
+          (dayChanged || now.difference(last) >= const Duration(minutes: 5))) {
         _load();
       }
     });
@@ -621,6 +627,12 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
       );
     }
 
+    final hasClassStatus = current != null || next != null;
+    final hasBusStatus = nextTo != null || nextFrom != null;
+    if (_loading || (!hasClassStatus && !hasBusStatus)) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 2, 14, 6),
       padding: const EdgeInsets.fromLTRB(15, 13, 15, 14),
@@ -644,9 +656,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
               const Icon(Icons.bolt_rounded, size: 16, color: _accent),
               const SizedBox(width: 6),
               Text(
-                _loading
-                    ? 'CLASS STATUS'
-                    : (dayName.isEmpty ? 'TODAY' : dayName),
+                dayName.isEmpty ? 'TODAY' : dayName,
                 style: const TextStyle(
                   color: AppColors.accentBright,
                   fontSize: 11.5,
@@ -667,86 +677,58 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
             ],
           ),
           const SizedBox(height: 12),
-          if (_loading) ...[
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Text(
-                'Loading today’s schedule…',
-                style: TextStyle(color: AppColors.muted, fontSize: 12.5),
+          if (current != null) ...[
+            _statusRow(
+              dot: _green,
+              label: 'NOW RUNNING',
+              value: current.name.isNotEmpty
+                  ? '${current.code} · ${current.name}'
+                  : current.code,
+              subtitle:
+                  'Room: ${current.room.isEmpty ? '—' : current.room} · ${current.time}',
+              trailing: _fmt('ends ', current.end - nowMin),
+              muted: false,
+            ),
+          ],
+          if (current != null && next != null) const SizedBox(height: 10),
+          if (next != null) ...[
+            _statusRow(
+              dot: _accent,
+              label: 'NEXT CLASS',
+              value: next.name.isNotEmpty
+                  ? '${next.code} · ${next.name}'
+                  : next.code,
+              trailing: _fmt('', next.start - nowMin),
+              muted: false,
+            ),
+            const SizedBox(height: 9),
+            Padding(
+              padding: const EdgeInsets.only(left: 18),
+              child: Row(
+                children: [
+                  _infoChip(Icons.schedule_rounded, 'Time', next.time, _accent),
+                  const SizedBox(width: 8),
+                  _infoChip(
+                    Icons.meeting_room_rounded,
+                    'Room',
+                    next.room.isEmpty ? '—' : next.room,
+                    _accent,
+                  ),
+                ],
               ),
             ),
-          ] else ...[
-            // Class rows only on days that actually have classes. The bus always
-            // shows (below).
-            if (slots.isNotEmpty) ...[
-              _statusRow(
-                dot: _green,
-                label: 'NOW RUNNING',
-                value: current != null
-                    ? (current.name.isNotEmpty
-                          ? '${current.code} · ${current.name}'
-                          : current.code)
-                    : 'No class right now',
-                subtitle: current != null
-                    ? 'Room: ${current.room.isEmpty ? '—' : current.room} · ${current.time}'
-                    : null,
-                trailing: current != null
-                    ? _fmt('ends ', current.end - nowMin)
-                    : null,
-                muted: current == null,
-              ),
-              const SizedBox(height: 10),
-              _statusRow(
-                dot: _accent,
-                label: 'NEXT CLASS',
-                value: next != null
-                    ? (next.name.isNotEmpty
-                          ? '${next.code} · ${next.name}'
-                          : next.code)
-                    : 'No more classes',
-                trailing: next != null ? _fmt('', next.start - nowMin) : null,
-                muted: next == null,
-              ),
-              if (next != null) ...[
-                const SizedBox(height: 9),
-                Padding(
-                  padding: const EdgeInsets.only(left: 18),
-                  child: Row(
-                    children: [
-                      _infoChip(
-                        Icons.schedule_rounded,
-                        'Time',
-                        next.time,
-                        _accent,
-                      ),
-                      const SizedBox(width: 8),
-                      _infoChip(
-                        Icons.meeting_room_rounded,
-                        'Room',
-                        next.room.isEmpty ? '—' : next.room,
-                        _accent,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-            _busSection(nowMin, showDivider: slots.isNotEmpty),
           ],
+          _busSection(nowMin, showDivider: hasClassStatus),
         ],
       ),
     );
   }
 
   /// Next Bus — To LU / From LU with live "in Xm" countdowns, like the website.
-  Widget _busSection(
-    int nowMin, {
-    bool showDivider = true,
-    bool loading = false,
-  }) {
+  Widget _busSection(int nowMin, {bool showDivider = true}) {
     final nextTo = _toLU.where((b) => b.t >= nowMin).firstOrNull;
     final nextFrom = _fromLU.where((b) => b.t >= nowMin).firstOrNull;
-    if (!loading && nextTo == null && nextFrom == null) {
+    if (nextTo == null && nextFrom == null) {
       return const SizedBox.shrink();
     }
     return Column(
@@ -786,18 +768,17 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
           padding: const EdgeInsets.only(left: 25),
           child: Row(
             children: [
-              Expanded(
-                child: _busCol('To LU', nextTo, nowMin, loading: loading),
-              ),
-              Container(
-                width: 1,
-                height: 30,
-                color: AppColors.border,
-                margin: const EdgeInsets.symmetric(horizontal: 10),
-              ),
-              Expanded(
-                child: _busCol('From LU', nextFrom, nowMin, loading: loading),
-              ),
+              if (nextTo != null)
+                Expanded(child: _busCol('To LU', nextTo, nowMin)),
+              if (nextTo != null && nextFrom != null)
+                Container(
+                  width: 1,
+                  height: 30,
+                  color: AppColors.border,
+                  margin: const EdgeInsets.symmetric(horizontal: 10),
+                ),
+              if (nextFrom != null)
+                Expanded(child: _busCol('From LU', nextFrom, nowMin)),
             ],
           ),
         ),
@@ -805,13 +786,8 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
     );
   }
 
-  Widget _busCol(
-    String dir,
-    ({String time, int t})? bus,
-    int nowMin, {
-    bool loading = false,
-  }) {
-    final cd = bus != null ? _fmt('', bus.t - nowMin) : null;
+  Widget _busCol(String dir, ({String time, int t}) bus, int nowMin) {
+    final cd = _fmt('', bus.t - nowMin);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -827,9 +803,9 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
         Row(
           children: [
             Text(
-              loading ? 'Loading…' : (bus?.time ?? 'No more'),
-              style: TextStyle(
-                color: bus != null ? AppColors.textBright : AppColors.muted,
+              bus.time,
+              style: const TextStyle(
+                color: AppColors.textBright,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
@@ -1038,9 +1014,14 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
               .where((item) => item.due?.isAfter(DateTime.now()) == true)
               .toList()
             ..sort((a, b) => a.due!.compareTo(b.due!));
+      final dueCounts = <String, int>{};
+      for (final item in upcoming) {
+        final label = _deadlineTypeLabel(item.type);
+        dueCounts.update(label, (count) => count + 1, ifAbsent: () => 1);
+      }
       final widgetDeadline = upcoming.isEmpty
           ? 'No upcoming deadline'
-          : 'Due: ${upcoming.first.course} · ${upcoming.first.title}';
+          : 'Due: ${dueCounts.entries.map((entry) => '${entry.key} ${entry.value}').join(' · ')}';
       await HomeWidgetService.instance.saveDeadline(widgetDeadline);
       if (!mounted) return;
       setState(() {
@@ -1075,6 +1056,19 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
       );
     }
     return DateTime.tryParse(t.replaceFirst(' ', 'T'));
+  }
+
+  static String _deadlineTypeLabel(String value) {
+    final words = value
+        .trim()
+        .split(' ')
+        .where((word) => word.isNotEmpty)
+        .map(
+          (word) =>
+              '${word.substring(0, 1).toUpperCase()}${word.substring(1).toLowerCase()}',
+        )
+        .toList();
+    return words.isEmpty ? 'Task' : words.join(' ');
   }
 
   static bool _sameDay(DateTime a, DateTime b) =>
