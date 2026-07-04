@@ -44,32 +44,40 @@ export default {
 
         // Rate limit: max 10 lookups per hour per IP
         if (env.SMS_RATE) {
-          const ip  = request.headers.get('CF-Connecting-IP') || 'unknown';
-          const now = Date.now();
-          const key = `lookup:h:${ip}:${Math.floor(now / 3600000)}`;
-          const raw = await env.SMS_RATE.get(key);
-          const cnt = parseInt(raw || '0');
-          if (cnt >= 10) return errResp(cors, 429, 'Too many lookups — try again later');
-          await env.SMS_RATE.put(key, String(cnt + 1), { expirationTtl: 3600 });
+          try {
+            const ip  = request.headers.get('CF-Connecting-IP') || 'unknown';
+            const now = Date.now();
+            const key = `lookup:h:${ip}:${Math.floor(now / 3600000)}`;
+            const raw = await env.SMS_RATE.get(key);
+            const cnt = parseInt(raw || '0');
+            if (cnt >= 10) return errResp(cors, 429, 'Too many lookups — try again later');
+            await env.SMS_RATE.put(key, String(cnt + 1), { expirationTtl: 3600 });
+          } catch (error) {
+            // Authentication must stay available when the optional KV
+            // rate-limiter hits its daily write quota.
+            console.warn('lookup rate limiter unavailable', error);
+          }
         }
 
         const id = env.MAIN_SHEET_ID;
         if (!id) return errResp(cors, 500, 'Not configured');
         const tq = `select * where B='${sid}'`;
         const u  = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=Student%20Info&tq=${encodeURIComponent(tq)}`;
-        const r  = await fetch(u);
+        const r  = await fetch(u).catch(() => null);
+        if (!r || !r.ok) return errResp(cors, 502, 'Student sheet unavailable');
         const text = await r.text();
         const m = text.match(/setResponse\(([\s\S]+)\)\s*;?\s*$/);
         if (!m) return errResp(cors, 502, 'Bad upstream');
-        const parsed = JSON.parse(m[1]);
+        let parsed;
+        try { parsed = JSON.parse(m[1]); } catch { return errResp(cors, 502, 'Bad upstream'); }
         const rows   = parsed.table?.rows || [];
         if (!rows.length) return jsonResp(cors, { found: false });
         const cells  = (rows[0].c || []).map(c => (c && c.v !== null && c.v !== undefined) ? String(c.f || c.v).trim() : '');
         return jsonResp(cors, { found: true, id: cells[1] || sid, name: cells[2] || 'Student' });
       }
 
-      // Main Sheet is the authoritative access list. The minute cron refreshes
-      // this roster in KV, so clients can revalidate without hammering Sheets.
+      // Main Sheet is the authoritative access list. The minute cron detects
+      // changes immediately; unchanged snapshots are persisted only hourly.
       if (p === '/session-status') {
         if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
         const sid = String(url.searchParams.get('id') || '').trim();
@@ -1432,13 +1440,26 @@ async function refreshActiveStudentRoster(env) {
       if (raw) previous = JSON.parse(raw);
     } catch {}
   }
-  const roster = { ids, checkedAt: Date.now() };
-  if (env.SMS_RATE) {
-    await env.SMS_RATE.put(ACTIVE_ROSTER_KEY, JSON.stringify(roster), {
-      expirationTtl: 86400,
-    });
+  const now = Date.now();
+  const roster = { ids, checkedAt: now };
+  const previousIds = Array.isArray(previous?.ids) ? previous.ids : [];
+  const rosterChanged =
+    previousIds.length !== ids.length ||
+    ids.some((id, index) => id !== previousIds[index]);
+  const hourlyRefreshDue =
+    !Number(previous?.checkedAt) ||
+    Number(previous.checkedAt) <= now - 3600000;
+  if (env.SMS_RATE && (!previous || rosterChanged || hourlyRefreshDue)) {
+    try {
+      await env.SMS_RATE.put(ACTIVE_ROSTER_KEY, JSON.stringify(roster), {
+        expirationTtl: 86400,
+      });
+    } catch (error) {
+      // A KV quota issue must not stop roster checks, removal cleanup, or login.
+      console.warn('active roster cache write unavailable', error);
+    }
   }
-  await unlinkRemovedStudents(env, previous?.ids || [], ids);
+  await unlinkRemovedStudents(env, previousIds, ids);
   return roster;
 }
 
@@ -1449,7 +1470,7 @@ async function getActiveStudentRoster(env) {
       if (raw) {
         const roster = JSON.parse(raw);
         if (Array.isArray(roster.ids) &&
-            Number(roster.checkedAt) > Date.now() - 90000) {
+            Number(roster.checkedAt) > Date.now() - 4500000) {
           return roster;
         }
       }
