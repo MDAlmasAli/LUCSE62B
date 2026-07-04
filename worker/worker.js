@@ -1898,6 +1898,8 @@ async function checkExamRoutine(env, type) {
     return;
   }
 
+  await checkExamReminder(env, type, label, allSlots);
+
   const sorted = [...allSlots].sort((a, b) => `${a.day}${a.time}${a.code}`.localeCompare(`${b.day}${b.time}${b.code}`));
   const hash   = await sha256(JSON.stringify(sorted));
   const stored = await supabaseGetState(env, stateKey);
@@ -1925,6 +1927,67 @@ async function checkExamRoutine(env, type) {
    first run it just seeds the baseline; afterwards any notice whose link is
    new fires a single public notification + push. We key on link (stable
    per-notice) rather than title so a re-titled notice isn't re-announced. */
+function examSlotDateKey(value) {
+  const text = String(value || '').trim();
+  const iso = text.match(/(?:^|\D)(\d{4})-(\d{1,2})-(\d{1,2})(?:\D|$)/);
+  if (iso) {
+    return `${iso[1]}-${String(Number(iso[2])).padStart(2, '0')}-${String(Number(iso[3])).padStart(2, '0')}`;
+  }
+  const dmy = text.match(/(?:^|\D)(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})(?:\D|$)/);
+  if (dmy) {
+    return `${dmy[3]}-${String(Number(dmy[2])).padStart(2, '0')}-${String(Number(dmy[1])).padStart(2, '0')}`;
+  }
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return '';
+  const parts = dhakaClockParts(parsed);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+/* During the 18:00 Asia/Dhaka hour, notify 62B about each Mid/Final exam
+   scheduled for tomorrow. The daily state lets the minute cron pick up a late
+   routine edit without sending any already-announced exam twice. */
+async function checkExamReminder(env, type, label, slots) {
+  if (!env.SUPA_KEY) return;
+  const clock = dhakaClockParts();
+  if (Number(clock.hour) !== 18) return;
+  const today = `${clock.year}-${clock.month}-${clock.day}`;
+  const tomorrow = addDateKeyDays(today, 1);
+
+  const byKey = new Map();
+  for (const slot of slots) {
+    if (examSlotDateKey(slot.day) !== tomorrow) continue;
+    const key = `${slot.code}|${slot.day}|${slot.time}`;
+    if (!byKey.has(key)) byKey.set(key, { ...slot, key });
+  }
+  const due = [...byKey.values()];
+  const stateKey = `${type}_exam_reminder`;
+  const state = await supabaseGetState(env, stateKey);
+  const known = state?.state_data?.date === today
+    ? new Set(state.state_data?.keys || []) : new Set();
+  const fresh = due.filter(item => !known.has(item.key));
+  const keys = [...new Set([...known, ...due.map(item => item.key)])];
+  const hash = await sha256(`${today}|${JSON.stringify(keys)}`);
+  await supabaseUpsertState(env, stateKey, hash, {
+    date: today, tomorrow, keys,
+  });
+  if (!fresh.length) return;
+
+  const title = fresh.length === 1
+    ? `📝 ${label} exam tomorrow`
+    : `📝 ${fresh.length} ${label} exams tomorrow`;
+  const body = fresh.slice(0, 6).map(item =>
+    `• ${item.code}${item.time ? ` · ${item.time}` : ''}`
+  ).join('\n') + (fresh.length > 6 ? `\n…and ${fresh.length - 6} more` : '');
+  await insertNotification(
+    env,
+    `${type}_exam_reminder`,
+    title,
+    body,
+    '/pages/info.html',
+  );
+  await sendPushToAll(env);
+}
+
 async function checkNotices(env) {
   if (!env.SUPA_KEY) return;
   const { notices } = await fetchLuNotices(env);
