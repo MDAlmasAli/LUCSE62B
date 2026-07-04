@@ -25,7 +25,7 @@
         android:layout_marginTop="4dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:text="Open the app to sync"
+        android:text="No upcoming class"
         android:textColor="#F8FAFC"
         android:textSize="16sp"
         android:textStyle="bold" />
@@ -37,11 +37,11 @@
         android:layout_marginTop="2dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:text="Routine and room"
+        android:text="Open the app to refresh your routine"
         android:textColor="#B6B6C8"
         android:textSize="11sp" />
 
-    <View
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="9dp"
@@ -49,9 +49,21 @@
         android:background="#34334A" />
 
     <TextView
+        android:id="@+id/widget_bus_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="No upcoming bus"
+        android:textColor="#67E8F9"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <TextView
         android:id="@+id/widget_deadline"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
         android:ellipsize="end"
         android:maxLines="1"
         android:text="No upcoming deadline"

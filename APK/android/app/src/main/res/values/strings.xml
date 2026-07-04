@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="cse_widget_description">Current class, next class and deadline</string>
+    <string name="cse_widget_description">Current class, next bus and nearest deadline</string>
 </resources>

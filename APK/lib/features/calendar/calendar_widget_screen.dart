@@ -14,13 +14,56 @@ class CalendarWidgetScreen extends StatefulWidget {
 
 class _CalendarWidgetScreenState extends State<CalendarWidgetScreen> {
   bool _pinSupported = false;
+  bool _checkingPin = true;
+  bool _adding = false;
 
   @override
   void initState() {
     super.initState();
-    HomeWidgetService.instance.canPin().then((value) {
-      if (mounted) setState(() => _pinSupported = value);
-    });
+    HomeWidgetService.instance
+        .canPin()
+        .then((value) {
+          if (mounted) {
+            setState(() {
+              _pinSupported = value;
+              _checkingPin = false;
+            });
+          }
+        })
+        .catchError((_) {
+          if (mounted) setState(() => _checkingPin = false);
+        });
+  }
+
+  Future<void> _addWidget() async {
+    if (_adding) return;
+    setState(() => _adding = true);
+    try {
+      await HomeWidgetService.instance.requestPin();
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        'Confirm Add on the launcher. If it is rejected, long-press the Home '
+        'screen and choose Widgets → CSE 62B Portal.',
+      );
+    } catch (_) {
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        'Use Home screen → long-press → Widgets → CSE 62B Portal.',
+      );
+    } finally {
+      if (mounted) setState(() => _adding = false);
+    }
+  }
+
+  Future<void> _refreshWidget() async {
+    try {
+      await HomeWidgetService.instance.ensureDefaults();
+      if (mounted) AppToast.show(context, 'Home widget refreshed.');
+    } catch (_) {
+      if (mounted) AppToast.show(context, 'Could not refresh the widget.');
+    }
   }
 
   @override
@@ -43,22 +86,36 @@ class _CalendarWidgetScreenState extends State<CalendarWidgetScreen> {
             'See your current/next class, room and nearest deadline without '
                 'opening the app.',
             FilledButton.icon(
-              onPressed: _pinSupported
-                  ? () async {
-                      await HomeWidgetService.instance.requestPin();
-                      if (context.mounted) {
-                        AppToast.show(
-                          context,
-                          'Widget request sent to launcher.',
-                        );
-                      }
-                    }
-                  : null,
+              onPressed: _pinSupported && !_adding ? _addWidget : null,
               icon: const Icon(Icons.add_to_home_screen_rounded),
               label: Text(
-                _pinSupported
+                _checkingPin
+                    ? 'Checking launcher…'
+                    : _adding
+                    ? 'Opening launcher…'
+                    : _pinSupported
                     ? 'Add to Home Screen'
                     : 'Use launcher widget picker',
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _refreshWidget,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Refresh Home Widget'),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(4, 8, 4, 4),
+            child: Text(
+              'Manual add: long-press an empty area on the Home screen → '
+              'Widgets → CSE 62B Portal. When there is no class, bus or '
+              'deadline, the widget will show a clear status instead of '
+              'remaining blank.',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 11.5,
+                height: 1.45,
               ),
             ),
           ),

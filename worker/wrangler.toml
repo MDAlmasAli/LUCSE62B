@@ -23,7 +23,6 @@ FIREBASE_PROJECT_ID = "cse-62b-portal"
 #   FIREBASE_CLIENT_EMAIL ← service-account client_email
 #   FIREBASE_PRIVATE_KEY  ← service-account private_key PEM
 #   RELEASE_PUBLISH_KEY   ← owner-only APK publishing endpoint
-#   ADMIN_SESSION_SECRET  ← signs short-lived Admin Control Center sessions
 #   RESULT_STUDENT_ID   ← CR's student ID for result monitoring
 #   RESULT_BIRTH_DATE   ← CR's birth date (YYYY-MM-DD) for result monitoring
 

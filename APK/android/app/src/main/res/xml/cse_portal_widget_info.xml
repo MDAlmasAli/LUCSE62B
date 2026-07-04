@@ -3,7 +3,7 @@
     android:description="@string/cse_widget_description"
     android:initialLayout="@layout/cse_portal_widget"
     android:minWidth="250dp"
-    android:minHeight="110dp"
+    android:minHeight="120dp"
     android:previewLayout="@layout/cse_portal_widget"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="4"

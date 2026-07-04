@@ -596,16 +596,27 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
         ? widgetItem.code
         : '${widgetItem.code} · ${widgetItem.name}';
     final widgetDetails = widgetItem == null
-        ? dayName
+        ? '$dayName · Check again tomorrow'
         : 'Room ${widgetItem.room.isEmpty ? '—' : widgetItem.room} · ${widgetItem.time}';
-    final widgetSignature = '$widgetLabel|$widgetTitle|$widgetDetails';
+    final nextTo = _toLU.where((bus) => bus.t >= nowMin).firstOrNull;
+    final nextFrom = _fromLU.where((bus) => bus.t >= nowMin).firstOrNull;
+    final busParts = <String>[
+      if (nextTo != null) 'To LU ${nextTo.time}',
+      if (nextFrom != null) 'From LU ${nextFrom.time}',
+    ];
+    final widgetBus = busParts.isEmpty
+        ? 'No more buses today'
+        : 'Next bus: ${busParts.join(' · ')}';
+    final widgetSignature =
+        '$widgetLabel|$widgetTitle|$widgetDetails|$widgetBus';
     if (_lastWidgetSignature != widgetSignature) {
       _lastWidgetSignature = widgetSignature;
       scheduleMicrotask(
-        () => HomeWidgetService.instance.saveClassStatus(
+        () => HomeWidgetService.instance.saveScheduleStatus(
           label: widgetLabel,
           title: widgetTitle,
           details: widgetDetails,
+          busStatus: widgetBus,
         ),
       );
     }
@@ -1040,6 +1051,9 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
         if (mounted) setState(() {});
       });
     } catch (_) {
+      await HomeWidgetService.instance
+          .saveDeadline('Deadline information unavailable')
+          .catchError((_) {});
       if (mounted) setState(() => _loading = false);
     }
   }

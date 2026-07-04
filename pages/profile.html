@@ -1597,9 +1597,6 @@
 
         <!-- Action Buttons -->
         <div class="profile-action-strip">
-          <a class="btn-action-primary" id="btnAdminControl" href="admin.html" style="display:none;text-decoration:none;">
-            <i class="fa-solid fa-shield-halved"></i> Admin Control
-          </a>
           <a class="btn-action-primary" href="notification-preferences.html" style="text-decoration:none;">
             <i class="fa-solid fa-sliders"></i> Notifications
           </a>
@@ -1899,9 +1896,6 @@
     } else {
       currentUser = JSON.parse(userData);
       isDemoUser = !!(currentUser.isDemo || String(currentUser.id || '').toUpperCase() === 'DEMO');
-      if (String(currentUser.id || '') === '0182320012101068') {
-        document.getElementById('btnAdminControl').style.display = 'inline-flex';
-      }
 
       document.getElementById('userName').innerText = currentUser.name || 'Student';
       document.getElementById('userId').innerText = 'ID: ' + currentUser.id;

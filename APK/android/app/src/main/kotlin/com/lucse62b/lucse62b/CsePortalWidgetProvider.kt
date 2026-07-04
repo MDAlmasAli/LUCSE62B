@@ -22,11 +22,18 @@ class CsePortalWidgetProvider : HomeWidgetProvider() {
                 )
                 setTextViewText(
                     R.id.widget_class_title,
-                    widgetData.getString("class_title", "Open the app to sync"),
+                    widgetData.getString("class_title", "No upcoming class"),
                 )
                 setTextViewText(
                     R.id.widget_class_details,
-                    widgetData.getString("class_details", "Routine and room"),
+                    widgetData.getString(
+                        "class_details",
+                        "Open the app to refresh your routine",
+                    ),
+                )
+                setTextViewText(
+                    R.id.widget_bus_status,
+                    widgetData.getString("bus_status", "No upcoming bus"),
                 )
                 setTextViewText(
                     R.id.widget_deadline,

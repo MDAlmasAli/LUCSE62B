@@ -10,15 +10,35 @@ class HomeWidgetService {
   static const qualifiedProvider =
       'com.lucse62b.lucse62b.CsePortalWidgetProvider';
 
-  Future<void> saveClassStatus({
+  Future<void> ensureDefaults() async {
+    if (!Platform.isAndroid) return;
+    final defaults = <String, String>{
+      'class_label': 'TODAY',
+      'class_title': 'No upcoming class',
+      'class_details': 'Open the app to refresh your routine',
+      'bus_status': 'No upcoming bus',
+      'deadline': 'No upcoming deadline',
+    };
+    for (final entry in defaults.entries) {
+      final saved = await HomeWidget.getWidgetData<String>(entry.key);
+      if (saved == null || saved.trim().isEmpty) {
+        await HomeWidget.saveWidgetData(entry.key, entry.value);
+      }
+    }
+    await update();
+  }
+
+  Future<void> saveScheduleStatus({
     required String label,
     required String title,
     required String details,
+    required String busStatus,
   }) async {
     if (!Platform.isAndroid) return;
     await HomeWidget.saveWidgetData('class_label', label);
     await HomeWidget.saveWidgetData('class_title', title);
     await HomeWidget.saveWidgetData('class_details', details);
+    await HomeWidget.saveWidgetData('bus_status', busStatus);
     await update();
   }
 
@@ -43,6 +63,7 @@ class HomeWidgetService {
 
   Future<void> requestPin() async {
     if (!Platform.isAndroid) return;
+    await ensureDefaults();
     await HomeWidget.requestPinWidget(
       androidName: provider,
       qualifiedAndroidName: qualifiedProvider,

@@ -270,34 +270,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 10),
                 if (s.id == K.attendanceAdminId) ...[
                   GlassCard(
-                    onTap: () => context.push('/admin'),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.admin_panel_settings_rounded,
-                          size: 18,
-                          color: AppColors.accentBright,
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Admin Control Center',
-                          style: TextStyle(
-                            color: AppColors.text,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const Spacer(),
-                        const Icon(
-                          Icons.chevron_right,
-                          color: AppColors.muted,
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  GlassCard(
                     onTap: () => context.push('/attendance'),
                     child: Row(
                       children: [

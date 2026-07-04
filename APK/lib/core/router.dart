@@ -2,7 +2,6 @@ import 'package:go_router/go_router.dart';
 
 import '../data/models/app_version.dart';
 import '../data/session.dart';
-import '../features/admin/admin_control_screen.dart';
 import '../features/auth/dob_gate_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/classwork/classwork_screen.dart';
@@ -51,7 +50,6 @@ GoRouter buildRouter() {
 
       if (loc == '/update') return null; // always reachable
       if (!s.isLoggedIn) return loc == '/login' ? null : '/login';
-      if (loc == '/admin' && s.student?.id != '0182320012101068') return '/';
       if (!s.dobOk) return loc == '/dob' ? null : '/dob';
       if (loc == '/login' || loc == '/dob') return '/';
       return null;
@@ -109,7 +107,6 @@ GoRouter buildRouter() {
       GoRoute(path: '/notice', builder: (_, _) => const NoticeScreen()),
       GoRoute(path: '/user-guide', builder: (_, _) => const UserGuideScreen()),
       GoRoute(path: '/attendance', builder: (_, _) => const AttendanceScreen()),
-      GoRoute(path: '/admin', builder: (_, _) => const AdminControlScreen()),
       GoRoute(
         path: '/notification-preferences',
         builder: (_, _) => const NotificationPreferencesScreen(),
