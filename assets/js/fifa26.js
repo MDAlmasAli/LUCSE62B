@@ -73,12 +73,15 @@
       });
   }
   /* UTC window covering BD "today" generously (yesterday→tomorrow UTC) */
-  function todayWindow() {
+  function dateWindow(backDays, forwardDays) {
     var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
-    var a = new Date(d.getTime() - 864e5), b = new Date(d.getTime() + 864e5);
+    var a = new Date(d.getTime() - (backDays || 0) * 864e5);
+    var b = new Date(d.getTime() + (forwardDays || 0) * 864e5);
     var f = function (x) { return '' + x.getUTCFullYear() + p(x.getUTCMonth() + 1) + p(x.getUTCDate()); };
     return f(a) + '-' + f(b);
   }
+  function todayWindow() { return dateWindow(1, 1); }
+  function upcomingWindow() { return dateWindow(1, 8); }
 
   /* ── Supabase (class squad + predictions) ── */
   var SUPA     = 'https://ftvtlqxpalwvyserujuh.supabase.co';
@@ -256,7 +259,7 @@
 
   function refreshBanner() {
     fetchSquad();   /* warm the cache so the ticker can show class banter */
-    fetchMatches(todayWindow(), liveSeen ? 6e4 : 3e5).then(function (m) {
+    fetchMatches(upcomingWindow(), liveSeen ? 6e4 : 3e5).then(function (m) {
       renderTicker(m);
       updateHomeStrip(m);
     }).catch(function () {});
@@ -326,6 +329,15 @@
     var post = today.filter(function (m) { return m.state === 'post'; });
     if (post.length) {
       sub.innerHTML = 'Full-time · ' + post.map(function (m) { return '<b>' + scoreOf(m) + '</b>'; }).join('  ·  ');
+      return;
+    }
+    var now = Date.now();
+    var next = (matches || []).filter(function (m) { return m.state === 'pre' && new Date(m.date).getTime() > now; })
+                              .sort(function (x, y) { return new Date(x.date) - new Date(y.date); })[0];
+    if (next) {
+      var t = next.teams || [], a = t[0] || {}, b = t[1] || {};
+      sub.innerHTML = 'Next match · ' + esc(a.abbr || a.name) + ' v ' + esc(b.abbr || b.name) +
+        ' <b>' + esc(bdDateLabel(next.date)) + ', ' + esc(bdTime(next.date)) + '</b>';
       return;
     }
     sub.textContent = HOME_STATIC;
@@ -453,7 +465,7 @@
   function renderToday() {
     var body = document.getElementById('f26-mc-body');
     if (!body) return;
-    fetchMatches(todayWindow(), 5e4).then(function (matches) {
+    fetchMatches(upcomingWindow(), 5e4).then(function (matches) {
       if (mcTab !== 'today') return;
       var tk = todayKey();
       var today = matches.filter(function (m) { return bdDateKey(m.date) === tk; })
