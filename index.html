@@ -337,7 +337,7 @@
 
     <!-- Quick Info Strip: Next Class · Time · Room · Next Bus -->
     <div class="qi-strip fade-in delay-2 auth-only" id="qiStrip">
-      <div class="qi-item">
+      <div class="qi-item" id="qiNowItem">
         <span class="qi-icon">🟢</span>
         <div class="qi-content">
           <span class="qi-label">Now Running</span>
@@ -345,7 +345,7 @@
           <span class="qi-countdown" id="qi-now-cd"></span>
         </div>
       </div>
-      <div class="qi-sep"></div>
+      <div class="qi-sep" id="qiNowSep"></div>
       <div class="qi-item">
         <span class="qi-icon">📚</span>
         <div class="qi-content">
@@ -739,6 +739,17 @@
       }
 
       function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+      function setNowRunningVisible(show) {
+        ['qiNowItem', 'qiNowSep'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = show ? '' : 'none';
+        });
+        if (!show) {
+          set('qi-now', '');
+          set('qi-now-cd', '');
+        }
+      }
+      setNowRunningVisible(false);
 
       /* Stored target times (in minutes from midnight) for live countdown ticks */
       let _classMin = null, _busFromMin = null, _busToMin = null, _nowEndMin = null;
@@ -835,11 +846,12 @@
             });
 
             if (current) {
+              setNowRunningVisible(true);
               const cname = courseNames[current.code.toUpperCase()] || '';
               set('qi-now', cname ? `${current.code} · ${cname}` : current.code);
               _nowEndMin = current.endMin;
             } else {
-              set('qi-now', 'No class right now'); _nowEndMin = null;
+              setNowRunningVisible(false); _nowEndMin = null;
             }
 
             if (next) {
@@ -853,7 +865,7 @@
               set('qi-class', 'No more classes'); set('qi-time', '—'); set('qi-room', '—');
             }
           } else {
-            set('qi-now', 'No class right now');
+            setNowRunningVisible(false); _nowEndMin = null;
             set('qi-class', 'No class today'); set('qi-time', '—'); set('qi-room', '—');
           }
         }
