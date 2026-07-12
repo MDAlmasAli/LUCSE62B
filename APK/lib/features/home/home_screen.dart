@@ -8,6 +8,7 @@ import '../../core/app_colors.dart';
 import '../../core/name_format.dart';
 import '../../core/sheets_api.dart';
 import '../../data/connectivity_service.dart';
+import '../../data/exam_repository.dart';
 import '../../data/home_widget_service.dart';
 import '../../data/routine_grid_repository.dart';
 import '../../data/session.dart';
@@ -208,6 +209,7 @@ class HomeScreen extends StatelessWidget {
             SliverToBoxAdapter(child: _greeting(student?.name)),
             if (student != null && !Session.instance.isDemo)
               const SliverToBoxAdapter(child: _ClassStatusCard()),
+            const SliverToBoxAdapter(child: _UpcomingExamStrip()),
             const SliverToBoxAdapter(child: _DeadlineStrip()),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(14, 6, 14, 28),
@@ -961,6 +963,305 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
     if (diffMin < 60) return '${prefix}in ${diffMin}m';
     final h = diffMin ~/ 60, m = diffMin % 60;
     return m > 0 ? '${prefix}in ${h}h ${m}m' : '${prefix}in ${h}h';
+  }
+}
+
+class _ExamHit {
+  final String type;
+  final Color color;
+  final ExamItem exam;
+  const _ExamHit(this.type, this.color, this.exam);
+}
+
+/// Compact upcoming exam strip on the home page. Mirrors the website home
+/// countdown: it appears only when a mid/final exam is within 7 days.
+class _UpcomingExamStrip extends StatefulWidget {
+  const _UpcomingExamStrip();
+
+  @override
+  State<_UpcomingExamStrip> createState() => _UpcomingExamStripState();
+}
+
+class _UpcomingExamStripState extends State<_UpcomingExamStrip> {
+  List<_ExamHit> _hits = const [];
+  bool _loading = true;
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final mid = await ExamRepository.instance
+          .load('mid', batch: '62', section: 'B')
+          .catchError((_) => <ExamItem>[]);
+      final fin = await ExamRepository.instance
+          .load('final', batch: '62', section: 'B')
+          .catchError((_) => <ExamItem>[]);
+      final today = _dateOnly(DateTime.now());
+      final all =
+          <_ExamHit>[
+              ...mid.map(
+                (e) => _ExamHit('Mid Term', const Color(0xFF34D399), e),
+              ),
+              ...fin.map(
+                (e) => _ExamHit('Final Term', const Color(0xFFF87171), e),
+              ),
+            ].where((hit) {
+              final d = hit.exam.dateObj;
+              if (d == null) return false;
+              final examDay = _dateOnly(d);
+              final days = examDay.difference(today).inDays;
+              return days >= 0 && days <= 7;
+            }).toList()
+            ..sort((a, b) {
+              final da = _examDateTime(a.exam);
+              final db = _examDateTime(b.exam);
+              if (da == null || db == null) return 0;
+              return da.compareTo(db);
+            });
+
+      if (!mounted) return;
+      setState(() {
+        _hits = all.take(2).toList();
+        _loading = false;
+      });
+      if (_hits.isNotEmpty) {
+        _ticker ??= Timer.periodic(const Duration(seconds: 1), (_) {
+          if (mounted) setState(() {});
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading || _hits.isEmpty) return const SizedBox.shrink();
+
+    return GestureDetector(
+      onTap: () => context.push('/info/exam'),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(14, 2, 14, 8),
+        padding: const EdgeInsets.fromLTRB(14, 11, 14, 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.accentBright.withValues(alpha: 0.12),
+              const Color(0xFF38BDF8).withValues(alpha: 0.06),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.borderAccent),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(
+                  Icons.event_available_rounded,
+                  size: 16,
+                  color: AppColors.accentBright,
+                ),
+                SizedBox(width: 6),
+                Text(
+                  'UPCOMING EXAM',
+                  style: TextStyle(
+                    color: AppColors.accentBright,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                Spacer(),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.muted,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (var i = 0; i < _hits.length; i++) ...[
+              if (i > 0)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Divider(height: 1, color: AppColors.border),
+                ),
+              _row(_hits[i]),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _row(_ExamHit hit) {
+    final exam = hit.exam;
+    final dt = _examDateTime(exam);
+    final diff = dt?.difference(DateTime.now());
+    final courseName = exam.courseName.trim().isNotEmpty
+        ? exam.courseName.trim()
+        : exam.course.trim();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: hit.color.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                hit.type,
+                style: TextStyle(
+                  color: hit.color,
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text(
+                courseName.isEmpty ? 'Exam' : courseName,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textBright,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (exam.courseName.trim().isNotEmpty && exam.course.trim().isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Text(
+              exam.course.trim(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        const SizedBox(height: 5),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.schedule_rounded, size: 13, color: hit.color),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: diff == null || diff.isNegative
+                          ? 'Starting soon'
+                          : _countdown(diff),
+                      style: TextStyle(
+                        color: hit.color,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    TextSpan(
+                      text: '  ·  ${_fmtExamDate(exam)}',
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  static DateTime? _examDateTime(ExamItem exam) {
+    final d = exam.dateObj;
+    if (d == null) return null;
+    final mins = _parseTimeMins(exam.time);
+    return DateTime(d.year, d.month, d.day, mins ~/ 60, mins % 60);
+  }
+
+  static int _parseTimeMins(String value) {
+    final m = RegExp(
+      r'(\d{1,2}):(\d{2})\s*([AP]M)?',
+      caseSensitive: false,
+    ).firstMatch(value);
+    if (m == null) return 0;
+    var h = int.tryParse(m[1] ?? '') ?? 0;
+    final min = int.tryParse(m[2] ?? '') ?? 0;
+    final ap = (m[3] ?? '').toUpperCase();
+    if (ap == 'PM' && h < 12) h += 12;
+    if (ap == 'AM' && h == 12) h = 0;
+    if (ap.isEmpty && h < 7) h += 12;
+    return h * 60 + min;
+  }
+
+  static String _countdown(Duration diff) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    final d = diff.inDays;
+    final h = diff.inHours % 24;
+    final m = diff.inMinutes % 60;
+    final s = diff.inSeconds % 60;
+    if (d > 0) return '${d}d ${two(h)}h ${two(m)}m ${two(s)}s';
+    if (h > 0) return '${two(h)}h ${two(m)}m ${two(s)}s';
+    return '${two(m)}m ${two(s)}s';
+  }
+
+  static String _fmtExamDate(ExamItem exam) {
+    final d = exam.dateObj;
+    if (d == null) return exam.time;
+    const mo = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final time = exam.time.trim();
+    return '${mo[d.month - 1]} ${d.day}${time.isEmpty ? '' : ', $time'}';
   }
 }
 

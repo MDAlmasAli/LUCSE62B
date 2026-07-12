@@ -335,15 +335,6 @@
       </div>
     </div>
 
-    <!-- Upcoming Deadlines (sits right under the graduation strip, when any exist) -->
-    <div class="deadlines-wrap fade-in delay-2" id="deadlinesWrap" style="display:none;margin-bottom:20px;">
-      <div class="section-header" style="margin-bottom:16px;">
-        <span class="section-label"><i class="fa-solid fa-hourglass-half" style="color:var(--accent-bright);margin-right:6px;"></i>Upcoming Deadlines</span>
-        <div class="section-line"></div>
-      </div>
-      <div class="deadline-list" id="deadlineList"></div>
-    </div>
-
     <!-- Quick Info Strip: Next Class · Time · Room · Next Bus -->
     <div class="qi-strip fade-in delay-2 auth-only" id="qiStrip">
       <div class="qi-item">
@@ -407,6 +398,15 @@
 
     <!-- Exam Countdown (shown when exam ≤ 7 days away) -->
     <div id="examCdHomeWrap" class="auth-only fade-in" style="display:none;margin-bottom:20px;"></div>
+
+    <!-- Upcoming Deadlines (shown under the exam widget, when any exist) -->
+    <div class="deadlines-wrap fade-in delay-2" id="deadlinesWrap" style="display:none;margin-bottom:20px;">
+      <div class="section-header" style="margin-bottom:16px;">
+        <span class="section-label"><i class="fa-solid fa-hourglass-half" style="color:var(--accent-bright);margin-right:6px;"></i>Upcoming Deadlines</span>
+        <div class="section-line"></div>
+      </div>
+      <div class="deadline-list" id="deadlineList"></div>
+    </div>
 
     <!-- Main Links -->
     <div class="section-header fade-in delay-3">
@@ -588,9 +588,11 @@
       justify-content:space-between; gap:14px;
       background:rgba(124,58,237,.07); border:1px solid rgba(124,58,237,.16);
       border-radius:12px; padding:12px 16px; }
+    .ehcd-info { min-width:0; }
     .ehcd-type { display:block; font-size:.6rem; font-weight:700;
       text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
-    .ehcd-course { display:block; font-size:1rem; font-weight:800; color:var(--text); }
+    .ehcd-course { display:block; font-size:1rem; font-weight:800; color:var(--text);
+      line-height:1.22; overflow-wrap:anywhere; }
     .ehcd-date { display:block; font-size:.68rem; color:var(--text-secondary); margin-top:2px; }
     .ehcd-timer { display:flex; align-items:center; gap:4px; flex-shrink:0; }
     .ehcd-unit { text-align:center; min-width:38px; background:rgba(124,58,237,.18);

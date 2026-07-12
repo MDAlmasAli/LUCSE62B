@@ -144,6 +144,41 @@
     return ids;
   }
 
+  let _courseTitles = null;
+
+  async function cdCourseTitles() {
+    if (_courseTitles) return _courseTitles;
+    const map = {};
+    try {
+      const d = await window.fetchSheet('CPG_Courses');
+      const rows = (d.table?.rows || []).map(r => (r.c || []).map(c => (c?.v != null ? String(c.v).trim() : '')));
+      rows.forEach(row => {
+        if (row.length < 2) return;
+        const title = (row[0] || '').trim();
+        const code = (row[1] || '').trim().toUpperCase();
+        if (!code || ['code','title','course'].includes((row[1] || '').trim().toLowerCase())) return;
+        if (title) map[code] = title;
+      });
+    } catch (_) {}
+    _courseTitles = map;
+    return map;
+  }
+
+  function cdCourseDisplay(course, titles) {
+    const code = String(course || '').trim();
+    return titles[code.toUpperCase()] || code;
+  }
+
+  function cdEsc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[ch]));
+  }
+
   /* Merge several GVIZ tables (same format) into one. */
   function cdMergeTables(tables) {
     const valid = tables.filter(t => t?.table);
@@ -264,9 +299,10 @@
     if (typeof window.fetchSheet !== 'function') return;
 
     try {
-      const [midIds, finalIds] = await Promise.all([
+      const [midIds, finalIds, titles] = await Promise.all([
         cdGetSheetIds('mid term'),
         cdGetSheetIds('final term'),
+        cdCourseTitles(),
       ]);
 
       const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -283,7 +319,11 @@
         if (!upcoming.length) continue;
         const next = upcoming[0];
         const diffDays = Math.ceil((cdDateObj(next.date) - today) / 86400000);
-        if (diffDays <= 7) hits.push({ type, exam: next, color });
+        if (diffDays <= 7) hits.push({
+          type,
+          exam: { ...next, courseName: cdCourseDisplay(next.course, titles) },
+          color,
+        });
       }
 
       if (!hits.length) return;
@@ -298,9 +338,9 @@
           ${hits.map((r, i) => `
           <div class="ehcd-card">
             <div class="ehcd-info">
-              <span class="ehcd-type" style="color:${r.color};">${r.type} Term</span>
-              <span class="ehcd-course">${r.exam.course}</span>
-              <span class="ehcd-date">${cdFmtDate(r.exam.date)}&nbsp;·&nbsp;${r.exam.time}</span>
+              <span class="ehcd-type" style="color:${r.color};">${cdEsc(r.type)} Term</span>
+              <span class="ehcd-course">${cdEsc(r.exam.courseName || r.exam.course)}</span>
+              <span class="ehcd-date">${cdEsc(cdFmtDate(r.exam.date))}&nbsp;·&nbsp;${cdEsc(r.exam.time)}</span>
             </div>
             <div class="ehcd-timer">
               <div class="ehcd-unit"><span id="ehcd${i}D">--</span><small>d</small></div>
