@@ -2083,6 +2083,162 @@ async function checkNotices(env) {
    assignment / tutorial / lab report / viva / lab final / project — was posted),
    so students get an in-app + push notification. Seeds a baseline on first run so
    existing deadlines aren't re-announced. */
+const DEADLINE_DEBOUNCE_MS = 10 * 60 * 1000;
+
+function normalizeDeadlineText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function compactDeadlineDate(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const gviz = text.match(/^Date\((\d+),(\d+),(\d+)/);
+  if (gviz) {
+    return `${gviz[1]}-${String(Number(gviz[2]) + 1).padStart(2, '0')}-${String(Number(gviz[3])).padStart(2, '0')}`;
+  }
+  return normalizeDeadlineText(text);
+}
+
+function deadlineIdentity(item) {
+  return [
+    normalizeDeadlineText(item.course),
+    normalizeDeadlineText(item.type),
+    normalizeDeadlineText(item.title),
+  ].join('|');
+}
+
+function deadlineMeaningfulShape(item) {
+  return {
+    course: normalizeDeadlineText(item.course),
+    type: normalizeDeadlineText(item.type),
+    title: normalizeDeadlineText(item.title),
+    deadline: compactDeadlineDate(item.deadline),
+  };
+}
+
+function deadlineTextSimilarity(a, b) {
+  const aa = normalizeDeadlineText(a);
+  const bb = normalizeDeadlineText(b);
+  if (!aa && !bb) return 1;
+  if (!aa || !bb) return 0;
+  if (aa === bb) return 1;
+  if (aa.includes(bb) || bb.includes(aa)) {
+    return Math.min(aa.length, bb.length) / Math.max(aa.length, bb.length);
+  }
+  const aw = new Set(aa.split(' ').filter(Boolean));
+  const bw = new Set(bb.split(' ').filter(Boolean));
+  const common = [...aw].filter(w => bw.has(w)).length;
+  return common ? (2 * common) / (aw.size + bw.size) : 0;
+}
+
+function describeDeadlineItem(item) {
+  const parts = [];
+  if (item.course) parts.push(item.course);
+  if (item.type) parts.push(item.type);
+  const prefix = parts.length ? `${parts.join(' · ')}: ` : '';
+  return `${prefix}${item.title || 'Untitled'}`;
+}
+
+function computeDeadlineDiff(oldItems, newItems) {
+  const oldById = new Map(oldItems.map(i => [deadlineIdentity(i), i]));
+  const newById = new Map(newItems.map(i => [deadlineIdentity(i), i]));
+  const matchedOld = new Set();
+  const matchedNew = new Set();
+  const added = [];
+  const updated = [];
+  const removed = [];
+
+  for (const [id, oldItem] of oldById.entries()) {
+    const newItem = newById.get(id);
+    if (!newItem) continue;
+    matchedOld.add(id);
+    matchedNew.add(id);
+    const fields = [];
+    if (compactDeadlineDate(oldItem.deadline) !== compactDeadlineDate(newItem.deadline)) {
+      fields.push(`Due: ${oldItem.deadline || '?'} → ${newItem.deadline || '?'}`);
+    }
+    if (fields.length) updated.push({ old: oldItem, item: newItem, fields });
+  }
+
+  const unmatchedOld = oldItems.filter(i => !matchedOld.has(deadlineIdentity(i)));
+  const unmatchedNew = newItems.filter(i => !matchedNew.has(deadlineIdentity(i)));
+
+  for (const oldItem of unmatchedOld) {
+    const oldId = deadlineIdentity(oldItem);
+    let best = null;
+    let bestScore = 0;
+    for (const newItem of unmatchedNew) {
+      const newId = deadlineIdentity(newItem);
+      if (matchedNew.has(newId)) continue;
+      if (normalizeDeadlineText(oldItem.course) !== normalizeDeadlineText(newItem.course)) continue;
+      if (normalizeDeadlineText(oldItem.type) !== normalizeDeadlineText(newItem.type)) continue;
+      const score = deadlineTextSimilarity(oldItem.title, newItem.title);
+      if (score > bestScore) { best = newItem; bestScore = score; }
+    }
+    if (best && bestScore >= 0.55) {
+      const newId = deadlineIdentity(best);
+      matchedOld.add(oldId);
+      matchedNew.add(newId);
+      const fields = [];
+      if (normalizeDeadlineText(oldItem.title) !== normalizeDeadlineText(best.title)) fields.push('Details changed');
+      if (compactDeadlineDate(oldItem.deadline) !== compactDeadlineDate(best.deadline)) {
+        fields.push(`Due: ${oldItem.deadline || '?'} → ${best.deadline || '?'}`);
+      }
+      if (fields.length) updated.push({ old: oldItem, item: best, fields });
+    }
+  }
+
+  for (const item of oldItems) {
+    if (!matchedOld.has(deadlineIdentity(item))) removed.push(item);
+  }
+  for (const item of newItems) {
+    if (!matchedNew.has(deadlineIdentity(item))) added.push(item);
+  }
+
+  return { added, updated, removed };
+}
+
+function countDeadlineChanges(changes) {
+  return changes.added.length + changes.updated.length + changes.removed.length;
+}
+
+function formatDeadlineChanges(changes) {
+  const summary = [
+    changes.added.length ? `Added ${changes.added.length}` : '',
+    changes.updated.length ? `Updated ${changes.updated.length}` : '',
+    changes.removed.length ? `Removed ${changes.removed.length}` : '',
+  ].filter(Boolean).join(' · ');
+  const lines = [summary || 'Deadlines changed'];
+  const limit = 6;
+  let used = 0;
+
+  const section = (label, rows, render) => {
+    if (!rows.length || used >= limit) return;
+    lines.push(label);
+    for (const row of rows) {
+      if (used >= limit) break;
+      lines.push(render(row));
+      used++;
+    }
+  };
+
+  section('Added', changes.added, item =>
+    `• ${describeDeadlineItem(item)}${item.deadline ? ` — Due ${item.deadline}` : ''}`);
+  section('Updated', changes.updated, change =>
+    `• ${describeDeadlineItem(change.item)} — ${change.fields.slice(0, 2).join('; ')}`);
+  section('Removed', changes.removed, item =>
+    `• ${describeDeadlineItem(item)}`);
+
+  const total = countDeadlineChanges(changes);
+  if (total > used) lines.push(`…and ${total - used} more`);
+  return lines.join('\n');
+}
+
 async function checkDeadlines(env) {
   if (!env.SUPA_KEY || !env.MAIN_SHEET_ID) return;
   const u = `https://docs.google.com/spreadsheets/d/${env.MAIN_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Deadlines`;
@@ -2095,34 +2251,67 @@ async function checkDeadlines(env) {
   try { rows = JSON.parse(m[1]).table?.rows || []; } catch (e) { return; }
 
   const items = [];
-  for (const row of rows) {
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    const row = rows[rowIndex];
     const cells = (row.c || []).map(c => (c && c.v !== null && c.v !== undefined) ? String(c.f || c.v).trim() : '');
-    const course = cells[0] || '', type = cells[1] || '', title = cells[2] || '';
+    const course = cells[0] || '', type = cells[1] || '', title = cells[2] || '', deadline = cells[3] || '';
     if (!title) continue;
     if (course.toLowerCase() === 'course' || type.toLowerCase() === 'type') continue; // header row
-    items.push({ course, type, title, key: `${course}|${type}|${title}|${cells[3] || ''}` });
+    items.push({ row: rowIndex + 1, course, type, title, deadline });
   }
   if (!items.length) return;
 
-  const keys   = items.map(i => i.key);
-  const hash   = await sha256(JSON.stringify(keys));
+  const meaningful = items.map(deadlineMeaningfulShape);
+  const hash   = await sha256(JSON.stringify(meaningful));
   const stored = await supabaseGetState(env, 'classwork_deadlines');
 
-  if (!stored) { await supabaseUpsertState(env, 'classwork_deadlines', hash, { keys }); return; }
-  if (stored.state_hash === hash) return;
+  if (!stored) {
+    await supabaseUpsertState(env, 'classwork_deadlines', hash, { items, meaningful });
+    await clearSupabaseState(env, 'classwork_deadlines_pending');
+    return;
+  }
+  if (stored.state_hash === hash) {
+    await clearSupabaseState(env, 'classwork_deadlines_pending');
+    return;
+  }
 
-  const known = new Set(stored.state_data?.keys || []);
-  const fresh = items.filter(i => !known.has(i.key));
-  await supabaseUpsertState(env, 'classwork_deadlines', hash, { keys });
-  if (!fresh.length) return;
+  const oldItems = Array.isArray(stored.state_data?.items) ? stored.state_data.items : [];
+  if (!oldItems.length) {
+    await supabaseUpsertState(env, 'classwork_deadlines', hash, { items, meaningful });
+    await clearSupabaseState(env, 'classwork_deadlines_pending');
+    return;
+  }
 
-  const title = fresh.length === 1 ? '📝 New Classwork Posted' : `📝 ${fresh.length} New Classwork Items`;
-  const body  = fresh.slice(0, 5)
-                  .map(i => `• ${i.type ? i.type + ': ' : ''}${i.title}${i.course ? ' (' + i.course + ')' : ''}`)
-                  .join('\n')
-              + (fresh.length > 5 ? `\n…and ${fresh.length - 5} more` : '');
-  await insertNotification(env, 'classwork', title, body, '/pages/classwork.html');
+  const changes = computeDeadlineDiff(oldItems, items);
+  if (!countDeadlineChanges(changes)) {
+    await supabaseUpsertState(env, 'classwork_deadlines', hash, { items, meaningful });
+    await clearSupabaseState(env, 'classwork_deadlines_pending');
+    return;
+  }
+
+  const pending = await supabaseGetState(env, 'classwork_deadlines_pending');
+  const now = Date.now();
+  const firstSeen = pending?.state_hash === hash
+    ? Number(pending.state_data?.first_seen_ms || now)
+    : now;
+  if (!pending || pending.state_hash !== hash || now - firstSeen < DEADLINE_DEBOUNCE_MS) {
+    await supabaseUpsertState(env, 'classwork_deadlines_pending', hash, {
+      items, meaningful, changes,
+      first_seen_ms: firstSeen,
+      first_seen: new Date(firstSeen).toISOString(),
+      last_seen: new Date(now).toISOString(),
+    });
+    return;
+  }
+
+  const total = countDeadlineChanges(changes);
+  const cleanTitle = total === 1 ? '📝 Classwork deadline updated' : `📝 ${total} classwork deadline updates`;
+  const cleanBody = formatDeadlineChanges(changes);
+  await insertNotification(env, 'classwork', cleanTitle, cleanBody, '/pages/classwork.html');
+  await supabaseUpsertState(env, 'classwork_deadlines', hash, { items, meaningful });
+  await clearSupabaseState(env, 'classwork_deadlines_pending');
   await sendPushToAll(env);
+  return;
 }
 
 /* ── What's New Monitor ──
