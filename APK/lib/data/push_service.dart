@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../core/supa.dart';
 import '../core/worker_api.dart';
+import 'home_widget_refresh_service.dart';
 import 'notification_preferences.dart';
 import 'session.dart';
 
@@ -13,6 +14,16 @@ import 'session.dart';
 @pragma('vm:entry-point')
 Future<void> _bgHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+  try {
+    await Supa.init();
+  } catch (_) {}
+  try {
+    await Session.instance.load();
+  } catch (_) {}
+  await HomeWidgetRefreshService.instance.refreshNow(
+    clearCache: true,
+    source: 'push-background',
+  );
   // Notification payloads are displayed by Android automatically. Data-only
   // messages need a local notification or users would never see them.
   if (message.notification != null) return;
@@ -190,6 +201,10 @@ class PushService {
   }
 
   void _showForeground(RemoteMessage m) {
+    HomeWidgetRefreshService.instance.refreshNow(
+      clearCache: true,
+      source: 'push-foreground',
+    );
     final n = m.notification;
     final title = n?.title ?? m.data['title']?.toString() ?? '';
     final body = n?.body ?? m.data['body']?.toString() ?? '';

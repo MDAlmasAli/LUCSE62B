@@ -1021,7 +1021,7 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
       }
       final widgetDeadline = upcoming.isEmpty
           ? 'No upcoming deadline'
-          : _widgetDueSummary(dueCounts, upcoming.length);
+          : _widgetDueSummaryNice(upcoming, dueCounts);
       await HomeWidgetService.instance.saveDeadline(widgetDeadline);
       if (!mounted) return;
       setState(() {
@@ -1071,6 +1071,27 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
     return words.isEmpty ? 'Task' : words.join(' ');
   }
 
+  static String _widgetDueSummaryNice(
+    List<_Dl> upcoming,
+    Map<String, int> counts,
+  ) {
+    final visibleEntries = counts.entries.take(3).toList();
+    final visible = visibleEntries
+        .map((entry) => '${_shortDeadlineType(entry.key)} ${entry.value}')
+        .join(' · ');
+    final visibleCount = visibleEntries.fold<int>(
+      0,
+      (total, entry) => total + entry.value,
+    );
+    final extra = upcoming.length - visibleCount;
+    final summary = extra > 0 ? 'Due: $visible · +$extra' : 'Due: $visible';
+    final nearest = upcoming.first;
+    return '$summary\nNext: ${_shortDeadlineType(nearest.type)} · ${_formatWidgetDue(nearest.due!)}';
+  }
+
+  // Kept for older cached widget text migration paths; new widget text uses
+  // [_widgetDueSummaryNice].
+  // ignore: unused_element
   static String _widgetDueSummary(Map<String, int> counts, int total) {
     final visible = counts.entries
         .take(3)
@@ -1094,6 +1115,22 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
       default:
         return value.length > 8 ? value.substring(0, 8) : value;
     }
+  }
+
+  static String _formatWidgetDue(DateTime due) {
+    final now = DateTime.now();
+    final time = _formatWidgetTime(due);
+    if (_sameDay(now, due)) return 'Today $time';
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    if (_sameDay(tomorrow, due)) return 'Tomorrow $time';
+    return '${due.day}/${due.month} $time';
+  }
+
+  static String _formatWidgetTime(DateTime d) {
+    var h = d.hour;
+    final ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 == 0 ? 12 : h % 12;
+    return '$h:${d.minute.toString().padLeft(2, '0')} $ap';
   }
 
   static bool _sameDay(DateTime a, DateTime b) =>

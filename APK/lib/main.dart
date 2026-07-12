@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'core/app_theme.dart';
@@ -5,6 +7,7 @@ import 'core/router.dart';
 import 'core/supa.dart';
 import 'data/connectivity_service.dart';
 import 'data/home_widget_service.dart';
+import 'data/home_widget_refresh_service.dart';
 import 'data/models/app_version.dart';
 import 'data/notification_preferences.dart';
 import 'data/push_service.dart';
@@ -20,6 +23,15 @@ Future<void> main() async {
   await Session.instance.load();
   await NotificationPreferences.instance.load();
   await HomeWidgetService.instance.ensureDefaults().catchError((_) {});
+  await HomeWidgetRefreshService.instance
+      .initializeBackgroundRefresh()
+      .catchError((_) {});
+  unawaited(
+    HomeWidgetRefreshService.instance.refreshNow(
+      clearCache: true,
+      source: 'startup',
+    ),
+  );
 
   // Resolve connectivity before optional startup network work. This makes an
   // offline launch immediate instead of waiting for Supabase/Firebase timeouts.
