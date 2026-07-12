@@ -739,7 +739,13 @@
       }
 
       function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+      let _hasCurrentClass = false, _hasNextClass = false, _hasNextBus = false;
+      function updateQuickInfoVisibility() {
+        const el = document.getElementById('qiStrip');
+        if (el) el.style.display = (_hasCurrentClass || _hasNextClass || _hasNextBus) ? '' : 'none';
+      }
       function setNowRunningVisible(show) {
+        _hasCurrentClass = !!show;
         ['qiNowItem', 'qiNowSep'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.style.display = show ? '' : 'none';
@@ -748,8 +754,10 @@
           set('qi-now', '');
           set('qi-now-cd', '');
         }
+        updateQuickInfoVisibility();
       }
       setNowRunningVisible(false);
+      updateQuickInfoVisibility();
 
       /* Stored target times (in minutes from midnight) for live countdown ticks */
       let _classMin = null, _busFromMin = null, _busToMin = null, _nowEndMin = null;
@@ -855,6 +863,7 @@
             }
 
             if (next) {
+              _hasNextClass = true;
               const name = courseNames[next.code.toUpperCase()] || '';
               const classEl = document.getElementById('qi-class');
               if (classEl) classEl.textContent = name ? `${next.code} · ${name}` : next.code;
@@ -862,10 +871,13 @@
               set('qi-room', next.room || '—');
               _classMin = next.tMin;
             } else {
+              _hasNextClass = false;
               set('qi-class', 'No more classes'); set('qi-time', '—'); set('qi-room', '—');
             }
+            updateQuickInfoVisibility();
           } else {
             setNowRunningVisible(false); _nowEndMin = null;
+            _hasNextClass = false;
             set('qi-class', 'No class today'); set('qi-time', '—'); set('qi-room', '—');
           }
         }
@@ -929,6 +941,8 @@
           set('qi-bus-to',   nextTo   ? nextTo.time   : 'No more');
           _busFromMin = nextFrom ? nextFrom.t : null;
           _busToMin   = nextTo   ? nextTo.t   : null;
+          _hasNextBus = !!(nextFrom || nextTo);
+          updateQuickInfoVisibility();
         }
       } catch (_) {}
 
