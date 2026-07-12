@@ -744,6 +744,18 @@
         const el = document.getElementById('qiStrip');
         if (el) el.style.display = (_hasCurrentClass || _hasNextClass || _hasNextBus) ? '' : 'none';
       }
+      function forceHideEmptyQuickInfo() {
+        const empty = value => {
+          const txt = String(value || '').trim().toLowerCase();
+          return !txt || /^[-\u2013\u2014]+$/.test(txt) || txt === 'no more' ||
+            txt === 'no more classes' || txt === 'no class today' || txt === 'no class right now';
+        };
+        const text = id => document.getElementById(id)?.textContent || '';
+        const useful = ['qi-now','qi-class','qi-time','qi-room','qi-bus-to','qi-bus-from']
+          .some(id => !empty(text(id)));
+        const el = document.getElementById('qiStrip');
+        if (el && !useful) el.style.display = 'none';
+      }
       function setNowRunningVisible(show) {
         _hasCurrentClass = !!show;
         ['qiNowItem', 'qiNowSep'].forEach(id => {
@@ -872,12 +884,17 @@
               _classMin = next.tMin;
             } else {
               _hasNextClass = false;
+              _classMin = null;
+              forceHideEmptyQuickInfo();
               set('qi-class', 'No more classes'); set('qi-time', '—'); set('qi-room', '—');
             }
             updateQuickInfoVisibility();
+            forceHideEmptyQuickInfo();
           } else {
             setNowRunningVisible(false); _nowEndMin = null;
             _hasNextClass = false;
+            _classMin = null;
+            forceHideEmptyQuickInfo();
             set('qi-class', 'No class today'); set('qi-time', '—'); set('qi-room', '—');
           }
         }
@@ -943,11 +960,14 @@
           _busToMin   = nextTo   ? nextTo.t   : null;
           _hasNextBus = !!(nextFrom || nextTo);
           updateQuickInfoVisibility();
+          forceHideEmptyQuickInfo();
         }
       } catch (_) {}
 
       /* Start live countdowns — tick every 30s */
       tickCountdowns();
+      forceHideEmptyQuickInfo();
+      setTimeout(forceHideEmptyQuickInfo, 300);
       setInterval(tickCountdowns, 30000);
     })();
   </script>
