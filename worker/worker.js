@@ -1592,6 +1592,15 @@ async function supabaseUpsertState(env, key, hash, data) {
   }).catch(() => {});
 }
 
+async function clearSupabaseState(env, key) {
+  await fetch(`${SUPA_URL}/rest/v1/monitor_state?key=eq.${encodeURIComponent(key)}`, {
+    method: 'DELETE',
+    headers: {
+      'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}`,
+    },
+  }).catch(() => {});
+}
+
 async function insertNotification(env, type, title, body, link) {
   await fetch(`${SUPA_URL}/rest/v1/notifications`, {
     method: 'POST',
@@ -1766,7 +1775,8 @@ function computeSlotDiff(oldSlots, newSlots) {
    under the per-run subrequest limit. (Extra links are merged where it matters:
    the enrolled-courses monitor below.) */
 async function checkClassRoutine(env) {
-  const sheetId = (await getRoutineSheetIdByKeyword(env, 'class routine')) || '1jjOmSUg3U_uyzM0mtaj1FldEOD1nNeMCAhybEiQTW3M';
+  const sheetId = await getRoutineSheetIdByKeyword(env, 'class routine');
+  if (!sheetId) return;
   const dayTabs = await Promise.all(MONITOR_DAYS.map(d => fetchSheetGviz(sheetId, d).catch(() => null)));
   const allSlots = MONITOR_DAYS.flatMap((day, i) => parse62BSlots(dayTabs[i], day));
   if (!allSlots.length) return;
@@ -1774,16 +1784,50 @@ async function checkClassRoutine(env) {
   const sorted = [...allSlots].sort((a, b) => `${a.day}${a.time}${a.code}`.localeCompare(`${b.day}${b.time}${b.code}`));
   const hash   = await sha256(JSON.stringify(sorted));
   const stored = await supabaseGetState(env, 'class_routine');
+  const sourceData = { source_sheet_id: sheetId, slots: sorted };
 
-  if (!stored) { await supabaseUpsertState(env, 'class_routine', hash, { slots: sorted }); return; }
+  if (!stored) {
+    await supabaseUpsertState(env, 'class_routine', hash, sourceData);
+    await clearSupabaseState(env, 'class_routine_pending');
+    return;
+  }
+
+  /* Migration/safety guard: older baselines could silently fall back to a
+     hard-coded legacy routine sheet whenever the Routine tab failed to load.
+     That caused fake remove/add notifications. If the stored baseline is not
+     tied to this exact source sheet, re-baseline once without notifying. */
+  if (stored.state_data?.source_sheet_id !== sheetId) {
+    await supabaseUpsertState(env, 'class_routine', hash, sourceData);
+    await clearSupabaseState(env, 'class_routine_pending');
+    return;
+  }
+
   if (stored.state_hash === hash) return;
 
   const changes = computeSlotDiff(stored.state_data?.slots || [], sorted);
-  if (!changes.length) { await supabaseUpsertState(env, 'class_routine', hash, { slots: sorted }); return; }
+  if (!changes.length) {
+    await supabaseUpsertState(env, 'class_routine', hash, sourceData);
+    await clearSupabaseState(env, 'class_routine_pending');
+    return;
+  }
+
+  /* A genuine routine edit should still be present on the next cron run.
+     Requiring one stable confirmation filters out transient Google GVIZ/parser
+     snapshots and stops the noisy remove -> add loop in app notifications. */
+  const pending = await supabaseGetState(env, 'class_routine_pending');
+  if (!pending || pending.state_hash !== hash || pending.state_data?.source_sheet_id !== sheetId) {
+    await supabaseUpsertState(env, 'class_routine_pending', hash, {
+      ...sourceData,
+      changes,
+      first_seen: new Date().toISOString(),
+    });
+    return;
+  }
 
   const body = changes.slice(0, 8).join('\n') + (changes.length > 8 ? `\n…and ${changes.length - 8} more` : '');
   await insertNotification(env, 'class_routine', '📅 Class Routine Updated', body, '/pages/info.html');
-  await supabaseUpsertState(env, 'class_routine', hash, { slots: sorted });
+  await supabaseUpsertState(env, 'class_routine', hash, sourceData);
+  await clearSupabaseState(env, 'class_routine_pending');
   await sendPushToAll(env);
 }
 
