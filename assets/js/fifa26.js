@@ -515,25 +515,29 @@
     var body = document.getElementById('f26-mc-body');
     if (!body) return;
     body.innerHTML = '<div class="f26-loading"><i class="fa-solid fa-futbol"></i></div>';
-    fetchMatches(WC_RANGE, 18e5).then(function (matches) {
+    fetchMatches(WC_RANGE, 3e5).then(function (matches) {
       if (mcTab !== 'schedule') return;
       var sorted = matches.slice().sort(function (x, y) { return new Date(x.date) - new Date(y.date); });
-      var tk = todayKey(), html = '', lastKey = '', anchorDone = false;
+      var tk = todayKey(), html = '', lastKey = '', anchorDone = false, now = Date.now();
+      var next = sorted.filter(function (m) {
+        return new Date(m.date).getTime() > now && m.state !== 'post';
+      }).sort(function (x, y) { return new Date(x.date) - new Date(y.date); })[0];
+      var anchorKey = next ? bdDateKey(next.date) : tk;
       sorted.forEach(function (m) {
         var k = bdDateKey(m.date);
         if (k !== lastKey) {
           lastKey = k;
-          var isToday = k === tk;
-          html += '<div class="f26-date-h"' + (isToday && !anchorDone ? ' id="f26-today-anchor"' : '') + '>' +
+          var isToday = k === tk, isAnchor = !anchorDone && k === anchorKey;
+          html += '<div class="f26-date-h"' + (isAnchor ? ' id="f26-schedule-anchor"' : '') + '>' +
             (isToday ? '🔥 TODAY · ' : '') + esc(bdDateLabel(m.date)) + '</div>';
-          if (isToday) anchorDone = true;
+          if (isAnchor) anchorDone = true;
         }
         html += matchCard(m, true);
       });
       body.innerHTML = html || '<div class="f26-empty">Schedule unavailable.</div>';
       attachExpand(body);
-      var anchor = document.getElementById('f26-today-anchor');
-      if (anchor) anchor.scrollIntoView({ block: 'start' });
+      var anchor = document.getElementById('f26-schedule-anchor');
+      if (anchor) body.scrollTo({ top: Math.max(0, anchor.offsetTop - 8), behavior: 'auto' });
     }).catch(function () {
       if (mcTab === 'schedule') body.innerHTML = '<div class="f26-empty">Could not load schedule — try again shortly.</div>';
     });
