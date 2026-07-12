@@ -6,6 +6,7 @@ import 'package:workmanager/workmanager.dart';
 
 import '../core/sheets_api.dart';
 import '../core/supa.dart';
+import 'class_reminder_service.dart';
 import 'home_widget_service.dart';
 import 'routine_grid_repository.dart';
 import 'session.dart';
@@ -92,6 +93,7 @@ class HomeWidgetRefreshService {
       await Future.wait([
         _saveSchedule(routine, busRows),
         _saveDeadlines(deadlineRows),
+        ClassReminderService.instance.scheduleFromRoutine(routine),
       ]);
     } finally {
       _refreshing = false;

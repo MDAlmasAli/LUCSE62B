@@ -6,6 +6,7 @@ import 'core/app_theme.dart';
 import 'core/router.dart';
 import 'core/supa.dart';
 import 'data/connectivity_service.dart';
+import 'data/class_reminder_service.dart';
 import 'data/home_widget_service.dart';
 import 'data/home_widget_refresh_service.dart';
 import 'data/models/app_version.dart';
@@ -22,6 +23,7 @@ Future<void> main() async {
   await Supa.init();
   await Session.instance.load();
   await NotificationPreferences.instance.load();
+  await ClassReminderService.instance.initialize().catchError((_) {});
   await HomeWidgetService.instance.ensureDefaults().catchError((_) {});
   await HomeWidgetRefreshService.instance
       .initializeBackgroundRefresh()
