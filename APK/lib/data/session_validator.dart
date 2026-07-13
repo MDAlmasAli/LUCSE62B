@@ -42,7 +42,11 @@ class SessionValidator with WidgetsBindingObserver {
 
     _checking = true;
     try {
-      final active = await WorkerApi.instance.sessionActive(student.id);
+      final active = await WorkerApi.instance.sessionActive(
+        student.id,
+        sessionId: student.sessionId,
+        sessionIssuedAt: student.sessionIssuedAt,
+      );
       if (active == false && Session.instance.student?.id == student.id) {
         await Session.instance.signOut();
       }

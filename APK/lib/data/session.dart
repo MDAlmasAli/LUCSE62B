@@ -35,6 +35,9 @@ class Session extends ChangeNotifier {
         return;
       }
       _student = s;
+      if (!raw.contains('"sessionId"') || !raw.contains('"sessionIssuedAt"')) {
+        await prefs.setString(K.ssStudent, jsonEncode(s.toJson()));
+      }
       dobOk = s.isDemo || prefs.getString('${K.ssDobOkPrefix}${s.id}') == '1';
     } catch (_) {
       await prefs.remove(K.ssStudent);
@@ -42,12 +45,14 @@ class Session extends ChangeNotifier {
   }
 
   Future<void> signIn(Student s, {required bool keep}) async {
-    _student = s;
+    final next = s.withFreshSession();
+    _student = next;
     final prefs = await SharedPreferences.getInstance();
-    dobOk = s.isDemo || prefs.getString('${K.ssDobOkPrefix}${s.id}') == '1';
+    dobOk =
+        next.isDemo || prefs.getString('${K.ssDobOkPrefix}${next.id}') == '1';
     // Demo sessions are never persisted across restarts.
-    if (keep && !s.isDemo) {
-      await prefs.setString(K.ssStudent, jsonEncode(s.toJson()));
+    if (keep && !next.isDemo) {
+      await prefs.setString(K.ssStudent, jsonEncode(next.toJson()));
     } else {
       await prefs.remove(K.ssStudent);
     }

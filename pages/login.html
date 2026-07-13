@@ -639,8 +639,23 @@
       document.querySelector('#stepPassword .welcome-badge-sub').textContent = isDemo ? 'Guest demo session' : 'Returning student';
     }
 
+    function makeSessionId() {
+      try {
+        if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      } catch (e) {}
+      return 'web-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+    }
+
     function buildStudentSession(student) {
-      return { id: student.id, name: student.name, loginTime: Date.now(), isDemo: !!student.isDemo };
+      const now = Date.now();
+      return {
+        id: student.id,
+        name: student.name,
+        loginTime: now,
+        isDemo: !!student.isDemo,
+        sessionId: makeSessionId(),
+        sessionIssuedAt: now
+      };
     }
 
     function togglePwd(inputId, btn) {

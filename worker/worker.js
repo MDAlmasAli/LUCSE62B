@@ -84,10 +84,45 @@ export default {
         if (!/^\d{8,16}$/.test(sid)) return errResp(cors, 400, 'Invalid ID');
         const roster = await getActiveStudentRoster(env);
         if (!roster) return errResp(cors, 503, 'Roster temporarily unavailable');
+        const activeInRoster = roster.ids.includes(sid);
+        const sessionAllowed = activeInRoster
+          ? await isSessionAllowed(env, sid, url.searchParams.get('sid'), url.searchParams.get('iat'))
+          : false;
         return jsonResp(cors, {
-          active: roster.ids.includes(sid),
+          active: activeInRoster && sessionAllowed,
           checked_at: new Date(roster.checkedAt).toISOString(),
         });
+      }
+
+      // POST /logout-other-devices — keep current session, revoke older/different sessions.
+      if (p === '/logout-other-devices' && request.method === 'POST') {
+        if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
+        if (!env.SUPA_KEY) return errResp(cors, 500, 'Not configured');
+        const body = await request.json().catch(() => ({}));
+        const studentId = String(body.student_id || '').trim();
+        const sessionId = String(body.session_id || '').trim();
+        const issuedAt = Number(body.issued_at || 0);
+        if (!/^\d{8,16}$/.test(studentId)) return errResp(cors, 400, 'Invalid ID');
+        if (!/^[A-Za-z0-9._:-]{12,120}$/.test(sessionId)) return errResp(cors, 400, 'Invalid session');
+        if (!Number.isFinite(issuedAt) || issuedAt <= 0) return errResp(cors, 400, 'Invalid session time');
+
+        const r = await fetch(`${SUPA_URL}/rest/v1/student_session_controls`, {
+          method: 'POST',
+          headers: {
+            'apikey': env.SUPA_KEY,
+            'Authorization': `Bearer ${env.SUPA_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates',
+          },
+          body: JSON.stringify({
+            student_id: studentId,
+            revoke_before: new Date().toISOString(),
+            keep_session_id: sessionId,
+            updated_at: new Date().toISOString(),
+          }),
+        }).catch(() => null);
+        if (!r || !r.ok) return errResp(cors, 503, 'Session control table unavailable');
+        return jsonResp(cors, { ok: true });
       }
 
       // ── GET /sheet?name=TabName ───────────────────────────────────────
@@ -1261,6 +1296,28 @@ async function getImportedResult(env, student_id, birth_date) {
   const rows = await r.json().catch(() => null);
   if (!rows || !rows.length || !rows[0].data) return null;
   return JSON.stringify(rows[0].data);
+}
+
+async function isSessionAllowed(env, studentId, sessionIdRaw, issuedAtRaw) {
+  if (!env.SUPA_KEY) return true;
+  const sessionId = String(sessionIdRaw || '').trim();
+  const issuedAt = Number(issuedAtRaw || 0);
+  if (!sessionId || !Number.isFinite(issuedAt) || issuedAt <= 0) return true;
+
+  const r = await fetch(
+    `${SUPA_URL}/rest/v1/student_session_controls?student_id=eq.${encodeURIComponent(studentId)}&select=revoke_before,keep_session_id&limit=1`,
+    { headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` } }
+  ).catch(() => null);
+  if (!r || !r.ok) return true;
+
+  const rows = await r.json().catch(() => []);
+  const control = Array.isArray(rows) && rows.length ? rows[0] : null;
+  if (!control || !control.revoke_before) return true;
+
+  const revokeBefore = Date.parse(control.revoke_before);
+  if (!Number.isFinite(revokeBefore)) return true;
+  if (sessionId === String(control.keep_session_id || '')) return true;
+  return issuedAt > revokeBefore;
 }
 
 function jsonResp(cors, data) {

@@ -19,6 +19,39 @@
 
   try { session = rawData ? JSON.parse(rawData) : null; } catch (e) {}
 
+  function makeSessionId() {
+    try {
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    } catch (e) {}
+    return 'web-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+  }
+
+  function persistSessionMeta(nextSession) {
+    var serialized = JSON.stringify(nextSession);
+    if (localStorage.getItem('lu62b_student')) {
+      localStorage.setItem('lu62b_student', serialized);
+    } else if (sessionStorage.getItem('lu62b_student')) {
+      sessionStorage.setItem('lu62b_student', serialized);
+    }
+  }
+
+  function ensureSessionMeta(nextSession) {
+    if (!nextSession || !nextSession.id) return nextSession;
+    var changed = false;
+    if (!nextSession.sessionId) {
+      nextSession.sessionId = makeSessionId();
+      changed = true;
+    }
+    if (!nextSession.sessionIssuedAt) {
+      nextSession.sessionIssuedAt = Date.now();
+      changed = true;
+    }
+    if (changed) persistSessionMeta(nextSession);
+    return nextSession;
+  }
+
+  session = ensureSessionMeta(session);
+
   const isDemoSession = !!(
     session &&
     (session.isDemo || String(session.id || '').toUpperCase() === 'DEMO')
@@ -62,11 +95,15 @@
   }
 
   // ── Sheet validation (proxied via Worker) ────────────────────────────
-  function checkStudentInSheet(studentId) {
+  function checkStudentInSheet(nextSession) {
+    var studentId = nextSession && nextSession.id;
     var timeout = new Promise(function (resolve) {
       setTimeout(function () { resolve(null); }, 5000);
     });
-    var check = fetch(WORKER_URL + '/session-status?id=' + encodeURIComponent(studentId), {
+    var qs = '?id=' + encodeURIComponent(studentId || '');
+    if (nextSession && nextSession.sessionId) qs += '&sid=' + encodeURIComponent(nextSession.sessionId);
+    if (nextSession && nextSession.sessionIssuedAt) qs += '&iat=' + encodeURIComponent(String(nextSession.sessionIssuedAt));
+    var check = fetch(WORKER_URL + '/session-status' + qs, {
       cache: 'no-store',
     })
       .then(function (r) { return r.ok ? r.json() : null; })
@@ -86,7 +123,7 @@
     if (page === 'login.html' || page === 'password-setup.html') return;
 
     validationRunning = true;
-    checkStudentInSheet(session.id).then(function (found) {
+    checkStudentInSheet(session).then(function (found) {
       if (found === true) {
         localStorage.setItem('lu62b_last_validation', JSON.stringify({ t: Date.now() }));
       } else if (found === false) {
@@ -96,6 +133,29 @@
       validationRunning = false;
     });
   }
+
+  window.lu62bLogoutOtherDevices = async function () {
+    if (!session || !session.id || isDemoSession) {
+      throw new Error('This action is not available for demo sessions.');
+    }
+    session = ensureSessionMeta(session);
+    var r = await fetch(WORKER_URL + '/logout-other-devices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        student_id: session.id,
+        session_id: session.sessionId,
+        issued_at: session.sessionIssuedAt,
+      }),
+    });
+    if (!r.ok) {
+      var msg = 'Could not update sessions.';
+      try { msg = (await r.json()).error || msg; } catch (e) {}
+      throw new Error(msg);
+    }
+    localStorage.removeItem('lu62b_last_validation');
+    return r.json();
+  };
 
   // ── Session checks (A + B) ───────────────────────────────────────────
   if (isLoggedIn) {

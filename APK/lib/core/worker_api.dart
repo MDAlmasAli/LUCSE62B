@@ -37,13 +37,21 @@ class WorkerApi {
   /// Returns true/false only when the authoritative Main Sheet roster was
   /// checked successfully. Null means offline/temporary server failure and
   /// must never force a legitimate user out.
-  Future<bool?> sessionActive(String studentId) async {
+  Future<bool?> sessionActive(
+    String studentId, {
+    String? sessionId,
+    int? sessionIssuedAt,
+  }) async {
     try {
+      var path = '/session-status?id=${Uri.encodeComponent(studentId)}';
+      if (sessionId != null && sessionId.isNotEmpty) {
+        path += '&sid=${Uri.encodeComponent(sessionId)}';
+      }
+      if (sessionIssuedAt != null && sessionIssuedAt > 0) {
+        path += '&iat=$sessionIssuedAt';
+      }
       final r = await http
-          .get(
-            _u('/session-status?id=${Uri.encodeComponent(studentId)}'),
-            headers: _origin,
-          )
+          .get(_u(path), headers: _origin)
           .timeout(const Duration(seconds: 8));
       // Backward-compatible fallback while an older Worker deployment is
       // still live: read the public (phone-stripped) Student Info roster.
@@ -58,6 +66,16 @@ class WorkerApi {
       return null;
     }
   }
+
+  Future<Map<String, dynamic>> logoutOtherDevices({
+    required String studentId,
+    required String sessionId,
+    required int sessionIssuedAt,
+  }) => _post('/logout-other-devices', {
+    'student_id': studentId,
+    'session_id': sessionId,
+    'issued_at': sessionIssuedAt,
+  });
 
   /// Remove an FCM token after logout/access revocation.
   Future<void> unregisterFcmToken(String token) async {

@@ -68,6 +68,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _dob = '';
   _Academic? _academic;
   bool _loadingAcademic = false;
+  bool _loggingOutOthers = false;
 
   @override
   void initState() {
@@ -125,6 +126,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final d = DateTime.tryParse(raw);
     if (d != null) return DateFormat('d MMMM yyyy').format(d);
     return raw;
+  }
+
+  Future<void> _logoutOtherDevices() async {
+    final s = Session.instance.student;
+    if (s == null || s.isDemo || _loggingOutOthers) return;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: const Text(
+          'Logout other devices?',
+          style: TextStyle(color: AppColors.text),
+        ),
+        content: const Text(
+          'This phone will stay logged in. Your account will be signed out from other phones and browsers on their next sync.',
+          style: TextStyle(color: AppColors.muted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Logout Others'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    setState(() => _loggingOutOthers = true);
+    try {
+      await WorkerApi.instance.logoutOtherDevices(
+        studentId: s.id,
+        sessionId: s.sessionId,
+        sessionIssuedAt: s.sessionIssuedAt,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Other devices will be logged out on their next sync.'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not logout other devices. Please try again.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loggingOutOthers = false);
+    }
   }
 
   @override
@@ -382,6 +438,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 22),
+                if (!s.isDemo) ...[
+                  OutlinedButton.icon(
+                    onPressed: _loggingOutOthers ? null : _logoutOtherDevices,
+                    icon: _loggingOutOthers
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(
+                            Icons.shield_outlined,
+                            color: AppColors.accentBright,
+                          ),
+                    label: Text(
+                      _loggingOutOthers
+                          ? 'Logging out other devices...'
+                          : 'Logout Other Devices',
+                      style: const TextStyle(color: AppColors.accentBright),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: BorderSide(
+                        color: AppColors.accent.withValues(alpha: 0.4),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 OutlinedButton.icon(
                   onPressed: () async {
                     await Session.instance.signOut();
