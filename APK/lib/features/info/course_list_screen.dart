@@ -23,7 +23,7 @@ class CourseListScreen extends StatefulWidget {
 }
 
 class _CourseListScreenState extends State<CourseListScreen> {
-  late final Future<Map<String, List<_Course>>> _future = _load();
+  late Future<Map<String, List<_Course>>> _future;
   String? _activeBatch;
   Set<String> _retake = {};
   Set<String> _improve = {};
@@ -34,6 +34,7 @@ class _CourseListScreenState extends State<CourseListScreen> {
   @override
   void initState() {
     super.initState();
+    _future = _load();
     _loadMyCodes();
   }
 
@@ -43,16 +44,27 @@ class _CourseListScreenState extends State<CourseListScreen> {
     if (rows.isEmpty) return batches;
     final first = rows[0].isNotEmpty ? rows[0][0].toLowerCase().trim() : '';
     final start = (first == 'batch' || first == 'semester') ? 1 : 0;
+    String currentBatch = '';
     for (var i = start; i < rows.length; i++) {
       final r = rows[i];
       String at(int n) => n < r.length ? r[n].trim() : '';
-      final batch = at(0);
-      if (batch.isEmpty || at(1).isEmpty) continue;
+      final batchCell = at(0);
+      final code = at(1);
+      if (batchCell.isNotEmpty) currentBatch = batchCell;
+      if (currentBatch.isEmpty || code.isEmpty) continue;
       batches
-          .putIfAbsent(batch, () => [])
-          .add(_Course(at(1), at(2), at(3), at(4), at(5)));
+          .putIfAbsent(currentBatch, () => [])
+          .add(_Course(code, at(2), at(3), at(4), at(5)));
     }
     return batches;
+  }
+
+  Future<void> _refreshCourses() async {
+    SheetsApi.instance.clearCache();
+    setState(() {
+      _future = _load();
+    });
+    await Future.wait([_future, _loadMyCodes()]);
   }
 
   Future<void> _loadMyCodes() async {
@@ -67,8 +79,8 @@ class _CourseListScreenState extends State<CourseListScreen> {
       final ri = data.retakeImprove();
       if (mounted) {
         setState(() {
-          _retake = ri.fail.map((e) => e.code.toUpperCase()).toSet();
-          _improve = ri.improve.map((e) => e.code.toUpperCase()).toSet();
+          _retake = ri.fail.map((e) => _norm(e.code)).toSet();
+          _improve = ri.improve.map((e) => _norm(e.code)).toSet();
         });
       }
     } catch (_) {}
@@ -91,6 +103,13 @@ class _CourseListScreenState extends State<CourseListScreen> {
           onPressed: () =>
               context.canPop() ? context.pop() : context.go('/info'),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _refreshCourses,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
       ),
       body: FutureBuilder<Map<String, List<_Course>>>(
         future: _future,
@@ -109,9 +128,17 @@ class _CourseListScreenState extends State<CourseListScreen> {
               ),
             );
           }
-          final order = batches.keys.toList();
+          final order = batches.keys.toList()
+            ..sort((a, b) {
+              final na = int.tryParse(a);
+              final nb = int.tryParse(b);
+              if (na != null && nb != null) return nb.compareTo(na);
+              return b.compareTo(a);
+            });
           final active =
-              _activeBatch ?? (order.contains('62') ? '62' : order.first);
+              (_activeBatch != null && batches.containsKey(_activeBatch))
+              ? _activeBatch!
+              : (order.contains('62') ? '62' : order.first);
           final courses = batches[active] ?? [];
           final totalCr = courses.fold<double>(
             0,
@@ -124,82 +151,88 @@ class _CourseListScreenState extends State<CourseListScreen> {
               .where((c) => _improve.contains(_norm(c.code)))
               .length;
 
-          return Column(
-            children: [
-              // batch chips
-              SizedBox(
-                height: 48,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-                  children: [
-                    for (final b in order)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: GestureDetector(
-                          onTap: () => setState(() => _activeBatch = b),
-                          child: Container(
-                            alignment: Alignment.center,
-                            padding: const EdgeInsets.symmetric(horizontal: 15),
-                            decoration: BoxDecoration(
-                              gradient: b == active
-                                  ? AppColors.accentGradient
-                                  : null,
-                              color: b == active ? null : AppColors.card,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: b == active
-                                    ? Colors.transparent
-                                    : AppColors.border,
+          return RefreshIndicator(
+            color: AppColors.accent,
+            onRefresh: _refreshCourses,
+            child: Column(
+              children: [
+                // batch chips
+                SizedBox(
+                  height: 48,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+                    children: [
+                      for (final b in order)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: GestureDetector(
+                            onTap: () => setState(() => _activeBatch = b),
+                            child: Container(
+                              alignment: Alignment.center,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 15,
                               ),
-                            ),
-                            child: Text(
-                              'Batch $b',
-                              style: TextStyle(
-                                color: b == active
-                                    ? Colors.white
-                                    : AppColors.textSecondary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
+                              decoration: BoxDecoration(
+                                gradient: b == active
+                                    ? AppColors.accentGradient
+                                    : null,
+                                color: b == active ? null : AppColors.card,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: b == active
+                                      ? Colors.transparent
+                                      : AppColors.border,
+                                ),
+                              ),
+                              child: Text(
+                                'Batch $b',
+                                style: TextStyle(
+                                  color: b == active
+                                      ? Colors.white
+                                      : AppColors.textSecondary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ),
                         ),
+                    ],
+                  ),
+                ),
+                // summary
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        '${courses.length} courses · ${totalCr.toStringAsFixed(totalCr % 1 == 0 ? 0 : 1)} credits',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                  ],
+                      if (myRetake > 0)
+                        _miniBadge('$myRetake Retake', _retakeColor),
+                      if (myImprove > 0)
+                        _miniBadge('$myImprove Improve', _improveColor),
+                    ],
+                  ),
                 ),
-              ),
-              // summary
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      '${courses.length} courses · ${totalCr.toStringAsFixed(totalCr % 1 == 0 ? 0 : 1)} credits',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (myRetake > 0)
-                      _miniBadge('$myRetake Retake', _retakeColor),
-                    if (myImprove > 0)
-                      _miniBadge('$myImprove Improve', _improveColor),
-                  ],
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(14, 2, 14, 24),
+                    itemCount: courses.length,
+                    itemBuilder: (_, i) => _courseCard(i + 1, courses[i]),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(14, 2, 14, 24),
-                  itemCount: courses.length,
-                  itemBuilder: (_, i) => _courseCard(i + 1, courses[i]),
-                ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
