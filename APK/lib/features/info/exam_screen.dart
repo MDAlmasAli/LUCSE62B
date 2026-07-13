@@ -5,11 +5,12 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../data/calendar_service.dart';
 import '../../data/exam_repository.dart';
+import '../../data/session.dart';
 import '../../shared/app_toast.dart';
 import 'routine_export.dart';
 import 'routine_template.dart';
 
-/// Mid / Final term exam routine — searchable by batch/section, with rich exam
+/// Mid / Final term exam routine â€” searchable by batch/section, with rich exam
 /// cards (day, weekday, date, course code + title, time, Today/past states).
 /// Mirrors the website's exam.js.
 class ExamScreen extends StatefulWidget {
@@ -21,17 +22,27 @@ class ExamScreen extends StatefulWidget {
 
 class _ExamScreenState extends State<ExamScreen> {
   String _type = 'mid';
+  String _mode = 'regular';
   final _batch = TextEditingController(text: '62');
   final _section = TextEditingController(text: 'B');
   String _batchVal = '62';
   String _sectionVal = 'B';
   late Future<List<ExamItem>> _future = _load();
 
-  Future<List<ExamItem>> _load() => ExamRepository.instance.load(
-    _type,
-    batch: _batchVal,
-    section: _sectionVal,
-  );
+  Future<List<ExamItem>> _load() {
+    if (_mode == 'mine') {
+      final id = Session.instance.student?.id;
+      if (id == null || id.toUpperCase() == 'DEMO') {
+        return Future.value(const <ExamItem>[]);
+      }
+      return ExamRepository.instance.loadMine(_type, id);
+    }
+    return ExamRepository.instance.load(
+      _type,
+      batch: _batchVal,
+      section: _sectionVal,
+    );
+  }
 
   @override
   void dispose() {
@@ -44,6 +55,14 @@ class _ExamScreenState extends State<ExamScreen> {
     if (_type == type) return;
     setState(() {
       _type = type;
+      _future = _load();
+    });
+  }
+
+  void _switchMode(String mode) {
+    if (_mode == mode) return;
+    setState(() {
+      _mode = mode;
       _future = _load();
     });
   }
@@ -86,9 +105,14 @@ class _ExamScreenState extends State<ExamScreen> {
             child: _toggle(),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
-            child: _searchRow(),
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+            child: _modeToggle(),
           ),
+          if (_mode == 'regular')
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+              child: _searchRow(),
+            ),
           Expanded(
             child: FutureBuilder<List<ExamItem>>(
               future: _future,
@@ -159,6 +183,62 @@ class _ExamScreenState extends State<ExamScreen> {
     );
   }
 
+  Widget _modeToggle() {
+    Widget seg(String label, String mode, IconData icon) {
+      final sel = _mode == mode;
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => _switchMode(mode),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: sel ? AppColors.accent.withValues(alpha: 0.18) : null,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: sel ? AppColors.accent : Colors.transparent,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 16,
+                  color: sel ? AppColors.accentBright : AppColors.muted,
+                ),
+                const SizedBox(width: 7),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: sel ? AppColors.text : AppColors.textSecondary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          seg('62B Exams', 'regular', Icons.event_note_rounded),
+          seg('My Exams', 'mine', Icons.account_tree_rounded),
+        ],
+      ),
+    );
+  }
+
   Widget _searchRow() {
     InputDecoration dec(String label) => InputDecoration(
       labelText: label,
@@ -207,6 +287,10 @@ class _ExamScreenState extends State<ExamScreen> {
   }
 
   Widget _summary(int total, int upcoming) {
+    final label = _type == 'final' ? 'Final Term' : 'Mid Term';
+    final contextLabel = _mode == 'mine'
+        ? '$label  ·  My Full Schedule'
+        : '$label  ·  Batch $_batchVal, Section $_sectionVal';
     return Row(
       children: [
         Container(
@@ -220,7 +304,7 @@ class _ExamScreenState extends State<ExamScreen> {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            '${_type == 'final' ? 'Final Term' : 'Mid Term'}  ·  Batch $_batchVal, Section $_sectionVal',
+            contextLabel,
             style: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12.5,
@@ -261,6 +345,26 @@ class _ExamScreenState extends State<ExamScreen> {
       d.month,
       d.day,
     ).isBefore(DateTime(n.year, n.month, n.day));
+  }
+
+  Widget _sourceBadge(String source) {
+    final improve = source.toLowerCase().contains('improve');
+    final color = improve ? const Color(0xFFFB923C) : const Color(0xFFF43F5E);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text(
+        improve ? 'IMPROVE' : 'RETAKE',
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
   }
 
   Widget _card(ExamItem e) {
@@ -371,6 +475,10 @@ class _ExamScreenState extends State<ExamScreen> {
                             ),
                           ),
                         ),
+                        if (e.source.isNotEmpty && e.source != '62b') ...[
+                          const SizedBox(width: 7),
+                          _sourceBadge(e.source),
+                        ],
                         if (today) ...[
                           const SizedBox(width: 7),
                           Container(
@@ -426,6 +534,18 @@ class _ExamScreenState extends State<ExamScreen> {
                             ),
                           ),
                         ],
+                      ),
+                    ],
+                    if (e.enrolledBatch.isNotEmpty ||
+                        e.enrolledSection.isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        'Batch ${e.enrolledBatch}, Section ${e.enrolledSection}',
+                        style: const TextStyle(
+                          color: AppColors.muted,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ],
@@ -487,7 +607,7 @@ class _ExamScreenState extends State<ExamScreen> {
       build: () => InfoTablePrintTemplate(
         title: '$label Exam Routine',
         subtitle:
-            'Batch $_batchVal · Section $_sectionVal · ${items.length} exam${items.length == 1 ? '' : 's'}',
+            'Batch $_batchVal Â· Section $_sectionVal Â· ${items.length} exam${items.length == 1 ? '' : 's'}',
         headers: const ['Date', 'Day', 'Course', 'Title', 'Time'],
         rows: rows,
         columnFlex: const [1.2, 0.9, 1.0, 2.2, 1.1],

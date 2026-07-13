@@ -1,4 +1,5 @@
 import '../core/sheets_api.dart';
+import '../core/supa.dart';
 
 class ExamItem {
   final String course;
@@ -8,6 +9,9 @@ class ExamItem {
   final String weekday;
   final String dayLabel; // e.g. "Day-1"
   final DateTime? dateObj;
+  final String source; // '' / '62b' / 'retake' / 'improve'
+  final String enrolledBatch;
+  final String enrolledSection;
   const ExamItem({
     required this.course,
     this.courseName = '',
@@ -16,7 +20,39 @@ class ExamItem {
     required this.weekday,
     this.dayLabel = '',
     this.dateObj,
+    this.source = '',
+    this.enrolledBatch = '',
+    this.enrolledSection = '',
   });
+
+  ExamItem copyWith({
+    String? courseName,
+    String? source,
+    String? enrolledBatch,
+    String? enrolledSection,
+  }) => ExamItem(
+    course: course,
+    courseName: courseName ?? this.courseName,
+    date: date,
+    time: time,
+    weekday: weekday,
+    dayLabel: dayLabel,
+    dateObj: dateObj,
+    source: source ?? this.source,
+    enrolledBatch: enrolledBatch ?? this.enrolledBatch,
+    enrolledSection: enrolledSection ?? this.enrolledSection,
+  );
+}
+
+class _ExamEnrollment {
+  final String courseCode, courseName, batch, section, type;
+  const _ExamEnrollment(
+    this.courseCode,
+    this.courseName,
+    this.batch,
+    this.section,
+    this.type,
+  );
 }
 
 /// Parses the mid/final term exam routine. Unlike the class routine, the exam
@@ -73,11 +109,82 @@ class ExamRepository {
     String batch = '62',
     String section = 'B',
   }) async {
+    final loaded = await _loadRowsAndTitles(type);
+    final allRows = loaded.rows;
+    final titles = loaded.titles;
+    if (allRows.isEmpty) return const [];
+    return _parse(allRows, batch, section, titles);
+  }
+
+  Future<List<ExamItem>> loadMine(String type, String studentId) async {
+    final loaded = await _loadRowsAndTitles(type);
+    final allRows = loaded.rows;
+    final titles = loaded.titles;
+    if (allRows.isEmpty) return const [];
+
+    final out = <ExamItem>[];
+    final seen = <String>{};
+    void add(ExamItem e) {
+      final key = [
+        _normCourse(e.course),
+        e.date,
+        e.time,
+        e.source,
+        e.enrolledBatch,
+        e.enrolledSection,
+      ].join('|');
+      if (seen.add(key)) out.add(e);
+    }
+
+    for (final e in _parse(allRows, '62', 'B', titles)) {
+      add(e.copyWith(source: '62b'));
+    }
+
+    final enrollments = await _enrollments(studentId);
+    final parsedBySection = <String, List<ExamItem>>{};
+    for (final enr in enrollments) {
+      if (enr.batch.isEmpty || enr.section.isEmpty || enr.courseCode.isEmpty) {
+        continue;
+      }
+      final key = '${enr.batch}-${enr.section.toUpperCase()}';
+      final sectionItems = parsedBySection.putIfAbsent(
+        key,
+        () => _parse(allRows, enr.batch, enr.section, titles),
+      );
+      final target = _normCourse(enr.courseCode);
+      for (final e in sectionItems) {
+        if (_normCourse(e.course) != target) continue;
+        add(
+          e.copyWith(
+            courseName: e.courseName.isNotEmpty ? e.courseName : enr.courseName,
+            source: enr.type.toLowerCase().contains('improve')
+                ? 'improve'
+                : 'retake',
+            enrolledBatch: enr.batch,
+            enrolledSection: enr.section,
+          ),
+        );
+      }
+    }
+
+    out.sort((a, b) {
+      final ad = _examDateTime(a);
+      final bd = _examDateTime(b);
+      if (ad == null && bd == null) return 0;
+      if (ad == null) return 1;
+      if (bd == null) return -1;
+      return ad.compareTo(bd);
+    });
+    return out;
+  }
+
+  Future<({List<List<String>> rows, Map<String, String> titles})>
+  _loadRowsAndTitles(String type) async {
     final keyword = type == 'final' ? 'final term' : 'mid term';
     final res = await Future.wait([_ids(keyword), _courseTitles()]);
     final ids = res[0] as List<String>;
     final titles = res[1] as Map<String, String>;
-    if (ids.isEmpty) return const [];
+    if (ids.isEmpty) return (rows: const <List<String>>[], titles: titles);
 
     final allRows = <List<String>>[];
     for (final id in ids) {
@@ -86,8 +193,35 @@ class ExamRepository {
         allRows.addAll(t.rows);
       } catch (_) {}
     }
-    if (allRows.isEmpty) return const [];
-    return _parse(allRows, batch, section, titles);
+    return (rows: allRows, titles: titles);
+  }
+
+  Future<List<_ExamEnrollment>> _enrollments(String studentId) async {
+    try {
+      final rows = await Supa.client
+          .from('student_retake_enrollments')
+          .select('course_code,course_name,batch,section,type')
+          .eq('student_id', studentId);
+      return (rows as List)
+          .map(
+            (r) => _ExamEnrollment(
+              (r['course_code'] ?? '').toString(),
+              (r['course_name'] ?? '').toString(),
+              (r['batch'] ?? '').toString(),
+              (r['section'] ?? '').toString(),
+              (r['type'] ?? 'retake').toString(),
+            ),
+          )
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  static String _normCourse(String c) {
+    final s = c.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    final m = RegExp(r'^([A-Z]+)(\d.*)$').firstMatch(s);
+    return m != null ? '${m.group(1)}-${m.group(2)}' : s;
   }
 
   List<ExamItem> _parse(
