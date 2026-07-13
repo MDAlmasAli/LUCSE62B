@@ -57,7 +57,10 @@ class ExamRepository {
         if (r.length < 2) continue;
         final code = r[1].trim().toUpperCase();
         final title = r[0].trim();
-        if (code.isEmpty || ['code', 'title', 'course'].contains(r[1].trim().toLowerCase())) continue;
+        if (code.isEmpty ||
+            ['code', 'title', 'course'].contains(r[1].trim().toLowerCase())) {
+          continue;
+        }
         if (title.isNotEmpty) map[code] = title;
       }
     } catch (_) {}
@@ -65,8 +68,11 @@ class ExamRepository {
   }
 
   /// [type] is 'mid' or 'final'.
-  Future<List<ExamItem>> load(String type,
-      {String batch = '62', String section = 'B'}) async {
+  Future<List<ExamItem>> load(
+    String type, {
+    String batch = '62',
+    String section = 'B',
+  }) async {
     final keyword = type == 'final' ? 'final term' : 'mid term';
     final res = await Future.wait([_ids(keyword), _courseTitles()]);
     final ids = res[0] as List<String>;
@@ -85,80 +91,187 @@ class ExamRepository {
   }
 
   List<ExamItem> _parse(
-      List<List<String>> rows, String batch, String section, Map<String, String> titles) {
-    final dateRe = RegExp(r'^\s*\d{1,2}[-/]\d{1,2}[-/]\d{4}');
-    final timeRe = RegExp(r'\d{1,2}:\d{2}');
+    List<List<String>> rows,
+    String batch,
+    String section,
+    Map<String, String> titles,
+  ) {
+    final targetBatch = batch
+        .replaceAll(RegExp(r'\.0+$'), '')
+        .replaceAll(RegExp(r'[^0-9]'), '');
+    final targetSection = section.trim().toUpperCase();
+    final dayRe = RegExp(r'^\s*day[\s-]*\d+\s*$', caseSensitive: false);
+    final dateRe = RegExp(r'\d{1,2}[-/]\d{1,2}[-/]\d{2,4}');
+    final timeRe = RegExp(r'\d{1,2}:\d{2}|am|pm', caseSensitive: false);
+    final weekdayRe = RegExp(
+      r'^(sun|mon|tue|wed|thu|fri|sat)',
+      caseSensitive: false,
+    );
 
-    int findRow(bool Function(List<String>) test) {
-      for (var i = 0; i < rows.length; i++) {
-        if (test(rows[i])) return i;
-      }
-      return -1;
+    final blockStarts = <int>[];
+    for (var r = 0; r < rows.length; r++) {
+      if (rows[r].any(dayRe.hasMatch)) blockStarts.add(r);
     }
+    if (blockStarts.isEmpty) return const [];
 
-    final headerIdx =
-        findRow((r) => r.isNotEmpty && r[0].toLowerCase().trim() == 'batch');
-    if (headerIdx < 0) return const [];
-
-    final dayIdx = findRow((r) => r.any((c) => RegExp(r'day[\s-]*\d+', caseSensitive: false).hasMatch(c)));
-    final dateIdx = findRow((r) => r.any((c) => dateRe.hasMatch(c)));
-    final timeIdx = findRow((r) => r.any((c) => timeRe.hasMatch(c)));
-    final weekdayIdx = findRow((r) =>
-        r.any((c) => RegExp(r'^(sun|mon|tue|wed|thu|fri|sat)', caseSensitive: false).hasMatch(c.trim())));
-
-    final header = rows[headerIdx];
-    final dateRow = dateIdx >= 0 ? rows[dateIdx] : const <String>[];
-    final timeRow = timeIdx >= 0 ? rows[timeIdx] : const <String>[];
-    final dayRow = dayIdx >= 0 ? rows[dayIdx] : const <String>[];
-    final weekdayRow = weekdayIdx >= 0 ? rows[weekdayIdx] : const <String>[];
-
-    // Day columns start at index 2 (after Batch, Section).
-    final dayCols = <int>[];
-    for (var c = 2; c < header.length; c++) {
-      final hasDate = c < dateRow.length && dateRe.hasMatch(dateRow[c]);
-      final hasDay = c < dayRow.length &&
-          RegExp(r'day[\s-]*\d+', caseSensitive: false).hasMatch(dayRow[c]);
-      if (hasDate || hasDay || (c < header.length && header[c].trim().isNotEmpty)) {
-        dayCols.add(c);
+    var batchCol = 0;
+    var sectionCol = 1;
+    for (var r = 0; r < rows.length && r < 15; r++) {
+      for (var c = 0; c < rows[r].length; c++) {
+        final cell = rows[r][c].trim();
+        if (RegExp(r'^\s*batch\s*$', caseSensitive: false).hasMatch(cell)) {
+          batchCol = c;
+        }
+        if (RegExp(r'^\s*section\s*$', caseSensitive: false).hasMatch(cell)) {
+          sectionCol = c;
+        }
       }
     }
 
     final out = <ExamItem>[];
-    var curBatch = '';
-    for (var r = headerIdx + 1; r < rows.length; r++) {
-      final row = rows[r];
-      if (row.isEmpty) continue;
-      final b = row[0].replaceAll(RegExp(r'\.0+$'), '').trim();
-      if (b.isNotEmpty) curBatch = b;
-      final sec = row.length > 1 ? row[1].trim().toUpperCase() : '';
-      if (curBatch != batch || sec != section) continue;
+    for (var bi = 0; bi < blockStarts.length; bi++) {
+      final dayHeaderIdx = blockStarts[bi];
+      final nextBlockRow = bi + 1 < blockStarts.length
+          ? blockStarts[bi + 1]
+          : rows.length;
+      final dayRow = rows[dayHeaderIdx];
+      final dayCols = <int>[
+        for (var c = 0; c < dayRow.length; c++)
+          if (dayRe.hasMatch(dayRow[c])) c,
+      ];
+      if (dayCols.isEmpty) continue;
 
-      for (final c in dayCols) {
-        var cell = c < row.length ? row[c].trim() : '';
-        if (cell.isEmpty || cell == '-' || cell == '--' || cell == '–') continue;
-        // Strip a trailing "(2)" credit marker like the website does.
-        cell = cell.replaceAll(RegExp(r'\s*\(\d+\)\s*'), '').trim();
-        if (cell.isEmpty) continue;
-        final date = dateRow.length > c ? _normDate(dateRow[c]) : '';
-        final wd = weekdayRow.length > c ? weekdayRow[c].trim() : '';
-        out.add(ExamItem(
-          course: cell,
-          courseName: titles[cell.toUpperCase()] ?? '',
-          date: date,
-          time: timeRow.length > c ? timeRow[c].trim() : '',
-          weekday: wd.isNotEmpty ? wd : (header.length > c ? header[c].trim() : ''),
-          dayLabel: dayRow.length > c ? dayRow[c].trim() : '',
-          dateObj: _dateObj(date),
-        ));
+      var dateRowIdx = dayHeaderIdx + 1;
+      var timeRowIdx = dayHeaderIdx + 2;
+      var weekdayRowIdx = dayHeaderIdx + 3;
+      final sampleCol = dayCols.first;
+      for (var offset = 1; offset <= 5; offset++) {
+        final rIdx = dayHeaderIdx + offset;
+        if (rIdx >= rows.length || rIdx >= nextBlockRow) break;
+        final cell = sampleCol < rows[rIdx].length
+            ? rows[rIdx][sampleCol].trim()
+            : '';
+        if (dateRe.hasMatch(cell)) {
+          dateRowIdx = rIdx;
+        } else if (timeRe.hasMatch(cell)) {
+          timeRowIdx = rIdx;
+        } else if (weekdayRe.hasMatch(cell)) {
+          weekdayRowIdx = rIdx;
+        }
       }
-      break; // section row found
+
+      final dateRow = dateRowIdx < rows.length ? rows[dateRowIdx] : const [];
+      final timeRow = timeRowIdx < rows.length ? rows[timeRowIdx] : const [];
+      final weekdayRow = weekdayRowIdx < rows.length
+          ? rows[weekdayRowIdx]
+          : const [];
+      final dataStart =
+          [
+            dayHeaderIdx,
+            dateRowIdx,
+            timeRowIdx,
+            weekdayRowIdx,
+          ].reduce((a, b) => a > b ? a : b) +
+          1;
+
+      final rowBatches = <int, String>{};
+      var lastBatch = '';
+      for (var r = dayHeaderIdx; r < nextBlockRow; r++) {
+        final rawBatch = batchCol < rows[r].length ? rows[r][batchCol] : '';
+        final normalized = rawBatch
+            .replaceAll(RegExp(r'\.0+$'), '')
+            .replaceAll(RegExp(r'[^0-9]'), '')
+            .trim();
+        if (normalized.isNotEmpty &&
+            !RegExp(
+              r'^(date|time|day|section)',
+              caseSensitive: false,
+            ).hasMatch(rawBatch.trim())) {
+          lastBatch = normalized;
+        }
+        rowBatches[r] = lastBatch;
+      }
+
+      for (var r = dataStart; r < nextBlockRow; r++) {
+        final row = rows[r];
+        if (row.isEmpty) continue;
+        final rowBatch = rowBatches[r] ?? '';
+        final rowSection = sectionCol < row.length
+            ? row[sectionCol].trim().toUpperCase()
+            : '';
+        if (rowBatch != targetBatch ||
+            !_sectionMatches(rowSection, targetSection)) {
+          continue;
+        }
+
+        for (final c in dayCols) {
+          var cell = c < row.length ? row[c].trim() : '';
+          cell = cell.replaceAll(RegExp(r'[\u2013\u2014]'), '-');
+          if (cell.isEmpty || cell == '-' || cell == '--') {
+            continue;
+          }
+          cell = cell.replaceAll(RegExp(r'\s*\(\d+\)\s*'), '').trim();
+          if (cell.isEmpty) continue;
+          final date = c < dateRow.length ? _normDate(dateRow[c]) : '';
+          final weekday = c < weekdayRow.length ? weekdayRow[c].trim() : '';
+          out.add(
+            ExamItem(
+              course: cell,
+              courseName: titles[cell.toUpperCase()] ?? '',
+              date: date,
+              time: c < timeRow.length ? timeRow[c].trim() : '',
+              weekday: weekday,
+              dayLabel: dayRow[c].trim(),
+              dateObj: _dateObj(date),
+            ),
+          );
+        }
+      }
     }
 
     out.sort((a, b) {
-      if (a.dateObj == null || b.dateObj == null) return 0;
-      return a.dateObj!.compareTo(b.dateObj!);
+      final ad = _examDateTime(a);
+      final bd = _examDateTime(b);
+      if (ad == null && bd == null) return 0;
+      if (ad == null) return 1;
+      if (bd == null) return -1;
+      return ad.compareTo(bd);
     });
     return out;
+  }
+
+  bool _sectionMatches(String rowSection, String targetSection) {
+    final row = rowSection.trim().toUpperCase();
+    final target = targetSection.trim().toUpperCase();
+    if (row.isEmpty || target.isEmpty) return false;
+    if (row == target) return true;
+    return row
+        .split(RegExp(r'[+&,]'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .contains(target);
+  }
+
+  DateTime? _examDateTime(ExamItem item) {
+    final d = item.dateObj;
+    if (d == null) return null;
+    final mins = _parseTimeMins(item.time);
+    return DateTime(d.year, d.month, d.day, mins ~/ 60, mins % 60);
+  }
+
+  int _parseTimeMins(String value) {
+    final m = RegExp(
+      r'(\d{1,2}):(\d{2})\s*([AP]M)?',
+      caseSensitive: false,
+    ).firstMatch(value);
+    if (m == null) return 0;
+    var h = int.tryParse(m[1] ?? '') ?? 0;
+    final min = int.tryParse(m[2] ?? '') ?? 0;
+    final ap = (m[3] ?? '').toUpperCase();
+    if (ap == 'PM' && h < 12) h += 12;
+    if (ap == 'AM' && h == 12) h = 0;
+    if (ap.isEmpty && h < 7) h += 12;
+    return h * 60 + min;
   }
 
   String _normDate(String s) {

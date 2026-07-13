@@ -10,7 +10,7 @@ let _examType        = 'mid';
 
 /* ── Date helpers ── */
 function fetchExamTab(sheetId) {
-  return fetchSheetById(sheetId);
+  return fetchSheetById(sheetId, '', true);
 }
 
 function normExamDate(raw) {
