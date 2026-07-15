@@ -2298,7 +2298,7 @@ function formatDeadlineChanges(changes) {
 
 async function checkDeadlines(env) {
   if (!env.SUPA_KEY || !env.MAIN_SHEET_ID) return;
-  const u = `https://docs.google.com/spreadsheets/d/${env.MAIN_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Deadlines`;
+  const u = `https://docs.google.com/spreadsheets/d/${env.MAIN_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Deadlines&_t=${Date.now()}`;
   const r = await fetch(u).catch(() => null);
   if (!r || !r.ok) return;
   const t = await r.text();
@@ -2343,6 +2343,24 @@ async function checkDeadlines(env) {
   if (!countDeadlineChanges(changes)) {
     await supabaseUpsertState(env, 'classwork_deadlines', hash, { items, meaningful });
     await clearSupabaseState(env, 'classwork_deadlines_pending');
+    return;
+  }
+
+  // New classwork posts should notify immediately. The debounce below is kept
+  // for edits/removes so tiny correction waves don't spam everyone.
+  const pureAdditions = changes.added.length > 0 &&
+    changes.updated.length === 0 &&
+    changes.removed.length === 0;
+  if (pureAdditions) {
+    const addedCount = changes.added.length;
+    const title = addedCount === 1
+      ? '📝 New classwork added'
+      : `📝 ${addedCount} new classworks added`;
+    const body = formatDeadlineChanges({ added: changes.added, updated: [], removed: [] });
+    await insertNotification(env, 'classwork', title, body, '/pages/classwork.html');
+    await supabaseUpsertState(env, 'classwork_deadlines', hash, { items, meaningful });
+    await clearSupabaseState(env, 'classwork_deadlines_pending');
+    await sendPushToAll(env);
     return;
   }
 

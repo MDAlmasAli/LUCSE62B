@@ -32,13 +32,16 @@ class DriveFileListView extends StatefulWidget {
 }
 
 class _DriveFileListViewState extends State<DriveFileListView> {
-  late final Future<List<Map<String, dynamic>>> _future = WorkerApi.instance
-      .driveFolder(widget.folderId);
+  late Future<List<Map<String, dynamic>>> _future;
+  final _search = TextEditingController();
   Map<String, DownloadEntry> _entries = {};
+  String _filter = 'all';
+  String _sort = 'name';
 
   @override
   void initState() {
     super.initState();
+    _future = WorkerApi.instance.driveFolder(widget.folderId);
     _refreshDownloaded();
     DownloadService.instance.active.addListener(_refreshDownloaded);
   }
@@ -46,6 +49,7 @@ class _DriveFileListViewState extends State<DriveFileListView> {
   @override
   void dispose() {
     DownloadService.instance.active.removeListener(_refreshDownloaded);
+    _search.dispose();
     super.dispose();
   }
 
@@ -64,7 +68,7 @@ class _DriveFileListViewState extends State<DriveFileListView> {
             child: CircularProgressIndicator(color: AppColors.accent),
           );
         }
-        final all = snap.data ?? [];
+        final all = _visible(snap.data ?? []);
         final folders = all
             .where((f) => '${f['mimeType']}' == _kFolderMime)
             .toList();
@@ -79,13 +83,157 @@ class _DriveFileListViewState extends State<DriveFileListView> {
             ),
           );
         }
-        return ListView(
-          padding: widget.padding,
-          children: [...folders.map(_folderCard), ...files.map(_fileCard)],
+        return RefreshIndicator(
+          color: AppColors.accent,
+          backgroundColor: AppColors.card,
+          onRefresh: () async {
+            setState(() {
+              _future = WorkerApi.instance.driveFolder(widget.folderId);
+            });
+            await _future;
+            await _refreshDownloaded();
+          },
+          child: ListView(
+            padding: widget.padding,
+            children: [
+              _tools(),
+              ...folders.map(_folderCard),
+              ...files.map(_fileCard),
+            ],
+          ),
         );
       },
     );
   }
+
+  List<Map<String, dynamic>> _visible(List<Map<String, dynamic>> all) {
+    final q = _search.text.trim().toLowerCase();
+    final filtered = all.where((f) {
+      final name = (f['name'] ?? '').toString();
+      final mime = (f['mimeType'] ?? '').toString();
+      final isFolder = mime == _kFolderMime;
+      if (q.isNotEmpty && !name.toLowerCase().contains(q)) return false;
+      if (_filter == 'saved' &&
+          !_entries.containsKey((f['id'] ?? '').toString())) {
+        return false;
+      }
+      if (_filter != 'all' && _filter != 'saved' && !isFolder) {
+        if (_filter == 'text' && DownloadService.isReadableText(name, mime)) {
+          return true;
+        }
+        final meta = _typeMeta(mime, name).$3.toLowerCase();
+        if (meta != _filter) return false;
+      }
+      return true;
+    }).toList();
+    filtered.sort((a, b) {
+      final am = (a['mimeType'] ?? '').toString();
+      final bm = (b['mimeType'] ?? '').toString();
+      final af = am == _kFolderMime, bf = bm == _kFolderMime;
+      if (af != bf) return af ? -1 : 1;
+      if (_sort == 'type') {
+        final t = _typeMeta(
+          am,
+          (a['name'] ?? '').toString(),
+        ).$3.compareTo(_typeMeta(bm, (b['name'] ?? '').toString()).$3);
+        if (t != 0) return t;
+      } else if (_sort == 'saved') {
+        final ae = _entries[(a['id'] ?? '').toString()];
+        final be = _entries[(b['id'] ?? '').toString()];
+        if (ae != null || be != null) {
+          if (ae == null) return 1;
+          if (be == null) return -1;
+          return be.savedAt.compareTo(ae.savedAt);
+        }
+      }
+      return (a['name'] ?? '').toString().toLowerCase().compareTo(
+        (b['name'] ?? '').toString().toLowerCase(),
+      );
+    });
+    return filtered;
+  }
+
+  Widget _tools() => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Column(
+      children: [
+        TextField(
+          controller: _search,
+          onChanged: (_) => setState(() {}),
+          style: const TextStyle(color: AppColors.text, fontSize: 14),
+          decoration: InputDecoration(
+            hintText: 'Search files in this folder...',
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: _search.text.isEmpty
+                ? null
+                : IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () {
+                      _search.clear();
+                      setState(() {});
+                    },
+                  ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _filterChip('all', 'All'),
+              _filterChip('saved', 'Saved offline'),
+              _filterChip('pdf', 'PDF'),
+              _filterChip('slides', 'Slides'),
+              _filterChip('document', 'Docs'),
+              _filterChip('text', 'Text/code'),
+              const SizedBox(width: 8),
+              _sortChip('name', 'Name'),
+              _sortChip('type', 'Type'),
+              _sortChip('saved', 'Recent saved'),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _filterChip(String value, String label) => Padding(
+    padding: const EdgeInsets.only(right: 7),
+    child: ChoiceChip(
+      selected: _filter == value,
+      label: Text(label),
+      onSelected: (_) => setState(() => _filter = value),
+      selectedColor: AppColors.accent.withValues(alpha: 0.22),
+      backgroundColor: AppColors.card,
+      side: BorderSide(
+        color: _filter == value ? AppColors.accent : AppColors.border,
+      ),
+      labelStyle: TextStyle(
+        color: _filter == value ? AppColors.text : AppColors.textSecondary,
+        fontSize: 11.5,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
+
+  Widget _sortChip(String value, String label) => Padding(
+    padding: const EdgeInsets.only(right: 7),
+    child: ActionChip(
+      label: Text(label),
+      onPressed: () => setState(() => _sort = value),
+      backgroundColor: _sort == value
+          ? AppColors.accent.withValues(alpha: 0.18)
+          : AppColors.card,
+      side: BorderSide(
+        color: _sort == value ? AppColors.accent : AppColors.border,
+      ),
+      labelStyle: TextStyle(
+        color: _sort == value ? AppColors.text : AppColors.textSecondary,
+        fontSize: 11.5,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
 
   Widget _folderCard(Map<String, dynamic> f) {
     final name = (f['name'] ?? 'Folder').toString();
