@@ -52,6 +52,3 @@
 
 /* Interactive network constellation background (all pages) */
 document.head.appendChild(Object.assign(document.createElement('script'), { src: '/assets/js/network-bg.js', defer: true }));
-
-/* FIFA26: temporary World Cup 2026 theme — delete this line (and the two fifa26 asset files) to remove */
-document.head.appendChild(Object.assign(document.createElement('script'), { src: '/assets/js/fifa26.js?v=20260712b', defer: true }));

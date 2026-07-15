@@ -60,7 +60,7 @@ prompt; forced updates block the whole app until installed.
   forced in-app update system.
 - **Phase 2:** Info hub (routine, exam, bus, teachers, retake), Profile, Students.
 - **Phase 3:** Results + analytics, Cover Page PDF, Resources, Gallery.
-- **Phase 4:** Games (Imposter, Draw), FIFA league, Attendance, push (FCM).
+- **Phase 4:** Games (Imposter, Draw), Attendance, push (FCM).
 
 ## Open items (need decisions / assets)
 - **APK hosting** for `apk_url` (Cloudflare R2 / GitHub Releases / Drive).
