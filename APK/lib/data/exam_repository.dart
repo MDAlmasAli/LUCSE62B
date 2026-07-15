@@ -116,6 +116,33 @@ class ExamRepository {
     return _parse(allRows, batch, section, titles);
   }
 
+  /// True only on exact exam dates for the given batch/section.
+  ///
+  /// Used by bus widgets/screens to switch from the regular bus schedule to
+  /// the exam-day bus schedule. Gap days between exams intentionally return
+  /// false.
+  Future<bool> hasExamToday({String batch = '62', String section = 'B'}) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    for (final type in const ['mid', 'final']) {
+      final items = await load(
+        type,
+        batch: batch,
+        section: section,
+      ).catchError((_) => const <ExamItem>[]);
+      if (items.any((item) {
+        final d = item.dateObj;
+        return d != null &&
+            d.year == today.year &&
+            d.month == today.month &&
+            d.day == today.day;
+      })) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   Future<List<ExamItem>> loadMine(String type, String studentId) async {
     final loaded = await _loadRowsAndTitles(type);
     final allRows = loaded.rows;

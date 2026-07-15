@@ -422,7 +422,8 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
   Future<void> _load() async {
     if (_refreshing) return;
     _refreshing = true;
-    // Routine (cached) + bus, in parallel. Bus failing must not block classes.
+    // Routine (cached) + bus + exam-day flag, in parallel. Bus/exam checks
+    // failing must not block classes.
     final repo = RoutineGridRepository.instance;
     final routine = () async {
       var data = await repo.load();
@@ -442,6 +443,9 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
     final results = await Future.wait([
       routine.then<Object?>((d) => d).catchError((_) => null),
       SheetsApi.instance.sheet('Bus').catchError((_) => <List<String>>[]),
+      ExamRepository.instance
+          .hasExamToday(batch: '62', section: 'B')
+          .catchError((_) => false),
     ]);
     if (!mounted) {
       _refreshing = false;
@@ -449,16 +453,16 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
     }
     setState(() {
       _data = results[0] as RoutineGridData?;
-      _parseBus(results[1] as List<List<String>>);
+      _parseBus(results[1] as List<List<String>>, examDay: results[2] as bool);
       _loading = false;
       _lastLoaded = DateTime.now();
       _refreshing = false;
     });
   }
 
-  /// Parse today's regular bus times into To-LU / From-LU lists. Mirrors the
-  /// website's quick-info bus logic (day-group match + direction).
-  void _parseBus(List<List<String>> rows) {
+  /// Parse today's bus times into To-LU / From-LU lists. On exact 62B exam
+  /// dates, the Exam:* schedule rows replace the regular schedule.
+  void _parseBus(List<List<String>> rows, {required bool examDay}) {
     final to = <({String time, int t})>[];
     final from = <({String time, int t})>[];
     final wd = DateTime.now().weekday;
@@ -474,7 +478,10 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
       final r = rows[i];
       if (r.length < 4) continue;
       final sched = r[0].trim();
-      if (sched != 'Regular') continue;
+      final isWantedSchedule = examDay
+          ? sched.toLowerCase().startsWith('exam:')
+          : sched == 'Regular';
+      if (!isWantedSchedule) continue;
       final gl = r[1].trim().toLowerCase();
       final dir = r[2].trim();
       final match =

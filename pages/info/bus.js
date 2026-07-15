@@ -58,6 +58,9 @@ async function loadBus(body) {
     });
     const hasReg  = keys.includes('Regular');
     const hasExam = examKeys.length > 0;
+    const examDay = hasExam
+      ? await (window._examCd?.hasExamToday?.('62', 'B') || Promise.resolve(false)).catch(() => false)
+      : false;
 
     if (!hasReg && !hasExam) {
       body.innerHTML = '<div class="info-placeholder"><i class="fa-solid fa-bus"></i><p>No schedule data available.</p></div>';
@@ -103,16 +106,15 @@ async function loadBus(body) {
     const regData     = schedules['Regular'] || {};
     const allDayGrps  = Object.keys(regData);
     const examDayGrps = examKeys.length ? Object.keys(schedules[examKeys[0]] || {}) : [];
-    let activeTab     = hasReg ? 'regular' : 'exam';
+    let activeTab     = examDay && hasExam ? 'exam' : (hasReg ? 'regular' : 'exam');
     let activeDayGrp  = detectDayGroup(allDayGrps);
     let activeExamDayGrp = detectDayGroup(examDayGrps);
 
     // ── Next Bus cards ────────────────────────────────────────────────────
-    function renderNextBus() {
-      if (activeTab !== 'regular') return '';
+    function renderNextBus(dayData) {
       const now = nowMins();
 
-      const findNext = dir => (regData[activeDayGrp]?.[dir] || [])
+      const findNext = dir => (dayData?.[dir] || [])
         .filter(e => toMins(e.time) >= now)
         .sort((a, b) => toMins(a.time) - toMins(b.time))[0];
 
@@ -225,7 +227,7 @@ async function loadBus(body) {
       }).join('');
 
       return `
-        ${renderNextBus()}
+        ${renderNextBus(regData[activeDayGrp])}
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
           <i class="fa-solid fa-calendar-days" style="color:var(--muted);font-size:0.78rem;"></i>
           <span style="font-size:0.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Day Group</span>
@@ -254,6 +256,15 @@ async function loadBus(body) {
           ${dayChips}
         </div>` : '';
 
+      const combinedDay = { 'To LU': [], 'From LU': [] };
+      examKeys.forEach(key => {
+        const d = schedules[key]?.[activeExamDayGrp] || {};
+        combinedDay['To LU'].push(...(d['To LU'] || []));
+        combinedDay['From LU'].push(...(d['From LU'] || []));
+      });
+      combinedDay['To LU'].sort((a, b) => toMins(a.time) - toMins(b.time));
+      combinedDay['From LU'].sort((a, b) => toMins(a.time) - toMins(b.time));
+
       const slots = examKeys.map(key => {
         const slotData  = schedules[key] || {};
         const examLabel = key.replace('Exam: ', '');
@@ -271,7 +282,7 @@ async function loadBus(body) {
           </div>`;
       }).join('');
 
-      return dayBar + slots;
+      return (examDay ? renderNextBus(combinedDay) : '') + dayBar + slots;
     }
 
     function renderTab(id) {

@@ -933,6 +933,8 @@
           const now = nowMin();
           const day = new Date().getDay();
           const fromLU = [], toLU = [];
+          const examDay = await (window._examCd?.hasExamToday?.('62', 'B') || Promise.resolve(false))
+            .catch(() => false);
           const firstVal = (rows[0]?.[0] || '').toLowerCase().trim();
           const startIdx = firstVal === 'schedule' ? 1 : 0;
 
@@ -940,7 +942,10 @@
             const row = rows[i];
             if (!row || !row[0] || !row[3]) continue;
             const sched = row[0].trim(), dayGrp = row[1].trim(), dir = row[2].trim(), time = row[3].trim();
-            if (sched !== 'Regular') continue;
+            const wantedSchedule = examDay
+              ? sched.toLowerCase().startsWith('exam:')
+              : sched === 'Regular';
+            if (!wantedSchedule) continue;
             const gl = dayGrp.toLowerCase();
             const isFri = day === 5, isSat = day === 6;
             const match = (isFri && gl.includes('fri'))

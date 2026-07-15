@@ -364,7 +364,33 @@
   }
 
   /* ── Expose to exam.js ── */
-  window._examCd = { cdBuildInfoBlock, cdStopInfo };
+  async function cdHasExamToday(batch = '62', section = 'B') {
+    try {
+      const [midIds, finalIds] = await Promise.all([
+        cdGetSheetIds('mid term'),
+        cdGetSheetIds('final term'),
+      ]);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      for (const ids of [midIds, finalIds]) {
+        if (!ids.length) continue;
+        const tables = await Promise.all(
+          ids.map(id => window.fetchSheetById(id, '', true).catch(() => null))
+        );
+        const data = cdMergeTables(tables);
+        if (!data) continue;
+        const exams = cdParseExams(data, batch, section);
+        if (exams.some(e => {
+          const d = cdDateObj(e.date);
+          return d && d.getTime() === today.getTime();
+        })) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  window._examCd = { cdBuildInfoBlock, cdStopInfo, hasExamToday: cdHasExamToday };
 
   initHome();
 })();

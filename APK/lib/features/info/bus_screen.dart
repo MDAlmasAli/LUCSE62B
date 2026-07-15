@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/app_colors.dart';
 import '../../core/sheets_api.dart';
+import '../../data/exam_repository.dart';
 
 /// Bus schedule — Regular / Exam tabs, a live "Next Bus" countdown, day-group
 /// chips, and side-by-side To LU / From LU timelines (past = red, next =
@@ -22,6 +23,7 @@ class _BusScreenState extends State<BusScreen> {
   String _tab = 'regular';
   String? _regDayGrp;
   String? _examDayGrp;
+  bool _examDay = false;
 
   static const _green = Color(0xFF34D399);
   static const _blue = Color(0xFF38BDF8);
@@ -42,18 +44,32 @@ class _BusScreenState extends State<BusScreen> {
   }
 
   Future<Map<String, _Schedule>> _load() async {
-    final rows = await SheetsApi.instance.sheet('Bus');
-    return _parse(rows);
+    final results = await Future.wait([
+      SheetsApi.instance.sheet('Bus').then<Object>((value) => value),
+      ExamRepository.instance
+          .hasExamToday(batch: '62', section: 'B')
+          .then<Object>((value) => value)
+          .catchError((_) => false),
+    ]);
+    _examDay = results[1] as bool;
+    return _parse(results[0] as List<List<String>>);
   }
 
   Map<String, _Schedule> _parse(List<List<String>> rows) {
     final out = <String, _Schedule>{};
     if (rows.isEmpty) return out;
-    final start = (rows[0].isNotEmpty && rows[0][0].toLowerCase().trim() == 'schedule') ? 1 : 0;
+    final start =
+        (rows[0].isNotEmpty && rows[0][0].toLowerCase().trim() == 'schedule')
+        ? 1
+        : 0;
     for (var i = start; i < rows.length; i++) {
       final r = rows[i];
       String at(int n) => n < r.length ? r[n].trim() : '';
-      final sched = at(0), dayGrp = at(1), dir = at(2), time = at(3), note = at(4);
+      final sched = at(0),
+          dayGrp = at(1),
+          dir = at(2),
+          time = at(3),
+          note = at(4);
       if (sched.isEmpty || time.isEmpty) continue;
       final s = out.putIfAbsent(sched, () => _Schedule());
       final d = s.days.putIfAbsent(dayGrp, () => _DayData());
@@ -68,7 +84,10 @@ class _BusScreenState extends State<BusScreen> {
 
   // ── time helpers ──
   static int _toMins(String t) {
-    final m = RegExp(r'(\d+):(\d+)\s*(AM|PM)', caseSensitive: false).firstMatch(t);
+    final m = RegExp(
+      r'(\d+):(\d+)\s*(AM|PM)',
+      caseSensitive: false,
+    ).firstMatch(t);
     if (m == null) return -1;
     var h = int.parse(m[1]!);
     final mn = int.parse(m[2]!);
@@ -100,8 +119,12 @@ class _BusScreenState extends State<BusScreen> {
       final gl = g.toLowerCase();
       if (isFri && gl.contains('fri')) return g;
       if (isSat && gl == 'saturday') return g;
-      if (!isFri && !isSat &&
-          (gl.contains('sun') || gl.contains('mon') || gl.contains('sat–thu') || gl.contains('sat-thu'))) {
+      if (!isFri &&
+          !isSat &&
+          (gl.contains('sun') ||
+              gl.contains('mon') ||
+              gl.contains('sat–thu') ||
+              gl.contains('sat-thu'))) {
         return g;
       }
     }
@@ -116,14 +139,17 @@ class _BusScreenState extends State<BusScreen> {
         title: const Text('Bus Schedule'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.canPop() ? context.pop() : context.go('/info'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/info'),
         ),
       ),
       body: FutureBuilder<Map<String, _Schedule>>(
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.accent),
+            );
           }
           final data = snap.data;
           if (data == null || data.isEmpty) {
@@ -145,6 +171,9 @@ class _BusScreenState extends State<BusScreen> {
     final examKeys = data.keys.where((k) => k.startsWith('Exam:')).toList();
     final hasExam = examKeys.isNotEmpty;
     if (!hasReg && !hasExam) return _msg('No schedule data available.');
+    if (_examDay && hasExam) {
+      _tab = 'exam';
+    }
     if (hasReg && _tab == 'regular' || (!hasReg && !hasExam)) {
       // ok
     } else if (!hasReg && _tab == 'regular') {
@@ -154,7 +183,9 @@ class _BusScreenState extends State<BusScreen> {
     final reg = data['Regular'];
     _regDayGrp ??= reg != null ? _detectDayGroup(reg.days.keys) : null;
     final examFirst = hasExam ? data[examKeys.first]! : null;
-    _examDayGrp ??= examFirst != null ? _detectDayGroup(examFirst.days.keys) : null;
+    _examDayGrp ??= examFirst != null
+        ? _detectDayGroup(examFirst.days.keys)
+        : null;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 28),
@@ -171,7 +202,12 @@ class _BusScreenState extends State<BusScreen> {
             ),
             child: Row(
               children: [
-                _tabBtn('regular', 'Regular', Icons.directions_bus_rounded, _green),
+                _tabBtn(
+                  'regular',
+                  'Regular',
+                  Icons.directions_bus_rounded,
+                  _green,
+                ),
                 _tabBtn('exam', 'Exam Days', Icons.event_note_rounded, _red),
               ],
             ),
@@ -183,11 +219,20 @@ class _BusScreenState extends State<BusScreen> {
         const SizedBox(height: 12),
         Row(
           children: [
-            const Icon(Icons.info_outline_rounded, size: 12, color: AppColors.muted),
+            const Icon(
+              Icons.info_outline_rounded,
+              size: 12,
+              color: AppColors.muted,
+            ),
             const SizedBox(width: 5),
             Expanded(
-              child: Text('Schedule may change · Always check the notice board',
-                  style: TextStyle(color: AppColors.muted.withValues(alpha: 0.8), fontSize: 11)),
+              child: Text(
+                'Schedule may change · Always check the notice board',
+                style: TextStyle(
+                  color: AppColors.muted.withValues(alpha: 0.8),
+                  fontSize: 11,
+                ),
+              ),
             ),
           ],
         ),
@@ -204,20 +249,32 @@ class _BusScreenState extends State<BusScreen> {
           padding: const EdgeInsets.symmetric(vertical: 9),
           decoration: BoxDecoration(
             gradient: active
-                ? LinearGradient(colors: [color.withValues(alpha: 0.85), color.withValues(alpha: 0.45)])
+                ? LinearGradient(
+                    colors: [
+                      color.withValues(alpha: 0.85),
+                      color.withValues(alpha: 0.45),
+                    ],
+                  )
                 : null,
             borderRadius: BorderRadius.circular(9),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 14, color: active ? Colors.white : AppColors.textSecondary),
+              Icon(
+                icon,
+                size: 14,
+                color: active ? Colors.white : AppColors.textSecondary,
+              ),
               const SizedBox(width: 7),
-              Text(label,
-                  style: TextStyle(
-                      color: active ? Colors.white : AppColors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700)),
+              Text(
+                label,
+                style: TextStyle(
+                  color: active ? Colors.white : AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
         ),
@@ -227,12 +284,17 @@ class _BusScreenState extends State<BusScreen> {
 
   // ── Regular tab ──
   List<Widget> _regular(_Schedule reg) {
-    final dayGrp = _regDayGrp ?? (reg.days.keys.isNotEmpty ? reg.days.keys.first : '');
+    final dayGrp =
+        _regDayGrp ?? (reg.days.keys.isNotEmpty ? reg.days.keys.first : '');
     final day = reg.days[dayGrp];
     return [
       _nextBus(day),
       const SizedBox(height: 18),
-      _dayChips(reg.days.keys.toList(), dayGrp, (g) => setState(() => _regDayGrp = g)),
+      _dayChips(
+        reg.days.keys.toList(),
+        dayGrp,
+        (g) => setState(() => _regDayGrp = g),
+      ),
       const SizedBox(height: 14),
       _dirPanel(day),
     ];
@@ -249,8 +311,14 @@ class _BusScreenState extends State<BusScreen> {
     final toLU = day == null ? null : next(day.toLU);
     final fromLU = day == null ? null : next(day.fromLU);
     final cards = <Widget>[];
-    if (toLU != null) cards.add(_nextCard('Next → To LU', toLU, _green, Icons.login_rounded));
-    if (fromLU != null) cards.add(_nextCard('Next ← From LU', fromLU, _blue, Icons.logout_rounded));
+    if (toLU != null) {
+      cards.add(_nextCard('Next → To LU', toLU, _green, Icons.login_rounded));
+    }
+    if (fromLU != null) {
+      cards.add(
+        _nextCard('Next ← From LU', fromLU, _blue, Icons.logout_rounded),
+      );
+    }
 
     if (cards.isEmpty) {
       return Container(
@@ -264,7 +332,10 @@ class _BusScreenState extends State<BusScreen> {
           children: [
             Icon(Icons.nightlight_round, color: AppColors.muted, size: 18),
             SizedBox(width: 10),
-            Text('No more buses today', style: TextStyle(color: AppColors.muted, fontSize: 13.5)),
+            Text(
+              'No more buses today',
+              style: TextStyle(color: AppColors.muted, fontSize: 13.5),
+            ),
           ],
         ),
       );
@@ -296,33 +367,58 @@ class _BusScreenState extends State<BusScreen> {
               Icon(icon, size: 12, color: color),
               const SizedBox(width: 5),
               Flexible(
-                child: Text(label.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: color, fontSize: 9.5, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                child: Text(
+                  label.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(trip.time,
-              style: const TextStyle(
-                  color: AppColors.textBright,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                  height: 1)),
+          Text(
+            trip.time,
+            style: const TextStyle(
+              color: AppColors.textBright,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              fontFeatures: [FontFeature.tabularFigures()],
+              height: 1,
+            ),
+          ),
           if (cd != null) ...[
             const SizedBox(height: 5),
-            Text('in $cd', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(
+              'in $cd',
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
           if (trip.note.isNotEmpty) ...[
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
-                  color: const Color(0xFFFBBF24).withValues(alpha: 0.13), borderRadius: BorderRadius.circular(5)),
-              child: Text(trip.note,
-                  style: const TextStyle(color: Color(0xFFFBBF24), fontSize: 9.5, fontWeight: FontWeight.w700)),
+                color: const Color(0xFFFBBF24).withValues(alpha: 0.13),
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Text(
+                trip.note,
+                style: const TextStyle(
+                  color: Color(0xFFFBBF24),
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ],
         ],
@@ -330,7 +426,11 @@ class _BusScreenState extends State<BusScreen> {
     );
   }
 
-  Widget _dayChips(List<String> groups, String active, ValueChanged<String> onPick) {
+  Widget _dayChips(
+    List<String> groups,
+    String active,
+    ValueChanged<String> onPick,
+  ) {
     if (groups.length <= 1) return const SizedBox.shrink();
     return Wrap(
       spacing: 7,
@@ -338,7 +438,11 @@ class _BusScreenState extends State<BusScreen> {
       children: [
         const Padding(
           padding: EdgeInsets.only(top: 5, right: 2),
-          child: Icon(Icons.calendar_today_rounded, size: 13, color: AppColors.muted),
+          child: Icon(
+            Icons.calendar_today_rounded,
+            size: 13,
+            color: AppColors.muted,
+          ),
         ),
         for (final g in groups)
           GestureDetector(
@@ -346,16 +450,26 @@ class _BusScreenState extends State<BusScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: g == active ? AppColors.accent.withValues(alpha: 0.18) : AppColors.card,
+                color: g == active
+                    ? AppColors.accent.withValues(alpha: 0.18)
+                    : AppColors.card,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: g == active ? AppColors.accent.withValues(alpha: 0.4) : AppColors.border),
+                  color: g == active
+                      ? AppColors.accent.withValues(alpha: 0.4)
+                      : AppColors.border,
+                ),
               ),
-              child: Text(g,
-                  style: TextStyle(
-                      color: g == active ? AppColors.accentBright : AppColors.textSecondary,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700)),
+              child: Text(
+                g,
+                style: TextStyle(
+                  color: g == active
+                      ? AppColors.accentBright
+                      : AppColors.textSecondary,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
       ],
@@ -366,9 +480,18 @@ class _BusScreenState extends State<BusScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: _dirCol('To LU', Icons.login_rounded, _green, day?.toLU ?? [])),
+        Expanded(
+          child: _dirCol('To LU', Icons.login_rounded, _green, day?.toLU ?? []),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: _dirCol('From LU', Icons.logout_rounded, _blue, day?.fromLU ?? [])),
+        Expanded(
+          child: _dirCol(
+            'From LU',
+            Icons.logout_rounded,
+            _blue,
+            day?.fromLU ?? [],
+          ),
+        ),
       ],
     );
   }
@@ -386,12 +509,26 @@ class _BusScreenState extends State<BusScreen> {
         children: [
           Row(
             children: [
-              Container(width: 3, height: 15, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+              Container(
+                width: 3,
+                height: 15,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               const SizedBox(width: 7),
               Icon(icon, size: 12, color: color),
               const SizedBox(width: 5),
-              Text(title.toUpperCase(),
-                  style: TextStyle(color: color, fontSize: 11.5, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+              Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -405,7 +542,10 @@ class _BusScreenState extends State<BusScreen> {
     if (trips.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 8),
-        child: Text('No buses scheduled', style: TextStyle(color: AppColors.muted, fontSize: 12)),
+        child: Text(
+          'No buses scheduled',
+          style: TextStyle(color: AppColors.muted, fontSize: 12),
+        ),
       );
     }
     final now = _nowMins();
@@ -426,8 +566,12 @@ class _BusScreenState extends State<BusScreen> {
         final (bg, fg, border) = isPast
             ? (_red.withValues(alpha: 0.12), _red, _red.withValues(alpha: 0.3))
             : isNext
-                ? (color, Colors.white, color)
-                : (color.withValues(alpha: 0.12), color, color.withValues(alpha: 0.3));
+            ? (color, Colors.white, color)
+            : (
+                color.withValues(alpha: 0.12),
+                color,
+                color.withValues(alpha: 0.3),
+              );
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -437,20 +581,34 @@ class _BusScreenState extends State<BusScreen> {
                 color: bg,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: border),
-                boxShadow: isNext ? [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 12)] : null,
+                boxShadow: isNext
+                    ? [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.4),
+                          blurRadius: 12,
+                        ),
+                      ]
+                    : null,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(t.time,
-                      style: TextStyle(
-                          color: fg,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          fontFeatures: const [FontFeature.tabularFigures()])),
+                  Text(
+                    t.time,
+                    style: TextStyle(
+                      color: fg,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
                   if (isNext) ...[
                     const SizedBox(width: 4),
-                    const Icon(Icons.directions_bus_rounded, size: 11, color: Colors.white),
+                    const Icon(
+                      Icons.directions_bus_rounded,
+                      size: 11,
+                      color: Colors.white,
+                    ),
                   ],
                 ],
               ),
@@ -458,8 +616,14 @@ class _BusScreenState extends State<BusScreen> {
             if (t.note.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 3),
-                child: Text(t.note,
-                    style: const TextStyle(color: Color(0xFFFBBF24), fontSize: 8.5, fontWeight: FontWeight.w700)),
+                child: Text(
+                  t.note,
+                  style: const TextStyle(
+                    color: Color(0xFFFBBF24),
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
           ],
         );
@@ -470,8 +634,11 @@ class _BusScreenState extends State<BusScreen> {
   // ── Exam tab ──
   List<Widget> _exam(Map<String, _Schedule> data, List<String> examKeys) {
     final examDayGroups = data[examKeys.first]!.days.keys.toList();
-    final dayGrp = _examDayGrp ?? (examDayGroups.isNotEmpty ? examDayGroups.first : '');
+    final dayGrp =
+        _examDayGrp ?? (examDayGroups.isNotEmpty ? examDayGroups.first : '');
+    final combinedDay = _combinedExamDayData(data, examKeys, dayGrp);
     return [
+      if (_examDay) ...[_nextBus(combinedDay), const SizedBox(height: 18)],
       _dayChips(examDayGroups, dayGrp, (g) => setState(() => _examDayGrp = g)),
       const SizedBox(height: 14),
       for (final key in examKeys) ...[
@@ -488,17 +655,28 @@ class _BusScreenState extends State<BusScreen> {
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: _red.withValues(alpha: 0.08),
-                  border: Border(bottom: BorderSide(color: _red.withValues(alpha: 0.15))),
+                  border: Border(
+                    bottom: BorderSide(color: _red.withValues(alpha: 0.15)),
+                  ),
                 ),
                 child: Row(
                   children: [
                     const Icon(Icons.schedule_rounded, size: 14, color: _red),
                     const SizedBox(width: 7),
-                    Text('${key.replaceFirst('Exam: ', '')} Exam',
-                        style: const TextStyle(color: _red, fontSize: 13.5, fontWeight: FontWeight.w800)),
+                    Text(
+                      '${key.replaceFirst('Exam: ', '')} Exam',
+                      style: const TextStyle(
+                        color: _red,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -513,12 +691,34 @@ class _BusScreenState extends State<BusScreen> {
     ];
   }
 
+  _DayData _combinedExamDayData(
+    Map<String, _Schedule> data,
+    List<String> examKeys,
+    String dayGrp,
+  ) {
+    final out = _DayData();
+    for (final key in examKeys) {
+      final day = data[key]?.days[dayGrp];
+      if (day == null) continue;
+      out.toLU.addAll(day.toLU);
+      out.fromLU.addAll(day.fromLU);
+    }
+    out.toLU.sort((a, b) => _toMins(a.time).compareTo(_toMins(b.time)));
+    out.fromLU.sort((a, b) => _toMins(a.time).compareTo(_toMins(b.time)));
+    return out;
+  }
+
   Widget _msg(String m) => ListView(
-        children: [
-          const SizedBox(height: 120),
-          Center(child: Text(m, style: const TextStyle(color: AppColors.muted, fontSize: 14))),
-        ],
-      );
+    children: [
+      const SizedBox(height: 120),
+      Center(
+        child: Text(
+          m,
+          style: const TextStyle(color: AppColors.muted, fontSize: 14),
+        ),
+      ),
+    ],
+  );
 }
 
 class _Schedule {

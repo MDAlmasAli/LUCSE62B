@@ -7,6 +7,7 @@ import 'package:workmanager/workmanager.dart';
 import '../core/sheets_api.dart';
 import '../core/supa.dart';
 import 'class_reminder_service.dart';
+import 'exam_repository.dart';
 import 'home_widget_service.dart';
 import 'routine_grid_repository.dart';
 import 'session.dart';
@@ -51,9 +52,7 @@ class HomeWidgetRefreshService {
   Future<void> initializeBackgroundRefresh() async {
     if (!Platform.isAndroid || _workmanagerReady) return;
     try {
-      await Workmanager().initialize(
-        homeWidgetCallbackDispatcher,
-      );
+      await Workmanager().initialize(homeWidgetCallbackDispatcher);
       await Workmanager().registerPeriodicTask(
         _widgetRefreshTask,
         _widgetRefreshTask,
@@ -106,12 +105,10 @@ class HomeWidgetRefreshService {
     final student = Session.instance.student;
     if (student != null && !student.isDemo) {
       final personal = await Future.wait([
-        repo.loadCustomCourses(student.id).catchError(
-          (_) => <CustomCourse>[],
-        ),
-        repo.loadEnrollmentCourses(student.id).catchError(
-          (_) => <CustomCourse>[],
-        ),
+        repo.loadCustomCourses(student.id).catchError((_) => <CustomCourse>[]),
+        repo
+            .loadEnrollmentCourses(student.id)
+            .catchError((_) => <CustomCourse>[]),
       ]);
       final courses = [...personal[0], ...personal[1]];
       if (courses.isNotEmpty) {
@@ -130,15 +127,25 @@ class HomeWidgetRefreshService {
     final nowMin = now.hour * 60 + now.minute;
 
     final slots =
-        <({String code, String name, String time, String room, int start, int end})>[];
+        <
+          ({
+            String code,
+            String name,
+            String time,
+            String room,
+            int start,
+            int end,
+          })
+        >[];
     final today = data?.schedule[dayName];
     if (data != null && today != null) {
-      final boundaries = today
-          .map((s) => _timeToMin(s.time))
-          .where((m) => m < 9999)
-          .toSet()
-          .toList()
-        ..sort();
+      final boundaries =
+          today
+              .map((s) => _timeToMin(s.time))
+              .where((m) => m < 9999)
+              .toSet()
+              .toList()
+            ..sort();
       for (final s in today) {
         if (s.isBreak || s.code.isEmpty) continue;
         final start = _timeToMin(s.time);
@@ -190,7 +197,10 @@ class HomeWidgetRefreshService {
         ? '$dayName · Check again tomorrow'
         : 'Room ${item.room.isEmpty ? '—' : item.room} · ${item.time}';
 
-    final (toLu, fromLu) = _parseBus(busRows);
+    final examDay = await ExamRepository.instance
+        .hasExamToday(batch: '62', section: 'B')
+        .catchError((_) => false);
+    final (toLu, fromLu) = _parseBus(busRows, examDay: examDay);
     final nextTo = toLu.where((bus) => bus.t >= nowMin).firstOrNull;
     final nextFrom = fromLu.where((bus) => bus.t >= nowMin).firstOrNull;
     final busParts = <String>[
@@ -210,7 +220,8 @@ class HomeWidgetRefreshService {
 
   Future<void> _saveDeadlines(List<List<String>> rows) async {
     final now = DateTime.now();
-    final upcoming = <({String course, String type, String title, DateTime due})>[];
+    final upcoming =
+        <({String course, String type, String title, DateTime due})>[];
     for (final row in rows) {
       String at(int i) => i < row.length ? row[i].trim() : '';
       final course = at(0), type = at(1), title = at(2);
@@ -238,7 +249,10 @@ class HomeWidgetRefreshService {
         .take(3)
         .map((entry) => '${_shortDeadlineType(entry.key)} ${entry.value}')
         .join(' · ');
-    final extra = math.max(0, upcoming.length - counts.values.take(3).fold(0, (a, b) => a + b));
+    final extra = math.max(
+      0,
+      upcoming.length - counts.values.take(3).fold(0, (a, b) => a + b),
+    );
     final summary = extra > 0 ? 'Due: $countLine · +$extra' : 'Due: $countLine';
     final nextLine =
         'Next: ${_shortDeadlineType(nearest.type)} · ${_formatDue(nearest.due)}';
@@ -246,8 +260,9 @@ class HomeWidgetRefreshService {
   }
 
   static (List<({String time, int t})>, List<({String time, int t})>) _parseBus(
-    List<List<String>> rows,
-  ) {
+    List<List<String>> rows, {
+    required bool examDay,
+  }) {
     final to = <({String time, int t})>[];
     final from = <({String time, int t})>[];
     final wd = DateTime.now().weekday;
@@ -263,7 +278,10 @@ class HomeWidgetRefreshService {
       final r = rows[i];
       if (r.length < 4) continue;
       final sched = r[0].trim();
-      if (sched != 'Regular') continue;
+      final isWantedSchedule = examDay
+          ? sched.toLowerCase().startsWith('exam:')
+          : sched == 'Regular';
+      if (!isWantedSchedule) continue;
       final gl = r[1].trim().toLowerCase();
       final dir = r[2].trim();
       final match =
