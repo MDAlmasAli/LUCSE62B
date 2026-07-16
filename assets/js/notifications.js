@@ -204,11 +204,28 @@
     } catch { return []; }
   }
 
-  function getLastSeen() { return localStorage.getItem(LS_SEEN) || '1970-01-01T00:00:00Z'; }
+  function parseTimestamp(value) {
+    const timestamp = Date.parse(value || '');
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  }
+
+  function getLastSeenTimestamp() {
+    return parseTimestamp(localStorage.getItem(LS_SEEN));
+  }
+
+  function markAllSeen() {
+    const newestNotification = _notifs.reduce(
+      (latest, notification) => Math.max(latest, parseTimestamp(notification.created_at)),
+      0,
+    );
+    /* Cover both the fetched rows and a device clock that is ahead of them. */
+    const watermark = Math.max(Date.now(), newestNotification);
+    localStorage.setItem(LS_SEEN, new Date(watermark).toISOString());
+  }
 
   function updateBadge() {
-    const seen  = getLastSeen();
-    const count = _notifs.filter(n => n.created_at > seen).length;
+    const seen  = getLastSeenTimestamp();
+    const count = _notifs.filter(n => parseTimestamp(n.created_at) > seen).length;
     const badge = document.getElementById('notifBadge');
     if (!badge) return;
     badge.textContent = count > 9 ? '9+' : String(count);
@@ -226,7 +243,7 @@
     const btn = document.getElementById('notifBellBtn');
     if (!btn) return;
 
-    const seen = getLastSeen();
+    const seen = getLastSeenTimestamp();
     const drop = document.createElement('div');
     drop.id = 'notif-dropdown';
 
@@ -241,7 +258,7 @@
 
     const items = _notifs.length
       ? _notifs.map(n => {
-          const isNew = n.created_at > seen;
+          const isNew = parseTimestamp(n.created_at) > seen;
           return `<a class="nd-item${isNew ? ' unread' : ''}" href="${escH(n.link || '/')}">
             <div class="nd-item-title">${escH(n.title)}</div>
             <div class="nd-item-body">${escH(n.body)}</div>
@@ -282,9 +299,8 @@
     }, 10);
 
     // Mark all as read
-    localStorage.setItem(LS_SEEN, new Date().toISOString());
-    const badge = document.getElementById('notifBadge');
-    if (badge) badge.style.display = 'none';
+    markAllSeen();
+    updateBadge();
   }
 
   function positionDrop(drop, btn) {
@@ -298,9 +314,8 @@
   }
 
   window._notifMarkAll = function () {
-    localStorage.setItem(LS_SEEN, new Date().toISOString());
-    const badge = document.getElementById('notifBadge');
-    if (badge) badge.style.display = 'none';
+    markAllSeen();
+    updateBadge();
     document.getElementById('notif-dropdown')?.remove();
   };
 

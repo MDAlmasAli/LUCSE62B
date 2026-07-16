@@ -37,14 +37,22 @@ class _NotificationBellState extends State<NotificationBell> {
   }
 
   Future<void> _open() async {
+    // Persist immediately: closing/killing the app while the sheet is open
+    // must not make the same notifications unread again on the next launch.
+    try {
+      await _repo.markAllSeen(_items);
+    } catch (_) {
+      // The notification list should still open if local persistence fails.
+    }
+    if (!mounted) return;
+    setState(() => _unread = 0);
+
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => NotificationsSheet(items: _items),
     );
-    await _repo.markAllSeen();
-    if (mounted) setState(() => _unread = 0);
   }
 
   @override

@@ -29,17 +29,23 @@ class NotificationsRepository {
   Future<DateTime> lastSeen() async {
     final prefs = await SharedPreferences.getInstance();
     final v = prefs.getString(K.ssNotifLastSeen);
-    return DateTime.tryParse(v ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+    return (DateTime.tryParse(v ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0))
+        .toUtc();
   }
 
-  Future<void> markAllSeen() async {
+  Future<void> markAllSeen(Iterable<AppNotification> items) async {
     final prefs = await SharedPreferences.getInstance();
+    var watermark = DateTime.now().toUtc();
+    for (final item in items) {
+      final createdAt = item.createdAt.toUtc();
+      if (createdAt.isAfter(watermark)) watermark = createdAt;
+    }
     await prefs.setString(
       K.ssNotifLastSeen,
-      DateTime.now().toUtc().toIso8601String(),
+      watermark.toIso8601String(),
     );
   }
 
   int unreadCount(List<AppNotification> list, DateTime seen) =>
-      list.where((n) => n.createdAt.isAfter(seen)).length;
+      list.where((n) => n.createdAt.toUtc().isAfter(seen.toUtc())).length;
 }
