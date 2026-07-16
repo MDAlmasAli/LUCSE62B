@@ -336,7 +336,7 @@
     </div>
 
     <!-- Quick Info Strip: Next Class · Time · Room · Next Bus -->
-    <div class="qi-strip fade-in delay-2 auth-only" id="qiStrip">
+    <div class="qi-strip fade-in delay-2 auth-only" id="qiStrip" style="display:none;">
       <div class="qi-item" id="qiNowItem">
         <span class="qi-icon">🟢</span>
         <div class="qi-content">
@@ -740,9 +740,18 @@
 
       function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
       let _hasCurrentClass = false, _hasNextClass = false, _hasNextBus = false;
+      let _routineChecked = false, _busChecked = false;
       function updateQuickInfoVisibility() {
         const el = document.getElementById('qiStrip');
-        if (el) el.style.display = (_hasCurrentClass || _hasNextClass || _hasNextBus) ? '' : 'none';
+        if (!el) return;
+
+        /* Keep the strip hidden while either data source is still loading. */
+        if (!_routineChecked || !_busChecked) {
+          el.style.display = 'none';
+          return;
+        }
+
+        el.style.display = (_hasCurrentClass || _hasNextClass || _hasNextBus) ? '' : 'none';
       }
       function forceHideEmptyQuickInfo() {
         const empty = value => {
@@ -898,7 +907,13 @@
             set('qi-class', 'No class today'); set('qi-time', '—'); set('qi-room', '—');
           }
         }
-      } catch (_) {}
+      } catch (_) {
+        _hasCurrentClass = false;
+        _hasNextClass = false;
+      } finally {
+        _routineChecked = true;
+        updateQuickInfoVisibility();
+      }
 
       /* ── Fetch bus schedule ── */
       try {
@@ -967,7 +982,13 @@
           updateQuickInfoVisibility();
           forceHideEmptyQuickInfo();
         }
-      } catch (_) {}
+      } catch (_) {
+        _hasNextBus = false;
+      } finally {
+        _busChecked = true;
+        updateQuickInfoVisibility();
+        forceHideEmptyQuickInfo();
+      }
 
       /* Start live countdowns — tick every 30s */
       tickCountdowns();
