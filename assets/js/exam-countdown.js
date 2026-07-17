@@ -288,7 +288,8 @@
     if (!container) return;
     let hasUpcomingExam = false;
     const syncVisibility = () => {
-      container.style.display = hasUpcomingExam && !window._homeQuickExamActive ? '' : 'none';
+      container.classList.toggle('quick-exam-active', !!window._homeQuickExamActive);
+      container.style.display = hasUpcomingExam ? '' : 'none';
     };
     window.addEventListener('home-quick-exam-change', syncVisibility);
 

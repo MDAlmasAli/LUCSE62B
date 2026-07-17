@@ -120,6 +120,7 @@ body {
 .lu62b-logged-in .mobile-nav-overlay .auth-only { display: flex !important; }
 .lu62b-logged-in .qi-strip.auth-only { display: flex !important; }
 .lu62b-logged-in .qi-strip.auth-only.qi-empty { display: none !important; }
+.lu62b-logged-in #examCdHomeWrap.quick-exam-active { display: none !important; }
 
 /* ── Hero / Profile ── */
 .hero {
