@@ -349,7 +349,7 @@
       <div class="qi-item">
         <span class="qi-icon">📚</span>
         <div class="qi-content">
-          <span class="qi-label">Next Class</span>
+          <span class="qi-label" id="qiClassLabel">Next Class</span>
           <span class="qi-val" id="qi-class">—</span>
           <span class="qi-countdown" id="qi-class-cd"></span>
         </div>
@@ -366,7 +366,7 @@
       <div class="qi-item">
         <span class="qi-icon">🚪</span>
         <div class="qi-content">
-          <span class="qi-label">Room</span>
+          <span class="qi-label" id="qiRoomLabel">Room</span>
           <span class="qi-val" id="qi-room">—</span>
         </div>
       </div>
@@ -818,8 +818,49 @@
         }
       } catch (_) {}
 
+      /* One exam-day lookup is shared by the class/exam card and bus schedule. */
+      const todayExams = await (window._examCd?.getExamsToday?.('62', 'B') || Promise.resolve([]))
+        .catch(() => []);
+      const examDay = todayExams.length > 0;
+
       /* ── Fetch routine for today ── */
       try {
+        if (examDay) {
+          const now = nowMin();
+          const exams = todayExams.map(exam => ({ ...exam, tMin: timeToMin(exam.time) }));
+          const current = exams.find(exam => exam.tMin <= now && now < exam.tMin + 120);
+          const next = exams.find(exam => exam.tMin > now);
+
+          set('qiClassLabel', 'Next Exam');
+          set('qiRoomLabel', 'Exam Type');
+          if (current) {
+            setNowRunningVisible(true);
+            const name = courseNames[current.course.toUpperCase()] || '';
+            set('qi-now', name ? `${current.course} · ${name}` : current.course);
+            _nowEndMin = current.tMin + 120;
+          } else {
+            setNowRunningVisible(false);
+            _nowEndMin = null;
+          }
+
+          if (next) {
+            _hasNextClass = true;
+            const name = courseNames[next.course.toUpperCase()] || '';
+            set('qi-class', name ? `${next.course} · ${name}` : next.course);
+            set('qi-time', next.time);
+            set('qi-room', next.type);
+            _classMin = next.tMin;
+          } else {
+            _hasNextClass = false;
+            _classMin = null;
+            set('qi-class', 'No more exams');
+            set('qi-time', '—');
+            set('qi-room', current?.type || '—');
+          }
+          updateQuickInfoVisibility();
+        } else {
+        set('qiClassLabel', 'Next Class');
+        set('qiRoomLabel', 'Room');
         const routineData = await fetchSheet('Routine').catch(() => null);
         let sheetId = '1jjOmSUg3U_uyzM0mtaj1FldEOD1nNeMCAhybEiQTW3M';
         if (routineData) {
@@ -909,6 +950,7 @@
             set('qi-class', 'No class today'); set('qi-time', '—'); set('qi-room', '—');
           }
         }
+        }
       } catch (_) {
         _hasCurrentClass = false;
         _hasNextClass = false;
@@ -950,8 +992,6 @@
           const now = nowMin();
           const day = new Date().getDay();
           const fromLU = [], toLU = [];
-          const examDay = await (window._examCd?.hasExamToday?.('62', 'B') || Promise.resolve(false))
-            .catch(() => false);
           const firstVal = (rows[0]?.[0] || '').toLowerCase().trim();
           const startIdx = firstVal === 'schedule' ? 1 : 0;
 
@@ -966,7 +1006,7 @@
             const gl = dayGrp.toLowerCase();
             const isFri = day === 5, isSat = day === 6;
             const match = (isFri && gl.includes('fri'))
-              || (isSat && gl === 'saturday')
+              || (isSat && (gl === 'saturday' || gl.includes('sat–thu') || gl.includes('sat-thu')))
               || (!isFri && !isSat && (gl.includes('sun') || gl.includes('sat') || gl.includes('mon')));
             if (!match) continue;
             const t = toMins(time); if (t < 0) continue;

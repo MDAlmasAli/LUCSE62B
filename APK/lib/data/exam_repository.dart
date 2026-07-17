@@ -44,6 +44,13 @@ class ExamItem {
   );
 }
 
+class TodayExamItem {
+  final ExamItem exam;
+  final String type;
+
+  const TodayExamItem({required this.exam, required this.type});
+}
+
 class _ExamEnrollment {
   final String courseCode, courseName, batch, section, type;
   const _ExamEnrollment(
@@ -116,31 +123,46 @@ class ExamRepository {
     return _parse(allRows, batch, section, titles);
   }
 
-  /// True only on exact exam dates for the given batch/section.
-  ///
-  /// Used by bus widgets/screens to switch from the regular bus schedule to
-  /// the exam-day bus schedule. Gap days between exams intentionally return
-  /// false.
-  Future<bool> hasExamToday({String batch = '62', String section = 'B'}) async {
+  /// Exams scheduled on today's exact date. Gap days intentionally return an
+  /// empty list so regular routine and bus data remain active between exams.
+  Future<List<TodayExamItem>> loadToday({
+    String batch = '62',
+    String section = 'B',
+  }) async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    for (final type in const ['mid', 'final']) {
-      final items = await load(
-        type,
-        batch: batch,
-        section: section,
-      ).catchError((_) => const <ExamItem>[]);
-      if (items.any((item) {
+    final loaded = await Future.wait([
+      load('mid', batch: batch, section: section)
+          .catchError((_) => const <ExamItem>[]),
+      load('final', batch: batch, section: section)
+          .catchError((_) => const <ExamItem>[]),
+    ]);
+    final result = <TodayExamItem>[];
+    for (var i = 0; i < loaded.length; i++) {
+      for (final item in loaded[i]) {
         final d = item.dateObj;
-        return d != null &&
+        final isToday = d != null &&
             d.year == today.year &&
             d.month == today.month &&
             d.day == today.day;
-      })) {
-        return true;
+        if (isToday) {
+          result.add(
+            TodayExamItem(exam: item, type: i == 0 ? 'Mid Term' : 'Final Term'),
+          );
+        }
       }
     }
-    return false;
+    result.sort(
+      (a, b) => _parseTimeMins(a.exam.time).compareTo(
+        _parseTimeMins(b.exam.time),
+      ),
+    );
+    return result;
+  }
+
+  /// True only on exact exam dates for the given batch/section.
+  Future<bool> hasExamToday({String batch = '62', String section = 'B'}) async {
+    return (await loadToday(batch: batch, section: section)).isNotEmpty;
   }
 
   Future<List<ExamItem>> loadMine(String type, String studentId) async {

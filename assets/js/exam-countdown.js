@@ -364,7 +364,8 @@
   }
 
   /* ── Expose to exam.js ── */
-  async function cdHasExamToday(batch = '62', section = 'B') {
+  async function cdGetExamsToday(batch = '62', section = 'B') {
+    const todayExams = [];
     try {
       const [midIds, finalIds] = await Promise.all([
         cdGetSheetIds('mid term'),
@@ -373,7 +374,7 @@
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      for (const ids of [midIds, finalIds]) {
+      for (const [type, ids] of [['Mid Term', midIds], ['Final Term', finalIds]]) {
         if (!ids.length) continue;
         const tables = await Promise.all(
           ids.map(id => window.fetchSheetById(id, '', true).catch(() => null))
@@ -381,16 +382,25 @@
         const data = cdMergeTables(tables);
         if (!data) continue;
         const exams = cdParseExams(data, batch, section);
-        if (exams.some(e => {
+        exams.forEach(e => {
           const d = cdDateObj(e.date);
-          return d && d.getTime() === today.getTime();
-        })) return true;
+          if (d && d.getTime() === today.getTime()) todayExams.push({ ...e, type });
+        });
       }
     } catch (_) {}
-    return false;
+    return todayExams.sort((a, b) => cdParseTimeMins(a.time) - cdParseTimeMins(b.time));
   }
 
-  window._examCd = { cdBuildInfoBlock, cdStopInfo, hasExamToday: cdHasExamToday };
+  async function cdHasExamToday(batch = '62', section = 'B') {
+    return (await cdGetExamsToday(batch, section)).length > 0;
+  }
+
+  window._examCd = {
+    cdBuildInfoBlock,
+    cdStopInfo,
+    hasExamToday: cdHasExamToday,
+    getExamsToday: cdGetExamsToday,
+  };
 
   initHome();
 })();

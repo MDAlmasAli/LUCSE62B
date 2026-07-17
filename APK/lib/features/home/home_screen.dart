@@ -367,6 +367,7 @@ class _ClassStatusCard extends StatefulWidget {
 
 class _ClassStatusCardState extends State<_ClassStatusCard> {
   RoutineGridData? _data;
+  List<TodayExamItem> _todayExams = const [];
   bool _loading = true;
   bool _refreshing = false;
   DateTime? _lastLoaded;
@@ -444,8 +445,8 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
       routine.then<Object?>((d) => d).catchError((_) => null),
       SheetsApi.instance.sheet('Bus').catchError((_) => <List<String>>[]),
       ExamRepository.instance
-          .hasExamToday(batch: '62', section: 'B')
-          .catchError((_) => false),
+          .loadToday(batch: '62', section: 'B')
+          .catchError((_) => <TodayExamItem>[]),
     ]);
     if (!mounted) {
       _refreshing = false;
@@ -453,7 +454,11 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
     }
     setState(() {
       _data = results[0] as RoutineGridData?;
-      _parseBus(results[1] as List<List<String>>, examDay: results[2] as bool);
+      _todayExams = results[2] as List<TodayExamItem>;
+      _parseBus(
+        results[1] as List<List<String>>,
+        examDay: _todayExams.isNotEmpty,
+      );
       _loading = false;
       _lastLoaded = DateTime.now();
       _refreshing = false;
@@ -486,7 +491,10 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
       final dir = r[2].trim();
       final match =
           (isFri && gl.contains('fri')) ||
-          (isSat && gl == 'saturday') ||
+          (isSat &&
+              (gl == 'saturday' ||
+                  gl.contains('sat–thu') ||
+                  gl.contains('sat-thu'))) ||
           (!isFri &&
               !isSat &&
               (gl.contains('sun') || gl.contains('sat') || gl.contains('mon')));
@@ -552,7 +560,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
           })
         >[];
     final today = _data?.schedule[dayName];
-    if (today != null) {
+    if (_todayExams.isEmpty && today != null) {
       final boundaries =
           today
               .map((s) => _toMin(s.time))
@@ -599,18 +607,43 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
       }
     }
 
+    TodayExamItem? currentExam;
+    TodayExamItem? nextExam;
+    for (final item in _todayExams) {
+      final start = _toMin(item.exam.time);
+      if (start > nowMin && nextExam == null) nextExam = item;
+      if (start <= nowMin && nowMin < start + 120) currentExam = item;
+    }
+
+    final examItem = currentExam ?? nextExam;
     final widgetItem = current ?? next;
-    final widgetLabel = current != null
+    final widgetLabel = currentExam != null
+        ? 'EXAM RUNNING'
+        : nextExam != null
+        ? 'NEXT EXAM'
+        : _todayExams.isNotEmpty
+        ? 'EXAM DAY'
+        : current != null
         ? 'NOW RUNNING'
         : next != null
         ? 'NEXT CLASS'
         : 'TODAY';
-    final widgetTitle = widgetItem == null
+    final widgetTitle = examItem != null
+        ? examItem.exam.courseName.isEmpty
+              ? examItem.exam.course
+              : '${examItem.exam.course} · ${examItem.exam.courseName}'
+        : _todayExams.isNotEmpty
+        ? 'No more exams'
+        : widgetItem == null
         ? 'No more classes'
         : widgetItem.name.isEmpty
         ? widgetItem.code
         : '${widgetItem.code} · ${widgetItem.name}';
-    final widgetDetails = widgetItem == null
+    final widgetDetails = examItem != null
+        ? '${examItem.type} · ${examItem.exam.time}'
+        : _todayExams.isNotEmpty
+        ? '${_todayExams.first.type} · Check again tomorrow'
+        : widgetItem == null
         ? '$dayName · Check again tomorrow'
         : 'Room ${widgetItem.room.isEmpty ? '—' : widgetItem.room} · ${widgetItem.time}';
     final nextTo = _toLU.where((bus) => bus.t >= nowMin).firstOrNull;
@@ -636,7 +669,8 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
       );
     }
 
-    final hasClassStatus = current != null || next != null;
+    final hasClassStatus =
+        currentExam != null || nextExam != null || current != null || next != null;
     final hasBusStatus = nextTo != null || nextFrom != null;
     if (_loading || (!hasClassStatus && !hasBusStatus)) {
       return const SizedBox.shrink();
@@ -686,7 +720,21 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
             ],
           ),
           const SizedBox(height: 12),
-          if (current != null) ...[
+          if (currentExam != null) ...[
+            _statusRow(
+              dot: _green,
+              label: 'EXAM RUNNING',
+              value: currentExam.exam.courseName.isNotEmpty
+                  ? '${currentExam.exam.course} · ${currentExam.exam.courseName}'
+                  : currentExam.exam.course,
+              subtitle: '${currentExam.type} · ${currentExam.exam.time}',
+              trailing: _fmt(
+                'ends ',
+                _toMin(currentExam.exam.time) + 120 - nowMin,
+              ),
+              muted: false,
+            ),
+          ] else if (current != null) ...[
             _statusRow(
               dot: _green,
               label: 'NOW RUNNING',
@@ -699,8 +747,41 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
               muted: false,
             ),
           ],
-          if (current != null && next != null) const SizedBox(height: 10),
-          if (next != null) ...[
+          if ((currentExam != null && nextExam != null) ||
+              (current != null && next != null))
+            const SizedBox(height: 10),
+          if (nextExam != null) ...[
+            _statusRow(
+              dot: _accent,
+              label: 'NEXT EXAM',
+              value: nextExam.exam.courseName.isNotEmpty
+                  ? '${nextExam.exam.course} · ${nextExam.exam.courseName}'
+                  : nextExam.exam.course,
+              trailing: _fmt('', _toMin(nextExam.exam.time) - nowMin),
+              muted: false,
+            ),
+            const SizedBox(height: 9),
+            Padding(
+              padding: const EdgeInsets.only(left: 18),
+              child: Row(
+                children: [
+                  _infoChip(
+                    Icons.schedule_rounded,
+                    'Time',
+                    nextExam.exam.time,
+                    _accent,
+                  ),
+                  const SizedBox(width: 8),
+                  _infoChip(
+                    Icons.description_rounded,
+                    'Type',
+                    nextExam.type,
+                    _accent,
+                  ),
+                ],
+              ),
+            ),
+          ] else if (next != null) ...[
             _statusRow(
               dot: _accent,
               label: 'NEXT CLASS',

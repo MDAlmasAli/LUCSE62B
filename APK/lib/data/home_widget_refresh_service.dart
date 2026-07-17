@@ -85,12 +85,16 @@ class HomeWidgetRefreshService {
         SheetsApi.instance
             .botSheetRaw('Deadlines')
             .catchError((_) => <List<String>>[]),
+        ExamRepository.instance
+            .loadToday(batch: '62', section: 'B')
+            .catchError((_) => <TodayExamItem>[]),
       ]);
       final routine = results[0] as RoutineGridData?;
       final busRows = results[1] as List<List<String>>;
       final deadlineRows = results[2] as List<List<String>>;
+      final todayExams = results[3] as List<TodayExamItem>;
       await Future.wait([
-        _saveSchedule(routine, busRows),
+        _saveSchedule(routine, busRows, todayExams),
         _saveDeadlines(deadlineRows),
         ClassReminderService.instance.scheduleFromRoutine(routine),
       ]);
@@ -121,6 +125,7 @@ class HomeWidgetRefreshService {
   Future<void> _saveSchedule(
     RoutineGridData? data,
     List<List<String>> busRows,
+    List<TodayExamItem> todayExams,
   ) async {
     final now = DateTime.now();
     final dayName = _weekdayName[now.weekday] ?? '';
@@ -138,7 +143,7 @@ class HomeWidgetRefreshService {
           })
         >[];
     final today = data?.schedule[dayName];
-    if (data != null && today != null) {
+    if (todayExams.isEmpty && data != null && today != null) {
       final boundaries =
           today
               .map((s) => _timeToMin(s.time))
@@ -182,25 +187,50 @@ class HomeWidgetRefreshService {
       if (s.start <= nowMin && nowMin < s.end) current = s;
     }
 
+    TodayExamItem? currentExam;
+    TodayExamItem? nextExam;
+    for (final item in todayExams) {
+      final start = _timeToMin(item.exam.time);
+      if (start > nowMin && nextExam == null) nextExam = item;
+      if (start <= nowMin && nowMin < start + 120) currentExam = item;
+    }
+
+    final exam = currentExam ?? nextExam;
     final item = current ?? next;
-    final label = current != null
+    final label = currentExam != null
+        ? 'EXAM RUNNING'
+        : nextExam != null
+        ? 'NEXT EXAM'
+        : todayExams.isNotEmpty
+        ? 'EXAM DAY'
+        : current != null
         ? 'NOW RUNNING'
         : next != null
         ? 'NEXT CLASS'
         : 'TODAY';
-    final title = item == null
+    final title = exam != null
+        ? exam.exam.courseName.isEmpty
+              ? exam.exam.course
+              : '${exam.exam.course} · ${exam.exam.courseName}'
+        : todayExams.isNotEmpty
+        ? 'No more exams'
+        : item == null
         ? 'No more classes'
         : item.name.isEmpty
         ? item.code
         : '${item.code} · ${item.name}';
-    final details = item == null
+    final details = exam != null
+        ? '${exam.type} · ${exam.exam.time}'
+        : todayExams.isNotEmpty
+        ? '${todayExams.first.type} · Check again tomorrow'
+        : item == null
         ? '$dayName · Check again tomorrow'
         : 'Room ${item.room.isEmpty ? '—' : item.room} · ${item.time}';
 
-    final examDay = await ExamRepository.instance
-        .hasExamToday(batch: '62', section: 'B')
-        .catchError((_) => false);
-    final (toLu, fromLu) = _parseBus(busRows, examDay: examDay);
+    final (toLu, fromLu) = _parseBus(
+      busRows,
+      examDay: todayExams.isNotEmpty,
+    );
     final nextTo = toLu.where((bus) => bus.t >= nowMin).firstOrNull;
     final nextFrom = fromLu.where((bus) => bus.t >= nowMin).firstOrNull;
     final busParts = <String>[
@@ -286,7 +316,10 @@ class HomeWidgetRefreshService {
       final dir = r[2].trim();
       final match =
           (isFri && gl.contains('fri')) ||
-          (isSat && gl == 'saturday') ||
+          (isSat &&
+              (gl == 'saturday' ||
+                  gl.contains('sat–thu') ||
+                  gl.contains('sat-thu'))) ||
           (!isFri &&
               !isSat &&
               (gl.contains('sun') || gl.contains('sat') || gl.contains('mon')));
