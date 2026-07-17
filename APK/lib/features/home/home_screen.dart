@@ -670,7 +670,10 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
     }
 
     final hasClassStatus =
-        currentExam != null || nextExam != null || current != null || next != null;
+        currentExam != null ||
+        nextExam != null ||
+        current != null ||
+        next != null;
     final hasBusStatus = nextTo != null || nextFrom != null;
     if (_loading || (!hasClassStatus && !hasBusStatus)) {
       return const SizedBox.shrink();

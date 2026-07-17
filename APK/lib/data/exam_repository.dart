@@ -132,16 +132,23 @@ class ExamRepository {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final loaded = await Future.wait([
-      load('mid', batch: batch, section: section)
-          .catchError((_) => const <ExamItem>[]),
-      load('final', batch: batch, section: section)
-          .catchError((_) => const <ExamItem>[]),
+      load(
+        'mid',
+        batch: batch,
+        section: section,
+      ).catchError((_) => const <ExamItem>[]),
+      load(
+        'final',
+        batch: batch,
+        section: section,
+      ).catchError((_) => const <ExamItem>[]),
     ]);
     final result = <TodayExamItem>[];
     for (var i = 0; i < loaded.length; i++) {
       for (final item in loaded[i]) {
         final d = item.dateObj;
-        final isToday = d != null &&
+        final isToday =
+            d != null &&
             d.year == today.year &&
             d.month == today.month &&
             d.day == today.day;
@@ -153,9 +160,8 @@ class ExamRepository {
       }
     }
     result.sort(
-      (a, b) => _parseTimeMins(a.exam.time).compareTo(
-        _parseTimeMins(b.exam.time),
-      ),
+      (a, b) =>
+          _parseTimeMins(a.exam.time).compareTo(_parseTimeMins(b.exam.time)),
     );
     return result;
   }

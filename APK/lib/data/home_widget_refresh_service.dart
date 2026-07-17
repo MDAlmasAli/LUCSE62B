@@ -227,10 +227,7 @@ class HomeWidgetRefreshService {
         ? '$dayName · Check again tomorrow'
         : 'Room ${item.room.isEmpty ? '—' : item.room} · ${item.time}';
 
-    final (toLu, fromLu) = _parseBus(
-      busRows,
-      examDay: todayExams.isNotEmpty,
-    );
+    final (toLu, fromLu) = _parseBus(busRows, examDay: todayExams.isNotEmpty);
     final nextTo = toLu.where((bus) => bus.t >= nowMin).firstOrNull;
     final nextFrom = fromLu.where((bus) => bus.t >= nowMin).firstOrNull;
     final busParts = <String>[
