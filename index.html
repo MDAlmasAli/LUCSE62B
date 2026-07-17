@@ -741,6 +741,10 @@
       function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
       let _hasCurrentClass = false, _hasNextClass = false, _hasNextBus = false;
       let _routineChecked = false, _busChecked = false;
+      function setHomeQuickExamActive(active) {
+        window._homeQuickExamActive = !!active;
+        window.dispatchEvent(new CustomEvent('home-quick-exam-change'));
+      }
       function updateQuickInfoVisibility() {
         const el = document.getElementById('qiStrip');
         if (!el) return;
@@ -830,6 +834,7 @@
           const exams = todayExams.map(exam => ({ ...exam, tMin: timeToMin(exam.time) }));
           const current = exams.find(exam => exam.tMin <= now && now < exam.tMin + 120);
           const next = exams.find(exam => exam.tMin > now);
+          setHomeQuickExamActive(!!(current || next));
 
           set('qiClassLabel', 'Next Exam');
           set('qiRoomLabel', 'Exam Type');
@@ -859,6 +864,7 @@
           }
           updateQuickInfoVisibility();
         } else {
+        setHomeQuickExamActive(false);
         set('qiClassLabel', 'Next Class');
         set('qiRoomLabel', 'Room');
         const routineData = await fetchSheet('Routine').catch(() => null);

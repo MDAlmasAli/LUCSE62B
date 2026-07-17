@@ -33,8 +33,11 @@ class _NavItem {
   ]);
 }
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
 
   // Content folders shown on the home grid. The website's header pages live in
   // the slide-out drawer instead. Classwork is a content hub here that also
@@ -89,13 +92,17 @@ class HomeScreen extends StatelessWidget {
       route: '/user-guide',
     ),
   ];
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _homeQuickExamActive = false;
 
   @override
   Widget build(BuildContext context) {
     final student = Session.instance.student;
     return Scaffold(
       backgroundColor: AppColors.bg,
-      drawer: _HomeDrawer(pages: _menuPages, student: student),
+      drawer: _HomeDrawer(pages: HomeScreen._menuPages, student: student),
       bottomNavigationBar: _searchBar(context),
       body: SafeArea(
         child: CustomScrollView(
@@ -208,8 +215,17 @@ class HomeScreen extends StatelessWidget {
             ),
             SliverToBoxAdapter(child: _greeting(student?.name)),
             if (student != null && !Session.instance.isDemo)
-              const SliverToBoxAdapter(child: _ClassStatusCard()),
-            const SliverToBoxAdapter(child: _UpcomingExamStrip()),
+              SliverToBoxAdapter(
+                child: _ClassStatusCard(
+                  onExamStatusChanged: (active) {
+                    if (mounted && active != _homeQuickExamActive) {
+                      setState(() => _homeQuickExamActive = active);
+                    }
+                  },
+                ),
+              ),
+            if (!_homeQuickExamActive)
+              const SliverToBoxAdapter(child: _UpcomingExamStrip()),
             const SliverToBoxAdapter(child: _DeadlineStrip()),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(14, 6, 14, 28),
@@ -221,7 +237,7 @@ class HomeScreen extends StatelessWidget {
                   childAspectRatio: 1.18,
                 ),
                 delegate: SliverChildBuilderDelegate((context, i) {
-                  final it = _items[i];
+                  final it = HomeScreen._items[i];
                   final card = FolderCard(
                     icon: it.icon,
                     title: it.title,
@@ -250,7 +266,7 @@ class HomeScreen extends StatelessWidget {
                     );
                   }
                   return card;
-                }, childCount: _items.length),
+                }, childCount: HomeScreen._items.length),
               ),
             ),
           ],
@@ -359,7 +375,8 @@ class HomeScreen extends StatelessWidget {
 /// website's quick-info bar. Reads today's 62B routine (from the cached grid)
 /// and ticks a live clock + countdowns every second.
 class _ClassStatusCard extends StatefulWidget {
-  const _ClassStatusCard();
+  final ValueChanged<bool> onExamStatusChanged;
+  const _ClassStatusCard({required this.onExamStatusChanged});
 
   @override
   State<_ClassStatusCard> createState() => _ClassStatusCardState();
@@ -373,6 +390,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
   DateTime? _lastLoaded;
   Timer? _ticker;
   String _lastWidgetSignature = '';
+  bool? _lastReportedExamStatus;
 
   // Today's regular bus times (minutes-from-midnight), per direction.
   List<({String time, int t})> _toLU = const [];
@@ -616,6 +634,13 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
     }
 
     final examItem = currentExam ?? nextExam;
+    final examStatusActive = examItem != null;
+    if (_lastReportedExamStatus != examStatusActive) {
+      _lastReportedExamStatus = examStatusActive;
+      scheduleMicrotask(() {
+        if (mounted) widget.onExamStatusChanged(examStatusActive);
+      });
+    }
     final widgetItem = current ?? next;
     final widgetLabel = currentExam != null
         ? 'EXAM RUNNING'

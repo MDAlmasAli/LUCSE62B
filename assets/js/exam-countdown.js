@@ -286,6 +286,11 @@
 
     const container = document.getElementById('examCdHomeWrap');
     if (!container) return;
+    let hasUpcomingExam = false;
+    const syncVisibility = () => {
+      container.style.display = hasUpcomingExam && !window._homeQuickExamActive ? '' : 'none';
+    };
+    window.addEventListener('home-quick-exam-change', syncVisibility);
 
     try {
       const raw = localStorage.getItem('lu62b_student') || sessionStorage.getItem('lu62b_student');
@@ -328,7 +333,8 @@
 
       if (!hits.length) return;
 
-      container.style.display = '';
+      hasUpcomingExam = true;
+      syncVisibility();
       container.innerHTML = `<div class="ehcd-wrap">
         <div class="ehcd-header">
           <i class="fa-solid fa-bell" style="color:#a78bfa;margin-right:6px;font-size:.8rem;"></i>
