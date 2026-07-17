@@ -336,7 +336,7 @@
     </div>
 
     <!-- Quick Info Strip: Next Class · Time · Room · Next Bus -->
-    <div class="qi-strip fade-in delay-2 auth-only" id="qiStrip" style="display:none;">
+    <div class="qi-strip fade-in delay-2 auth-only qi-empty" id="qiStrip" style="display:none;">
       <div class="qi-item" id="qiNowItem">
         <span class="qi-icon">🟢</span>
         <div class="qi-content">
@@ -747,11 +747,11 @@
 
         /* Keep the strip hidden while either data source is still loading. */
         if (!_routineChecked || !_busChecked) {
-          el.style.display = 'none';
+          el.classList.add('qi-empty');
           return;
         }
 
-        el.style.display = (_hasCurrentClass || _hasNextClass || _hasNextBus) ? '' : 'none';
+        el.classList.toggle('qi-empty', !(_hasCurrentClass || _hasNextClass || _hasNextBus));
       }
       function forceHideEmptyQuickInfo() {
         const empty = value => {
@@ -763,7 +763,9 @@
         const useful = ['qi-now','qi-class','qi-time','qi-room','qi-bus-to','qi-bus-from']
           .some(id => !empty(text(id)));
         const el = document.getElementById('qiStrip');
-        if (el && !useful) el.style.display = 'none';
+        if (!el) return;
+        if (!useful) el.classList.add('qi-empty');
+        else updateQuickInfoVisibility();
       }
       function setNowRunningVisible(show) {
         _hasCurrentClass = !!show;
