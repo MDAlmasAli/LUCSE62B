@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="../assets/css/style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     .cg-page {
       max-width: 1380px;
@@ -436,6 +437,122 @@
     html[data-theme="light"] .ac-item.ac-focused { background: rgba(109,40,217,0.07); }
     html[data-theme="light"] .ac-item strong { color: var(--accent); }
     html[data-theme="light"] .ac-item small { color: var(--text-secondary); }
+
+    /* ── CR "already generated" notice banner ── */
+    .cr-notice {
+      display: none;
+      margin: 0 0 16px; padding: 13px 15px;
+      background: linear-gradient(135deg, rgba(16,185,129,0.14), rgba(20,184,166,0.10));
+      border: 1px solid rgba(16,185,129,0.35); border-radius: 14px;
+      animation: acIn 0.2s ease;
+    }
+    .cr-notice.show { display: block; }
+    .cr-notice-top { display: flex; align-items: flex-start; gap: 10px; }
+    .cr-notice-ic {
+      flex-shrink: 0; width: 30px; height: 30px; border-radius: 9px;
+      background: linear-gradient(135deg, #10b981, #14b8a6);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 0.9rem;
+    }
+    .cr-notice-title { font-size: 0.85rem; font-weight: 700; color: var(--text); line-height: 1.35; }
+    .cr-notice-sub { font-size: 0.75rem; color: var(--text-secondary); margin-top: 3px; line-height: 1.5; }
+    .cr-notice-wa {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; margin-top: 11px; padding: 10px;
+      background: #25D366; color: #fff; border-radius: 10px;
+      font-family: 'Inter', sans-serif; font-size: 0.83rem; font-weight: 700;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .cr-notice-wa:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(37,211,102,0.4); }
+
+    /* ── CR "Class Mode" trigger button ── */
+    .btn-classmode {
+      width: 100%; padding: 13px; margin-top: 10px;
+      background: rgba(124,58,237,0.12);
+      color: var(--accent-bright); border: 1px solid rgba(124,58,237,0.4);
+      border-radius: 12px; font-weight: 700; font-family: 'Inter', sans-serif; font-size: 0.95rem;
+      cursor: pointer; transition: all 0.25s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-classmode:hover { background: rgba(124,58,237,0.22); transform: translateY(-2px); }
+
+    /* ── Class Mode modal ── */
+    .cm-overlay {
+      display: none; position: fixed; inset: 0; z-index: 10000;
+      background: rgba(6,4,24,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      align-items: center; justify-content: center; padding: 18px;
+    }
+    .cm-overlay.show { display: flex; }
+    .cm-modal {
+      background: var(--card, #13111f); border: 1px solid var(--border, rgba(124,58,237,0.25));
+      border-radius: 22px; width: 100%; max-width: 520px; max-height: 90vh;
+      display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6); animation: acIn 0.22s ease;
+    }
+    .cm-head {
+      padding: 20px 22px 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    }
+    .cm-head h3 {
+      margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; font-weight: 700;
+      color: var(--text); display: flex; align-items: center; gap: 9px;
+    }
+    .cm-head p { margin: 6px 0 0; font-size: 0.76rem; color: var(--text-secondary); line-height: 1.5; }
+    .cm-close {
+      flex-shrink: 0; background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      color: var(--text-secondary); width: 32px; height: 32px; border-radius: 9px;
+      cursor: pointer; font-size: 0.95rem; transition: all 0.2s;
+    }
+    .cm-close:hover { background: rgba(244,63,94,0.15); color: #f43f5e; }
+    .cm-summary {
+      margin: 14px 22px 0; padding: 10px 13px; border-radius: 11px;
+      background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.2);
+      font-size: 0.77rem; color: var(--text-secondary); line-height: 1.55;
+    }
+    .cm-summary b { color: var(--accent-bright); }
+    .cm-toolbar { padding: 14px 22px 10px; display: flex; gap: 10px; align-items: center; }
+    .cm-search {
+      flex: 1; padding: 9px 12px; box-sizing: border-box;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      border-radius: 9px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.84rem;
+    }
+    .cm-search:focus { outline: none; border-color: var(--accent); }
+    .cm-selall {
+      display: flex; align-items: center; gap: 7px; white-space: nowrap;
+      font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); cursor: pointer;
+    }
+    .cm-selall input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+    .cm-list {
+      flex: 1; overflow-y: auto; padding: 4px 14px 6px; margin: 0 8px;
+    }
+    .cm-list::-webkit-scrollbar { width: 5px; }
+    .cm-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .cm-row {
+      display: flex; align-items: center; gap: 11px; padding: 9px 10px;
+      border-radius: 10px; cursor: pointer; transition: background 0.12s;
+    }
+    .cm-row:hover { background: rgba(124,58,237,0.08); }
+    .cm-row input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+    .cm-row-name { font-size: 0.86rem; color: var(--text); font-weight: 500; line-height: 1.3; }
+    .cm-row-id { font-size: 0.72rem; color: var(--text-secondary); }
+    .cm-empty { padding: 30px 10px; text-align: center; color: var(--text-secondary); font-size: 0.85rem; }
+    .cm-foot { padding: 14px 22px 18px; border-top: 1px solid var(--border); }
+    .cm-count { font-size: 0.76rem; color: var(--text-secondary); margin-bottom: 10px; text-align: center; }
+    .cm-count strong { color: var(--accent-bright); }
+    .cm-gen {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; border: none; border-radius: 12px;
+      font-weight: 700; font-family: 'Inter', sans-serif; font-size: 0.95rem;
+      cursor: pointer; transition: all 0.25s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .cm-gen:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(124,58,237,0.35); }
+    .cm-gen:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    html[data-theme="light"] .cm-search,
+    html[data-theme="light"] .cm-close { background: rgba(109,40,217,0.05); color: #0f172a; }
+    html[data-theme="light"] .cm-search { border-color: rgba(109,40,217,0.2); }
   </style>
 </head>
 <body>
@@ -478,6 +595,20 @@
         <div class="cg-panel-title">
           <i class="fa-solid fa-file-pdf" style="color:var(--accent-bright);"></i>
           Cover Page Generator
+        </div>
+
+        <!-- CR already-generated notice (auto-shown to matched students) -->
+        <div class="cr-notice" id="crNotice">
+          <div class="cr-notice-top">
+            <div class="cr-notice-ic"><i class="fa-solid fa-circle-check"></i></div>
+            <div>
+              <div class="cr-notice-title">Your CR already made this cover page for you</div>
+              <div class="cr-notice-sub">No need to generate it again. Just message the CR to collect your print.</div>
+            </div>
+          </div>
+          <a class="cr-notice-wa" href="https://wa.link/jwgbp2" target="_blank" rel="noopener">
+            <i class="fa-brands fa-whatsapp" style="font-size:1.05rem;"></i> Message the CR
+          </a>
         </div>
 
         <!-- Template Selector -->
@@ -643,6 +774,9 @@
         <button class="btn-print" id="btnPrint" onclick="printCover()">
           <i class="fa-solid fa-print"></i> Print
         </button>
+        <button class="btn-classmode" id="btnClassMode" style="display:none;" onclick="openClassMode()">
+          <i class="fa-solid fa-users-line"></i> Class Mode — Generate for Everyone
+        </button>
         <button class="cg-preview-toggle-btn" id="previewToggleBtn" onclick="toggleMobilePreview()">
           <i class="fa-solid fa-eye" id="previewToggleIcon"></i>
           <span id="previewToggleText">Show Live Preview</span>
@@ -665,7 +799,32 @@
 
     </div><!-- .cg-page -->
 
-      
+    <!-- ── Class Mode modal (CR only) ── -->
+    <div class="cm-overlay" id="classModal">
+      <div class="cm-modal">
+        <div class="cm-head">
+          <div>
+            <h3><i class="fa-solid fa-users-line" style="color:var(--accent-bright);"></i> Class Mode</h3>
+            <p>Fill the course, teacher, number, topic &amp; date in the form first. Each selected student gets their own cover page, bundled into one ZIP.</p>
+          </div>
+          <button class="cm-close" onclick="closeClassMode()" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="cm-summary" id="cmSummary"></div>
+        <div class="cm-toolbar">
+          <input class="cm-search" id="cmSearch" type="text" placeholder="Search students…" autocomplete="off" oninput="cmRenderList()">
+          <label class="cm-selall"><input type="checkbox" id="cmSelAll" onchange="cmToggleAll(this.checked)"> All</label>
+        </div>
+        <div class="cm-list" id="cmList"></div>
+        <div class="cm-foot">
+          <div class="cm-count" id="cmCount">No students selected</div>
+          <button class="cm-gen" id="cmGen" onclick="generateBulk()">
+            <i class="fa-solid fa-file-zipper"></i> Generate ZIP
+          </button>
+        </div>
+      </div>
+    </div>
+
+
       <footer>
       <div class="footer-brand">CSE 62B · PORTAL</div>
       <div class="footer-links">
@@ -984,11 +1143,17 @@
       document.getElementById('coverPreview').innerHTML = buildCoverHTML();
       scalePreview();
       saveFormState();
+      if (typeof _crCheckNotice === 'function') _crCheckNotice();
+      if (typeof cmUpdateSummary === 'function') {
+        const m = document.getElementById('classModal');
+        if (m && m.classList.contains('show')) cmUpdateSummary();
+      }
     }
 
     const CPG_KEY = 'lu62b_cpg';
 
     function saveFormState() {
+      if (window._cpgBulk) return;   // don't clobber the CR's form during bulk render
       try {
         localStorage.setItem(CPG_KEY, JSON.stringify({
           type:        currentType,
@@ -1625,6 +1790,281 @@
     /* ── Logo embedded as base64 — no CORS/fetch issues on file:// ── */
     const logoDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAAFACAMAAAD6TlWYAAAC6FBMVEVHcEwAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHBwUAAAAAAAAAAAAAAAAAAAAAAACfc2S/vr6/vr6tlY2fc2Sjb2G7urq/vr6/vr6/vr6/vr7Av7/Cv8CYtaMZmE0QlkcSl0gPlkYOlUVbt4Ch1raIy6PE5dJ1wpQ0pmLm9OxAq2yV0K1ovYu94sw5qGbd8OUooVnN6dgjnlXU7N4vo15+xpy03sUUmEtnqoS6vbs/oWmSsp9Zp3tzrYyruLAonFqJspoXmE8LlUYNlkh9r5KetagxnmCzvLalua0cm1FQpXRGo245oGUXlEeoSzToKywMlEMVGBgQExNgYmIEBweLjYz+///Hrqb08/LCp56nfnDbzcirhXjj2dWxjoLp4uC2lInu6ee7nZLx7uz8/f36/Pv9/v7////v+PNMsHX2+PbMtq/4+vnUwbujeGqfc2SgdGWfcmOpiX+/vby/vr6/vr6/vr6/v77Av7/Av7/kLS3lLCzhMC+vY1ivYlbvf3+r2r7tcXHzoqLymprmNDT2t7fqVVXkKSnlLS3kKyvlMDD1sLDsamr4x8frYmLueXnvhIT86OjwiYn0qannQED3v7/oSEj3wsLqW1vxkpLmOTn2urrpT0/61taWtaLlLS3lLS3NOS/lLS2JZj8Sl0gSl0gRlkcRlkcSl0gSl0gWmEsA//+/vr6/vr6/vr6/vr6xn5mfc2Shdmifc2SobmGfc2ShcmOgdGUAAAAAAAAAAAAAAAAAAACgio6yAAAA+HRSTlMABbYMvhDCE8U7OPP/9lRX/N0g4iPKJswq6uYuyB4b2RfUfJeBm553b0IsWUlLR/nuNM6GkouO0DE/PAezXGGwZa1oqgKlAaFzbJqTeJsRqCACRvdZ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////hMzWGtrc2///////////////////////////////////////////////3vxYiaABoKGXP+kqKgE36im1C8fa7jZOZnA2TlG5CZ/fYewAACt9SURBVHja7NnXdurYGQfw/1b3FIh9kCAxECGKwG25qFBUKBsBc5XcJg+U8j6ZF5i8RHq9TjOg2whxfNymGaeYpf2jF7Vv129tMAzDMAzDMAzDMAzDMAzDMAzDvF5JBPMaYw3MK5DZGZhXkN05mFe4/XhKwezOPCxWwOyMX7e5AMzOzsvVtseD2VE8aqBSXoHZka8eAXNBBrMTrRgAkNc3FMy30NPxiBx+FiNxUPPx2EEVzDNyeaLjAX3q6Uid1nIR7kWrdwswzwRFjuvigxPPO8IWDWptHnfitjuSdDBPVJRAdFyzilS17Vp6+iYGEJ2VR70YG4PepHwmr01kGF8ieGZgjXiQJadafqfjW+X1Kv2TOPGxUbGvQ3PZO5+H1/YRcFbr4zm9gEygY6cU4TFiFk/S4F7YniR5zpmI1OJ7RQ0bVFtMBUmYtjW6+WSUj/EEn2uVkA3y+p19NXj0zc11D+8NRPHDbz03X/d0bFFe5im2eKfcoXhAP+UuA2TF7bvD4mh8wkfYiPRTgbvClzhWzUgPpzKei+eucxUjRfQLWyl+XB8gM9rqWdsrCk1jeBqYLUVqy/gSV4oTAxVuUsFz0W3rmrMXvr+wR2Wlft5QjpAd/LROBlrOaI68cGZcyED0bPGD5K5veCSqU6lDn/5Y4pNHYE28cOqM+zqu3CWypHTtY4MMSIQNXfE6A9yLNMsdEqREo2ZrEe7RknN4tn03GKSxlbms5Xv+9QkeoIZkX09OKwQbkdh3rmfd+18PJkWnI1NskOqyed1qcjLuRY21jmwh9QmPD+J2rQfNENTQno8XjZakfvaoPiLu1MvKxDbbphOqkv0Rkb1ZFRsREhe1XgYzjzYSvH/WvfJHatoixduhPZtM6+Z5heIJqnfaTmvWvBkeyBGAwkSZ94/7Qw1AVTKRPefuR0gEl4fK2jjCnYhSfCuiP1Hcj5s8QKyRiOyhN2sZAHHU4xg7IXpdqQDIu11kkbxu0HQAtQl2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';
 
+    /* ══════════════════════════════════════════════════════════════════
+       CR CLASS MODE — bulk cover pages + "already generated" notice
+       ══════════════════════════════════════════════════════════════════ */
+    const CR_ID  = '0182320012101068';
+    const _isCR  = !!(_ud && (JSON.parse(_ud).id === CR_ID));
+
+    /* Normalisers keep the tracking key stable across "06" vs "6", spacing, case */
+    function _normCode(s) { return (s || '').trim().toUpperCase().replace(/\s+/g, ''); }
+    function _normNo(s)   { s = (s || '').trim(); return /^\d+$/.test(s) ? String(parseInt(s, 10)) : s.toLowerCase(); }
+    function _crDocType() { return currentType.includes('lab') ? 'lab' : 'assignment'; }
+
+    /* ── Class Mode state ── */
+    let _cmStudents = [];
+    let _cmSelected = new Set();
+
+    async function cmEnsureStudents() {
+      if (STUDENTS && STUDENTS.length) return;
+      try {
+        const data = await loadCPGSheet('Student Info');
+        STUDENTS = parseStudentNames(data.table?.rows || []);
+      } catch (e) {}
+    }
+
+    function _cmKey(s) { return s.id ? String(s.id).trim() : ('n:' + s.name); }
+
+    async function openClassMode() {
+      const modal = document.getElementById('classModal');
+      document.getElementById('cmList').innerHTML = '<div class="cm-empty"><span class="cg-spinner" style="border-color:rgba(124,58,237,0.3);border-top-color:var(--accent);"></span> Loading students…</div>';
+      modal.classList.add('show');
+      cmUpdateSummary();
+
+      await cmEnsureStudents();
+      // Dedupe by key, keep those with a name
+      const seen = new Set();
+      _cmStudents = (STUDENTS || []).filter(s => {
+        if (!s.name) return false;
+        const k = _cmKey(s);
+        if (seen.has(k)) return false;
+        seen.add(k); return true;
+      });
+      cmRenderList();
+    }
+
+    function closeClassMode() {
+      document.getElementById('classModal').classList.remove('show');
+    }
+
+    function cmUpdateSummary() {
+      const code = v('fCourseCode') || '—';
+      const title = v('fCourseTitle');
+      const no   = v('fNo');
+      const type = _crDocType() === 'lab' ? 'Lab Report' : 'Assignment';
+      document.getElementById('cmSummary').innerHTML =
+        `<b>${escH(type)}${no ? ' No ' + escH(no) : ''}</b> · Course: <b>${escH(title || code)}</b>` +
+        (title && code ? ` (${escH(code)})` : '') +
+        `<br>Template: <b>${currentTemplate === 't1' ? 'Template 1' : 'Template 2'}</b>`;
+    }
+
+    function cmRenderList() {
+      const q = (document.getElementById('cmSearch').value || '').toLowerCase().trim();
+      const list = document.getElementById('cmList');
+      const hits = _cmStudents.filter(s =>
+        !q || s.name.toLowerCase().includes(q) || String(s.id || '').toLowerCase().includes(q));
+
+      if (!_cmStudents.length) {
+        list.innerHTML = '<div class="cm-empty">Could not load the student list. Please try again.</div>';
+      } else if (!hits.length) {
+        list.innerHTML = '<div class="cm-empty">No students match your search.</div>';
+      } else {
+        list.innerHTML = hits.map(s => {
+          const k = _cmKey(s);
+          const checked = _cmSelected.has(k) ? 'checked' : '';
+          return `<label class="cm-row">
+            <input type="checkbox" data-key="${escH(k)}" ${checked}>
+            <span><span class="cm-row-name">${escH(s.name)}</span>${s.id ? `<br><span class="cm-row-id">${escH(s.id)}</span>` : ''}</span>
+          </label>`;
+        }).join('');
+      }
+      cmSyncControls(hits);
+    }
+
+    // Delegated so it survives list re-renders and needs no inline escaping
+    document.getElementById('cmList').addEventListener('change', e => {
+      const cb = e.target.closest('input[type="checkbox"]');
+      if (!cb || !cb.dataset.key) return;
+      if (cb.checked) _cmSelected.add(cb.dataset.key); else _cmSelected.delete(cb.dataset.key);
+      cmSyncControls();
+    });
+
+    function cmToggleAll(on) {
+      const q = (document.getElementById('cmSearch').value || '').toLowerCase().trim();
+      const hits = _cmStudents.filter(s =>
+        !q || s.name.toLowerCase().includes(q) || String(s.id || '').toLowerCase().includes(q));
+      hits.forEach(s => { const k = _cmKey(s); if (on) _cmSelected.add(k); else _cmSelected.delete(k); });
+      cmRenderList();
+    }
+
+    function cmSyncControls(hits) {
+      if (!hits) {
+        const q = (document.getElementById('cmSearch').value || '').toLowerCase().trim();
+        hits = _cmStudents.filter(s =>
+          !q || s.name.toLowerCase().includes(q) || String(s.id || '').toLowerCase().includes(q));
+      }
+      const n = _cmSelected.size;
+      document.getElementById('cmCount').innerHTML = n
+        ? `<strong>${n}</strong> student${n > 1 ? 's' : ''} selected`
+        : 'No students selected';
+      const allSel = hits.length > 0 && hits.every(s => _cmSelected.has(_cmKey(s)));
+      const selAll = document.getElementById('cmSelAll');
+      selAll.checked = allSel;
+      selAll.indeterminate = !allSel && hits.some(s => _cmSelected.has(_cmKey(s)));
+      document.getElementById('cmGen').disabled = n === 0;
+    }
+
+    function _cmDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 15000);
+    }
+
+    async function _cmSaveRecords(students, code, docType, no, topic) {
+      const rows = students.filter(s => s.id).map(s => ({
+        course_code: _normCode(code),
+        doc_type:    docType,
+        doc_no:      _normNo(no),
+        student_id:  String(s.id).trim(),
+        topic:       topic || '',
+        generated_by: CR_ID,
+      }));
+      if (!rows.length) return;
+      try {
+        await fetch(`${_TS_URL}/rest/v1/cr_cover_pages?on_conflict=course_code,doc_type,doc_no,student_id`, {
+          method: 'POST',
+          headers: {
+            apikey: _TS_KEY, Authorization: `Bearer ${_TS_KEY}`,
+            'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates',
+          },
+          body: JSON.stringify(rows),
+        });
+      } catch (e) {}
+    }
+
+    async function generateBulk() {
+      const chosen = _cmStudents.filter(s => _cmSelected.has(_cmKey(s)));
+      if (!chosen.length) return;
+
+      const code = v('fCourseCode');
+      if (!v('fCourseTitle') && !code) {
+        alert('Please fill the course details in the form first.');
+        return;
+      }
+      const no      = v('fNo');
+      const topic   = v('fTopic');
+      const docType = _crDocType();
+
+      const gen = document.getElementById('cmGen');
+      gen.disabled = true;
+
+      // Snapshot form state we are about to overwrite
+      const origName = document.getElementById('fName').value;
+      const origSID  = document.getElementById('fSID').value;
+      const origType = currentType;
+      // Force single-student rendering for each page
+      currentType = docType === 'lab' ? 'lab-single' : 'asgn-single';
+      window._cpgBulk = true;
+
+      try {
+        await document.fonts.ready;
+        await Promise.allSettled([
+          document.fonts.load('400 19px Tinos'),
+          document.fonts.load('700 19px Tinos'),
+        ]);
+
+        const { jsPDF } = window.jspdf;
+        const zip = new JSZip();
+        const usedNames = {};
+
+        for (let i = 0; i < chosen.length; i++) {
+          const s = chosen[i];
+          gen.innerHTML = `<span class="cg-spinner"></span> Generating ${i + 1}/${chosen.length}…`;
+
+          document.getElementById('fName').value = s.name;
+          document.getElementById('fSID').value  = s.id || '';
+          updatePreview();
+          await new Promise(r => setTimeout(r, 60));
+
+          const canvas  = await getCanvasFromPreview();
+          const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.97), 'JPEG', 0, 0, 210, 297);
+
+          let fname = `${String(i + 1).padStart(2, '0')}_${buildFilename()}.pdf`;
+          if (usedNames[fname]) fname = fname.replace(/\.pdf$/, `_${i}.pdf`);
+          usedNames[fname] = true;
+          zip.file(fname, pdf.output('blob'));
+        }
+
+        gen.innerHTML = '<span class="cg-spinner"></span> Packaging ZIP…';
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const clean = s => (s || '').trim().replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, '');
+        const zipName = `${clean(code) || 'Course'}_${docType === 'lab' ? 'Lab-Report' : 'Assignment'}${no ? '-' + String(no).padStart(2, '0') : ''}_CoverPages.zip`;
+        _cmDownload(blob, zipName);
+
+        // Record which students the CR generated for, so they see the notice
+        await _cmSaveRecords(chosen, code, docType, no, topic);
+
+        // Reflect in the global PDF counter (one bump for the batch)
+        if (typeof LU_ANALYTICS !== 'undefined') {
+          LU_ANALYTICS.trackPDF().then(() =>
+            LU_ANALYTICS.getCounter('total_pdfs').then(n => {
+              const el = document.getElementById('pdfCountVal');
+              if (el) el.textContent = n.toLocaleString();
+            })
+          ).catch(() => {});
+        }
+
+        gen.innerHTML = '<i class="fa-solid fa-circle-check"></i> Done!';
+        setTimeout(() => { gen.innerHTML = '<i class="fa-solid fa-file-zipper"></i> Generate ZIP'; }, 1800);
+      } catch (err) {
+        alert('Bulk generation failed. Please try again.\n' + err.message);
+        gen.innerHTML = '<i class="fa-solid fa-file-zipper"></i> Generate ZIP';
+      } finally {
+        // Restore the CR's own form exactly as it was
+        window._cpgBulk = false;
+        currentType = origType;
+        document.getElementById('fName').value = origName;
+        document.getElementById('fSID').value  = origSID;
+        updatePreview();
+        gen.disabled = _cmSelected.size === 0;
+      }
+    }
+
+    /* ── Student-side "CR already generated this" notice ── */
+    let _crCache = {};
+    let _crTimer = null;
+
+    function _crCheckNotice() {
+      const el = document.getElementById('crNotice');
+      if (!el || !_ud) return;
+      const myId = String(JSON.parse(_ud).id || '').trim();
+      const code = _normCode(v('fCourseCode'));
+      const no   = _normNo(v('fNo'));
+      if (!myId || !code || !no) { el.classList.remove('show'); return; }
+
+      const docType = _crDocType();
+      const key = `${code}|${docType}|${no}|${myId}`;
+      if (_crCache[key] !== undefined) { el.classList.toggle('show', _crCache[key]); return; }
+
+      clearTimeout(_crTimer);
+      _crTimer = setTimeout(async () => {
+        try {
+          const url = `${_TS_URL}/rest/v1/cr_cover_pages`
+            + `?course_code=eq.${encodeURIComponent(code)}`
+            + `&doc_type=eq.${encodeURIComponent(docType)}`
+            + `&doc_no=eq.${encodeURIComponent(no)}`
+            + `&student_id=eq.${encodeURIComponent(myId)}`
+            + `&select=created_at&limit=1`;
+          const r = await fetch(url, { headers: { apikey: _TS_KEY, Authorization: `Bearer ${_TS_KEY}` } });
+          const rows = r.ok ? await r.json() : [];
+          const found = Array.isArray(rows) && rows.length > 0;
+          _crCache[key] = found;
+          document.getElementById('crNotice').classList.toggle('show', found);
+        } catch (e) {}
+      }, 350);
+    }
+
+    // Close modal on backdrop click / Esc
+    document.getElementById('classModal').addEventListener('click', e => {
+      if (e.target.id === 'classModal') closeClassMode();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeClassMode();
+    });
+
     /* ── Init ── */
     addMember(
       (_ud ? JSON.parse(_ud).name : '') || '',
@@ -1643,6 +2083,14 @@
     }
     _syncFooterVisibility();
     setTimeout(scalePreview, 150);
+
+    /* Reveal Class Mode for the CR only */
+    if (_isCR) {
+      const cmBtn = document.getElementById('btnClassMode');
+      if (cmBtn) cmBtn.style.display = 'flex';
+    }
+    /* Initial "already generated" check for the logged-in student */
+    _crCheckNotice();
   </script>
   <script src="../assets/js/theme.js"></script>
 <script src="../assets/js/analytics.js"></script>
