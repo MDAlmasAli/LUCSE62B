@@ -145,6 +145,28 @@ class CoverSuggestions {
     }
   }
 
+  /// True when the CR has already bulk-generated this student's cover page for
+  /// the same course + document number (written from the website's Class Mode).
+  /// Caller passes already-normalised course code + number so the key matches
+  /// exactly what the site stored. Returns false on any error / missing input.
+  Future<bool> crAlreadyMade(
+      String courseCode, String docType, String docNo, String studentId) async {
+    if (courseCode.isEmpty || docNo.isEmpty || studentId.isEmpty) return false;
+    try {
+      final rows = await Supa.client
+          .from('cr_cover_pages')
+          .select('id')
+          .eq('course_code', courseCode)
+          .eq('doc_type', docType)
+          .eq('doc_no', docNo)
+          .eq('student_id', studentId)
+          .limit(1);
+      return (rows as List).isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Record a freshly used topic so it appears as a suggestion next time.
   Future<void> saveTopic(
       String courseCode, String docType, String docNo, String topic,

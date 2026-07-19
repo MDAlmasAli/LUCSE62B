@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_colors.dart';
 import '../../data/session.dart';
@@ -28,6 +29,11 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
   final _sugg = CoverSuggestions();
   List<Suggestion> _topicSuggestions = [];
   Timer? _topicDebounce;
+
+  /// Shows the "your CR already made this" banner when the CR bulk-generated
+  /// this student's cover page (recorded from the website's Class Mode).
+  bool _crMadeIt = false;
+  Timer? _crDebounce;
 
   final _courseTitle = TextEditingController();
   final _courseCode = TextEditingController();
@@ -56,6 +62,8 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
     _addMember(name: _name.text, id: _sid.text);
     _courseCode.addListener(_scheduleTopicRefresh);
     _no.addListener(_scheduleTopicRefresh);
+    _courseCode.addListener(_scheduleCrCheck);
+    _no.addListener(_scheduleCrCheck);
     _sugg.load().then((_) {
       if (mounted) setState(() {});
     });
@@ -64,6 +72,7 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
   @override
   void dispose() {
     _topicDebounce?.cancel();
+    _crDebounce?.cancel();
     for (final c in [
       _courseTitle, _courseCode, _no, _topic, _teacher, _desig, _dept,
       _name, _sid, _date,
@@ -88,6 +97,44 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
     final list = await _sugg.topicsFor(
         _courseCode.text.trim(), _docTypeKey, _no.text.trim());
     if (mounted) setState(() => _topicSuggestions = list);
+  }
+
+  // ── "CR already made this" notice ──
+  // Keys are normalised exactly like the website before the lookup so "06"/"6",
+  // spacing and case never cause a miss.
+  static String _normCode(String s) =>
+      s.trim().toUpperCase().replaceAll(RegExp(r'\s+'), '');
+  static String _normNo(String s) {
+    s = s.trim();
+    return RegExp(r'^\d+$').hasMatch(s)
+        ? int.parse(s).toString()
+        : s.toLowerCase();
+  }
+
+  void _scheduleCrCheck() {
+    _crDebounce?.cancel();
+    _crDebounce = Timer(const Duration(milliseconds: 350), _runCrCheck);
+  }
+
+  Future<void> _runCrCheck() async {
+    final s = Session.instance.student;
+    final code = _normCode(_courseCode.text);
+    final no = _normNo(_no.text);
+    if (s == null || s.isDemo || code.isEmpty || no.isEmpty) {
+      if (_crMadeIt && mounted) setState(() => _crMadeIt = false);
+      return;
+    }
+    final made = await _sugg.crAlreadyMade(code, _docTypeKey, no, s.id);
+    if (mounted && made != _crMadeIt) setState(() => _crMadeIt = made);
+  }
+
+  Future<void> _messageCr() async {
+    final uri = Uri.parse('https://wa.link/jwgbp2');
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (mounted) AppToast.show(context, 'Could not open WhatsApp', error: true);
+    }
   }
 
   /// Ordinal date like the site: "24th June 2026".
@@ -205,6 +252,7 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
         children: [
+          if (_crMadeIt) _crNotice(),
           _templatePicker(),
           const SizedBox(height: 14),
           _docTypeSelector(),
@@ -465,6 +513,77 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
       ),
     );
   }
+
+  /// Green banner shown to a student the CR has already generated for.
+  Widget _crNotice() => Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.green.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.green.withValues(alpha: 0.4)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: AppColors.green,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Icon(Icons.check_rounded,
+                      color: Colors.white, size: 18),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Your CR already made this cover page for you',
+                          style: TextStyle(
+                              color: AppColors.text,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
+                              height: 1.3)),
+                      SizedBox(height: 3),
+                      Text(
+                          'No need to generate it again. Just message the CR to collect your print.',
+                          style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 11.5,
+                              height: 1.4)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 11),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _messageCr,
+                icon: const Icon(Icons.chat_rounded, size: 18),
+                label: const Text('Message the CR'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF25D366),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  textStyle:
+                      const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _sectionLabel(String s) => Padding(
         padding: const EdgeInsets.fromLTRB(2, 16, 2, 8),
