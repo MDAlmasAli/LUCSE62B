@@ -252,7 +252,6 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
         children: [
-          if (_crMadeIt) _crNotice(),
           _templatePicker(),
           const SizedBox(height: 14),
           _docTypeSelector(),
@@ -348,6 +347,10 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
           _sectionLabel('Submission'),
           _dateField(),
           const SizedBox(height: 18),
+          if (_crMadeIt) ...[
+            _crNotice(),
+            const SizedBox(height: 14),
+          ],
           GradientButton(
             label: 'Download PDF',
             icon: Icons.file_download_rounded,
