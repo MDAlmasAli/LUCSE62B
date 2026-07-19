@@ -9,27 +9,47 @@ echo.
 
 cd /d "%~dp0"
 
-echo [1/3] Checking git status...
-git status
+echo [1/4] Cleaning up any stuck git lock...
+if exist ".git\index.lock" del /f /q ".git\index.lock"
 echo.
 
-echo [2/3] Pulling latest changes from main branch...
-git pull origin main
+echo [2/4] Fetching latest from GitHub...
+git fetch origin main
+if errorlevel 1 goto :failed
 echo.
 
-if %ERRORLEVEL% == 0 (
-    echo [3/3] Update successful!
-    echo.
-    echo ================================================
-    echo   All changes downloaded successfully!
-    echo ================================================
-) else (
-    echo [3/3] Something went wrong. See error above.
-    echo.
-    echo ================================================
-    echo   Update FAILED. Check your internet or git.
-    echo ================================================
-)
+echo [3/4] Applying update (keeps your local edits and commits)...
+git pull --rebase --autostash origin main
+if errorlevel 1 goto :conflict
+echo.
 
+echo [4/4] Update successful!
+echo.
+echo ================================================
+echo   All changes downloaded - your work is kept!
+echo ================================================
 echo.
 pause
+exit /b 0
+
+:conflict
+echo.
+echo ================================================
+echo   Update stopped: your changes clash with the
+echo   new update and need manual fixing.
+echo.
+echo   Nothing is lost. To undo and try later, run:
+echo       git rebase --abort
+echo ================================================
+echo.
+pause
+exit /b 1
+
+:failed
+echo.
+echo ================================================
+echo   Update FAILED. Check your internet or git.
+echo ================================================
+echo.
+pause
+exit /b 1
