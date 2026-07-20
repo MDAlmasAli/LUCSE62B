@@ -56,20 +56,20 @@ class CoverPdf {
     final noLabel = isLab ? 'Lab Report No' : 'Assignment No';
 
     final body = <pw.Widget>[
-      pw.SizedBox(height: 14),
+      pw.SizedBox(height: 10),
       pw.Text(heading, style: _s(_fBody, bold: true)),
       pw.SizedBox(height: 5),
     ];
     if (d.courseTitle.isNotEmpty) body.add(_courseLine('Course Title', d.courseTitle));
     if (d.courseCode.isNotEmpty) body.add(_courseLine('Course Code', d.courseCode));
-    body.add(pw.SizedBox(height: 21));
+    body.add(pw.SizedBox(height: 14));
 
     final noTopic = <List<String>>[];
     if (d.no.isNotEmpty) noTopic.add([noLabel, d.no]);
     if (d.topic.isNotEmpty) noTopic.add(['Assignment Topic', d.topic]);
     if (noTopic.isNotEmpty) {
       body.add(_kv(noTopic));
-      body.add(pw.SizedBox(height: 21));
+      body.add(pw.SizedBox(height: 14));
     }
 
     body.add(pw.Text('Submitted To', style: _s(_fBody, bold: true)));
@@ -79,7 +79,7 @@ class CoverPdf {
     if (d.designation.isNotEmpty) toRows.add(['Designation', d.designation]);
     if (d.department.isNotEmpty) toRows.add(['Department', d.department]);
     if (toRows.isNotEmpty) body.add(_kv(toRows));
-    body.add(pw.SizedBox(height: 21));
+    body.add(pw.SizedBox(height: 14));
 
     body.add(pw.Text('Submitted From', style: _s(_fBody, bold: true)));
     body.add(pw.SizedBox(height: 4));
