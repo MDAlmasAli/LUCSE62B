@@ -4,7 +4,6 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Notification Preferences · CSE 62B</title>
   <link rel="stylesheet" href="../assets/css/style.css">
-  <link rel="stylesheet" href="../assets/css/cinematic.css?v=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     .np{max-width:680px;margin:auto;padding:82px 16px 40px}.np-head{display:flex;gap:12px;align-items:center;margin-bottom:16px}.np-back{color:var(--text);background:var(--card);border:1px solid var(--border);padding:10px 13px;border-radius:10px}
@@ -35,6 +34,5 @@
     async function savePreferences(){for(const x of options)prefs[x[0]]=document.getElementById('pref_'+x[0]).checked;localStorage.setItem('lu62b_notif_preferences',JSON.stringify(prefs));const msg=document.getElementById('prefMsg');msg.textContent='Saved locally.';try{const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();if(sub){const r=await fetch(WORKER+'/push-preferences',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:sub.endpoint,preferences:prefs})});if(r.ok)msg.textContent='Preferences saved and push delivery updated.'}}catch(e){}}
   </script>
   <script src="../assets/js/auth.js"></script>
-<script src="../assets/js/cinematic.js?v=1"></script>
 </body>
 </html>

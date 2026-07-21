@@ -104,34 +104,6 @@
      sections keep their own light styling from style.css. ─────────── */
 html[data-theme="light"] .cine-stage{border-color:rgba(0,0,0,.18)}
 
-/* ═══════════════════════════════════════════════════════════════════
-   Inner pages — the same cinematic language, light touch
-   ═══════════════════════════════════════════════════════════════════ */
-
-/* ambient corner glows behind every dark page (wrapper is z-index:1) */
-html:not([data-theme="light"])::after{
-  content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
-  background:
-    radial-gradient(60% 40% at 88% -6%, rgba(255,182,72,.07), transparent 60%),
-    radial-gradient(55% 38% at 2% 4%,   rgba(63,224,224,.055), transparent 58%),
-    radial-gradient(50% 42% at 50% 108%,rgba(124,58,237,.06), transparent 60%);
-}
-
-/* HUD-styled section labels, site-wide */
-.section-label{
-  font-family:var(--cine-mono) !important;
-  text-transform:uppercase;
-  letter-spacing:.18em;
-  font-size:.78rem;
-}
-.section-header .section-line{
-  background:linear-gradient(90deg,rgba(255,182,72,.45),rgba(63,224,224,.3),transparent) !important;
-  height:1px;
-}
-html[data-theme="light"] .section-header .section-line{
-  background:linear-gradient(90deg,rgba(180,120,20,.4),rgba(20,140,140,.3),transparent) !important;
-}
-
 /* ── Reduced motion / no-JS safety: everything static + visible ──── */
 @media (prefers-reduced-motion: reduce){
   .cine-wrap{height:auto}
