@@ -1,0 +1,112 @@
+/* ═══════════════════════════════════════════════════════════════════
+   CSE 62B · Cinematic layer
+   Additive stylesheet — never overrides style.css rules outside the
+   .cine-* namespace. Safe to load on any page; without cinematic.js
+   everything degrades to a static, fully usable layout.
+   ═══════════════════════════════════════════════════════════════════ */
+:root{
+  --cine-amber:#ffb648;
+  --cine-amber2:#ff8a3c;
+  --cine-cyan:#3fe0e0;
+  --cine-line:rgba(255,255,255,.1);
+  --cine-line2:rgba(255,255,255,.16);
+  --cine-muted:#8b91a8;
+  --cine-dim:#565b70;
+  --cine-mono:ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  --cine-serif:'Iowan Old Style','Palatino Linotype',Georgia,serif;
+}
+
+/* ── Scroll runway + sticky stage ────────────────────────────────── */
+.cine-wrap{height:460vh; position:relative; margin:0 0 26px}
+.cine-stage{
+  position:sticky; top:0; height:100vh; overflow:hidden;
+  border:1px solid var(--cine-line); border-radius:24px;
+  background:radial-gradient(120% 80% at 50% 42%,#0d1018 0%,#05060a 62%);
+}
+#cineCore{position:absolute; inset:0; width:100%; height:100%; display:block}
+.cine-vignette{position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 45%,transparent 38%,rgba(0,0,0,.6) 100%)}
+.cine-scan{position:absolute; inset:0; pointer-events:none; opacity:.5;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
+
+/* ── HUD chrome ──────────────────────────────────────────────────── */
+.cine-hud{position:absolute; inset:0; padding:84px clamp(16px,4vw,44px) 20px; pointer-events:none; z-index:3}
+.cine-bracket{position:absolute; width:26px; height:26px; border:1px solid var(--cine-amber); opacity:.5; will-change:transform}
+.cine-bracket.tl{left:16px; top:76px; border-right:0; border-bottom:0}
+.cine-bracket.tr{right:16px; top:76px; border-left:0; border-bottom:0}
+.cine-bracket.blb{left:16px; bottom:74px; border-right:0; border-top:0}
+.cine-bracket.brb{right:16px; bottom:74px; border-left:0; border-top:0}
+.cine-readout{position:absolute; font-family:var(--cine-mono); font-size:10.5px; letter-spacing:.12em; color:var(--cine-dim); text-transform:uppercase; line-height:1.8}
+.cine-readout.rtl{left:24px; top:86px} .cine-readout.rtr{right:24px; top:86px; text-align:right}
+.cine-readout b{color:var(--cine-cyan); font-weight:500}
+.cine-readout .ok{color:var(--cine-amber)}
+@media(max-width:640px){ .cine-readout.rtr{display:none} }
+
+.cine-quote{position:absolute; left:clamp(16px,4vw,44px); top:42%; max-width:250px; padding:14px 16px;
+  border:1px solid var(--cine-line); border-radius:12px;
+  background:linear-gradient(150deg,rgba(20,24,34,.66),rgba(10,12,20,.5));
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); will-change:transform,opacity}
+.cine-quote .q{font-family:var(--cine-serif); font-size:1.05rem; color:#fff; font-style:italic; line-height:1.4}
+.cine-quote .by{font-family:var(--cine-mono); font-size:10px; letter-spacing:.16em; color:var(--cine-muted); margin-top:8px; text-transform:uppercase}
+@media(max-width:760px){ .cine-quote{display:none} }
+
+.cine-headline{position:absolute; right:clamp(16px,4vw,44px); top:33%; text-align:right; max-width:60%; will-change:transform,opacity}
+.cine-headline .kick{font-family:var(--cine-mono); font-size:11px; letter-spacing:.28em; color:var(--cine-amber); text-transform:uppercase; margin-bottom:10px}
+.cine-headline h1{font-family:var(--cine-serif); font-weight:600; font-size:clamp(2.4rem,7.5vw,5rem); line-height:.96; margin:0; letter-spacing:-.02em; color:#fff}
+.cine-headline h1 em{font-style:normal; color:var(--cine-amber)}
+.cine-headline p{color:var(--cine-muted); font-size:.92rem; max-width:36ch; margin:16px 0 0 auto; line-height:1.6}
+@media(max-width:640px){ .cine-headline{left:clamp(16px,4vw,44px); text-align:left; max-width:86%} .cine-headline p{margin-left:0} }
+
+.cine-botbar{position:absolute; left:0; right:0; bottom:20px; padding:0 clamp(16px,4vw,44px);
+  display:flex; justify-content:space-between; align-items:center; z-index:4;
+  font-family:var(--cine-mono); font-size:10.5px; letter-spacing:.16em; color:var(--cine-muted); text-transform:uppercase}
+.cine-track{flex:1; margin:0 18px; height:2px; background:rgba(255,255,255,.1); border-radius:2px; position:relative; max-width:320px}
+.cine-track i{position:absolute; inset:0 auto 0 0; background:linear-gradient(90deg,var(--cine-amber),var(--cine-cyan)); border-radius:2px; width:0%}
+.cine-enter{pointer-events:auto; cursor:pointer; color:var(--cine-amber); text-decoration:none; animation:cineBob 1.8s ease-in-out infinite}
+@keyframes cineBob{50%{transform:translateY(4px)}}
+
+/* ── Navigation zone inside the stage ────────────────────────────── */
+.cine-nav{position:absolute; left:0; right:0; top:27%; bottom:60px; z-index:2;
+  padding:0 clamp(14px,3.5vw,40px); display:flex; flex-direction:column; justify-content:center}
+.cine-nav .cine-inw{max-width:1100px; margin:0 auto; width:100%; min-height:0}
+.cine-cnt{color:var(--cine-cyan); font-family:var(--cine-mono); font-size:.82em; letter-spacing:.1em; margin-left:10px}
+
+/* Scoped compaction of the REAL folders-grid while it lives on stage.
+   These rules apply only under .cine-nav — the global .folder-card
+   styling used elsewhere is untouched. */
+.cine-nav .section-header{margin-bottom:14px}
+.cine-nav .folders-grid{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:0;
+}
+.cine-nav .folder-card{padding:15px 15px 13px; border-radius:16px}
+.cine-nav .folder-card .folder-icon-wrap{width:40px; height:40px; font-size:19px; margin-bottom:10px}
+.cine-nav .folder-card .folder-name{font-size:1rem}
+.cine-nav .folder-card .folder-desc{font-size:.72rem}
+@media(max-width:900px){ .cine-nav .folders-grid{grid-template-columns:repeat(3,1fr)} }
+@media(max-width:640px){
+  .cine-nav{top:22%; bottom:56px}
+  .cine-nav .folders-grid{grid-template-columns:repeat(2,1fr); gap:8px}
+  .cine-nav .folder-card{padding:11px 11px 10px; border-radius:13px}
+  .cine-nav .folder-card .folder-icon-wrap{width:32px; height:32px; font-size:16px; margin-bottom:7px}
+  .cine-nav .folder-card .folder-name{font-size:.86rem}
+  .cine-nav .folder-card .folder-desc{display:none}
+}
+@media(max-height:740px){
+  .cine-nav{top:21%}
+  .cine-nav .folder-card .folder-desc{display:none}
+  .cine-nav .folder-card{padding:12px 13px 11px}
+}
+
+/* ── Body entrance scrub targets (used on inner sections) ────────── */
+.cine-sc{will-change:transform,opacity}
+
+/* ── Light theme: the stage is a deliberate dark cinema block; body
+     sections keep their own light styling from style.css. ─────────── */
+html[data-theme="light"] .cine-stage{border-color:rgba(0,0,0,.18)}
+
+/* ── Reduced motion / no-JS safety: everything static + visible ──── */
+@media (prefers-reduced-motion: reduce){
+  .cine-wrap{height:auto}
+  .cine-stage{position:relative; height:auto; min-height:80vh}
+  .cine-enter{animation:none}
+}
