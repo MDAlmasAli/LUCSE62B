@@ -14,7 +14,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@300;400;500;600;700;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css?v=20260718b">
-  <link rel="stylesheet" href="assets/css/cinematic.css?v=1">
   <meta name="description" content="Official digital portal for CSE Batch 62, Section B at Leading University. Access class materials, schedules, notices and more.">
   <meta name="keywords" content="CSE 62B, Leading University, LU CSE, Batch 62, Section B, student portal, Sylhet">
   <meta property="og:type" content="website">
@@ -266,129 +265,6 @@
     <!-- Top Nav -->
 
 
-    <!-- ══ Cinematic stage: boot + navigation assembly (scroll-driven) ══ -->
-    <div class="cine-wrap" id="cineWrap">
-      <div class="cine-stage">
-        <canvas id="cineCore"></canvas>
-        <div class="cine-scan"></div>
-        <div class="cine-vignette"></div>
-
-        <div class="cine-nav" id="cineNavZone">
-          <div class="cine-inw">
-    <!-- Main Links -->
-    <div class="section-header fade-in delay-3">
-      <span class="section-label">📁 Navigation <span class="cine-cnt" id="cineCnt"></span></span>
-      <div class="section-line"></div>
-    </div>
-    <div class="folders-grid fade-in delay-3">
-      <a href="pages/resources.html" class="folder-card" style="--card-accent:rgba(139,92,246,0.5);--card-shadow:0 0 40px rgba(139,92,246,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(139,92,246,0.15),transparent 70%);--icon-bg:rgba(139,92,246,0.1);--icon-border:rgba(139,92,246,0.25);">
-        <span class="folder-arrow">↗</span>
-        <div class="folder-icon-wrap" data-anim="bounce">📚</div>
-        <div class="folder-name">Class Material</div>
-        <div class="folder-desc">Lectures, notes & PDFs</div>
-      </a>
-      <a href="pages/category.html?cat=assignment" class="folder-card" style="--card-accent:rgba(16,185,129,0.5);--card-shadow:0 0 40px rgba(16,185,129,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(16,185,129,0.15),transparent 70%);--icon-bg:rgba(16,185,129,0.1);--icon-border:rgba(16,185,129,0.25);">
-        <span class="folder-arrow">↗</span>
-        <div class="folder-icon-wrap" data-anim="shake">📝</div>
-        <div class="folder-name">Assignment</div>
-        <div class="folder-desc">Tasks & deadlines</div>
-      </a>
-      <a href="pages/category.html?cat=presentation" class="folder-card" style="--card-accent:rgba(249,115,22,0.5);--card-shadow:0 0 40px rgba(249,115,22,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(249,115,22,0.15),transparent 70%);--icon-bg:rgba(249,115,22,0.1);--icon-border:rgba(249,115,22,0.25);">
-        <span class="folder-arrow">↗</span>
-        <div class="folder-icon-wrap" data-anim="grow">📊</div>
-        <div class="folder-name">Presentation</div>
-        <div class="folder-desc">Slides & presentations</div>
-      </a>
-      <a href="pages/category.html?cat=tutorial" class="folder-card" style="--card-accent:rgba(99,102,241,0.5);--card-shadow:0 0 40px rgba(99,102,241,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(99,102,241,0.15),transparent 70%);--icon-bg:rgba(99,102,241,0.1);--icon-border:rgba(99,102,241,0.25);">
-        <span class="folder-arrow">↗</span>
-        <div class="folder-icon-wrap" data-anim="bounce">📖</div>
-        <div class="folder-name">Tutorial</div>
-        <div class="folder-desc">Practice sheets & guides</div>
-      </a>
-      <a href="pages/category.html?cat=lab+report" class="folder-card" style="--card-accent:rgba(20,184,166,0.5);--card-shadow:0 0 40px rgba(20,184,166,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(20,184,166,0.15),transparent 70%);--icon-bg:rgba(20,184,166,0.1);--icon-border:rgba(20,184,166,0.25);">
-        <span class="folder-arrow">↗</span>
-        <div class="folder-icon-wrap" data-anim="shake">🔬</div>
-        <div class="folder-name">Lab Report</div>
-        <div class="folder-desc">Lab experiments & reports</div>
-      </a>
-      <a href="pages/category.html?cat=viva" class="folder-card" style="--card-accent:rgba(244,63,94,0.5);--card-shadow:0 0 40px rgba(244,63,94,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(244,63,94,0.15),transparent 70%);--icon-bg:rgba(244,63,94,0.1);--icon-border:rgba(244,63,94,0.25);">
-        <span class="folder-arrow">↗</span>
-        <div class="folder-icon-wrap" data-anim="pulse">🎙️</div>
-        <div class="folder-name">Viva</div>
-        <div class="folder-desc">Viva questions & prep</div>
-      </a>
-      <a href="pages/category.html?cat=lab+final" class="folder-card" style="--card-accent:rgba(234,179,8,0.5);--card-shadow:0 0 40px rgba(234,179,8,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(234,179,8,0.15),transparent 70%);--icon-bg:rgba(234,179,8,0.1);--icon-border:rgba(234,179,8,0.25);">
-        <span class="folder-arrow">↗</span>
-        <div class="folder-icon-wrap" data-anim="spin">⚗️</div>
-        <div class="folder-name">Lab Final</div>
-        <div class="folder-desc">Lab exam resources</div>
-      </a>
-      <a href="pages/category.html?cat=project" class="folder-card" style="--card-accent:rgba(167,139,250,0.5);--card-shadow:0 0 40px rgba(167,139,250,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(167,139,250,0.15),transparent 70%);--icon-bg:rgba(167,139,250,0.1);--icon-border:rgba(167,139,250,0.25);">
-        <span class="folder-arrow">↗</span>
-        <div class="folder-icon-wrap" data-anim="fly">🚀</div>
-        <div class="folder-name">Project</div>
-        <div class="folder-desc">Group & individual projects</div>
-      </a>
-      <a href="pages/gallery.html" class="folder-card" style="--card-accent:rgba(236,72,153,0.5);--card-shadow:0 0 40px rgba(236,72,153,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(236,72,153,0.15),transparent 70%);--icon-bg:rgba(236,72,153,0.1);--icon-border:rgba(236,72,153,0.25);">
-        <span class="folder-arrow">↗</span>
-        <div class="folder-icon-wrap" data-anim="flash">📸</div>
-        <div class="folder-name">Gallery</div>
-        <div class="folder-desc">Class photos & events</div>
-      </a>
-      <a href="pages/result-dashboard.html" class="folder-card auth-only" style="--card-accent:rgba(0,229,255,0.5);--card-shadow:0 0 40px rgba(0,229,255,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(0,229,255,0.15),transparent 70%);--icon-bg:rgba(0,229,255,0.1);--icon-border:rgba(0,229,255,0.25);">
-        <span class="folder-arrow">↗</span>
-        <div class="folder-icon-wrap" data-anim="bounce">📊</div>
-        <div class="folder-name">Check Result</div>
-        <div class="folder-desc">CGPA, grades & analytics</div>
-      </a>
-      <a href="pages/games.html" class="folder-card" style="--card-accent:rgba(251,146,60,0.5);--card-shadow:0 0 40px rgba(251,146,60,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(251,146,60,0.15),transparent 70%);--icon-bg:rgba(251,146,60,0.1);--icon-border:rgba(251,146,60,0.25);">
-        <span class="folder-arrow">↗</span>
-        <div class="folder-icon-wrap" data-anim="bounce">🎮</div>
-        <div class="folder-name">Games</div>
-        <div class="folder-desc">Play with friends — Discord</div>
-      </a>
-      <a href="pages/attendance.html" class="folder-card attendance-admin-only" style="display:none;--card-accent:rgba(16,185,129,0.6);--card-shadow:0 0 40px rgba(16,185,129,0.15);--card-glow:radial-gradient(circle at 50% 0%,rgba(16,185,129,0.18),transparent 70%);--icon-bg:rgba(16,185,129,0.1);--icon-border:rgba(16,185,129,0.3);">
-        <span class="folder-arrow">↗</span>
-        <div class="folder-icon-wrap" data-anim="pulse">📋</div>
-        <div class="folder-name">Attendance</div>
-        <div class="folder-desc">Mark & report class attendance</div>
-      </a>
-    </div>
-    <script>
-      (function(){
-        var raw = localStorage.getItem('lu62b_student') || sessionStorage.getItem('lu62b_student');
-        try {
-          var s = raw ? JSON.parse(raw) : null;
-          if (s && s.id === '0182320012101068') {
-            var el = document.querySelector('.attendance-admin-only');
-            if (el) el.style.display = '';
-          }
-        } catch(e) {}
-      })();
-    </script>
-          </div>
-        </div>
-
-        <div class="cine-hud">
-          <span class="cine-bracket tl" id="cineBkTL"></span><span class="cine-bracket tr" id="cineBkTR"></span>
-          <span class="cine-bracket blb" id="cineBkBL"></span><span class="cine-bracket brb" id="cineBkBR"></span>
-          <div class="cine-readout rtl">CLASS LOG &middot; 62B<br><b id="cineBoot">CORE // STANDBY</b></div>
-          <div class="cine-readout rtr">RESULTS <span class="ok">&#10003;</span><br>ROUTINE <span class="ok">&#10003;</span><br>COVER PAGE <span class="ok">&#10003;</span></div>
-          <div class="cine-quote" id="cineQuote"><div class="q">"Everything in one place."</div><div class="by">&mdash; 62B Portal</div></div>
-          <div class="cine-headline" id="cineHeadline">
-            <div class="kick" id="cineKick">// booting</div>
-            <h1>CSE<br><em>62B.</em></h1>
-            <p>Scroll &mdash; the portal assembles as you go.</p>
-          </div>
-          <div class="cine-botbar">
-            <a class="cine-enter" href="#afterStage">&darr; enter portal</a>
-            <span class="cine-track"><i id="cineBar"></i></span>
-            <span id="cinePct">BOOT 00%</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Hero Section -->
     <section class="hero fade-in delay-1">
       <div class="avatar-container">
@@ -429,7 +305,7 @@
     </section>
 
     <!-- Graduation Countdown Strip -->
-    <div class="grad-strip fade-in delay-2" id="afterStage">
+    <div class="grad-strip fade-in delay-2">
       <span class="grad-strip-icon">🎓</span>
       <span class="grad-strip-label">Graduation in</span>
       <div class="grad-strip-nums">
@@ -532,7 +408,97 @@
       <div class="deadline-list" id="deadlineList"></div>
     </div>
 
-    <!-- Main Links grid now lives inside the cinematic stage above -->
+    <!-- Main Links -->
+    <div class="section-header fade-in delay-3">
+      <span class="section-label">📁 Navigation</span>
+      <div class="section-line"></div>
+    </div>
+    <div class="folders-grid fade-in delay-3">
+      <a href="pages/resources.html" class="folder-card" style="--card-accent:rgba(139,92,246,0.5);--card-shadow:0 0 40px rgba(139,92,246,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(139,92,246,0.15),transparent 70%);--icon-bg:rgba(139,92,246,0.1);--icon-border:rgba(139,92,246,0.25);">
+        <span class="folder-arrow">↗</span>
+        <div class="folder-icon-wrap" data-anim="bounce">📚</div>
+        <div class="folder-name">Class Material</div>
+        <div class="folder-desc">Lectures, notes & PDFs</div>
+      </a>
+      <a href="pages/category.html?cat=assignment" class="folder-card" style="--card-accent:rgba(16,185,129,0.5);--card-shadow:0 0 40px rgba(16,185,129,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(16,185,129,0.15),transparent 70%);--icon-bg:rgba(16,185,129,0.1);--icon-border:rgba(16,185,129,0.25);">
+        <span class="folder-arrow">↗</span>
+        <div class="folder-icon-wrap" data-anim="shake">📝</div>
+        <div class="folder-name">Assignment</div>
+        <div class="folder-desc">Tasks & deadlines</div>
+      </a>
+      <a href="pages/category.html?cat=presentation" class="folder-card" style="--card-accent:rgba(249,115,22,0.5);--card-shadow:0 0 40px rgba(249,115,22,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(249,115,22,0.15),transparent 70%);--icon-bg:rgba(249,115,22,0.1);--icon-border:rgba(249,115,22,0.25);">
+        <span class="folder-arrow">↗</span>
+        <div class="folder-icon-wrap" data-anim="grow">📊</div>
+        <div class="folder-name">Presentation</div>
+        <div class="folder-desc">Slides & presentations</div>
+      </a>
+      <a href="pages/category.html?cat=tutorial" class="folder-card" style="--card-accent:rgba(99,102,241,0.5);--card-shadow:0 0 40px rgba(99,102,241,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(99,102,241,0.15),transparent 70%);--icon-bg:rgba(99,102,241,0.1);--icon-border:rgba(99,102,241,0.25);">
+        <span class="folder-arrow">↗</span>
+        <div class="folder-icon-wrap" data-anim="bounce">📖</div>
+        <div class="folder-name">Tutorial</div>
+        <div class="folder-desc">Practice sheets & guides</div>
+      </a>
+      <a href="pages/category.html?cat=lab+report" class="folder-card" style="--card-accent:rgba(20,184,166,0.5);--card-shadow:0 0 40px rgba(20,184,166,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(20,184,166,0.15),transparent 70%);--icon-bg:rgba(20,184,166,0.1);--icon-border:rgba(20,184,166,0.25);">
+        <span class="folder-arrow">↗</span>
+        <div class="folder-icon-wrap" data-anim="shake">🔬</div>
+        <div class="folder-name">Lab Report</div>
+        <div class="folder-desc">Lab experiments & reports</div>
+      </a>
+      <a href="pages/category.html?cat=viva" class="folder-card" style="--card-accent:rgba(244,63,94,0.5);--card-shadow:0 0 40px rgba(244,63,94,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(244,63,94,0.15),transparent 70%);--icon-bg:rgba(244,63,94,0.1);--icon-border:rgba(244,63,94,0.25);">
+        <span class="folder-arrow">↗</span>
+        <div class="folder-icon-wrap" data-anim="pulse">🎙️</div>
+        <div class="folder-name">Viva</div>
+        <div class="folder-desc">Viva questions & prep</div>
+      </a>
+      <a href="pages/category.html?cat=lab+final" class="folder-card" style="--card-accent:rgba(234,179,8,0.5);--card-shadow:0 0 40px rgba(234,179,8,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(234,179,8,0.15),transparent 70%);--icon-bg:rgba(234,179,8,0.1);--icon-border:rgba(234,179,8,0.25);">
+        <span class="folder-arrow">↗</span>
+        <div class="folder-icon-wrap" data-anim="spin">⚗️</div>
+        <div class="folder-name">Lab Final</div>
+        <div class="folder-desc">Lab exam resources</div>
+      </a>
+      <a href="pages/category.html?cat=project" class="folder-card" style="--card-accent:rgba(167,139,250,0.5);--card-shadow:0 0 40px rgba(167,139,250,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(167,139,250,0.15),transparent 70%);--icon-bg:rgba(167,139,250,0.1);--icon-border:rgba(167,139,250,0.25);">
+        <span class="folder-arrow">↗</span>
+        <div class="folder-icon-wrap" data-anim="fly">🚀</div>
+        <div class="folder-name">Project</div>
+        <div class="folder-desc">Group & individual projects</div>
+      </a>
+      <a href="pages/gallery.html" class="folder-card" style="--card-accent:rgba(236,72,153,0.5);--card-shadow:0 0 40px rgba(236,72,153,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(236,72,153,0.15),transparent 70%);--icon-bg:rgba(236,72,153,0.1);--icon-border:rgba(236,72,153,0.25);">
+        <span class="folder-arrow">↗</span>
+        <div class="folder-icon-wrap" data-anim="flash">📸</div>
+        <div class="folder-name">Gallery</div>
+        <div class="folder-desc">Class photos & events</div>
+      </a>
+      <a href="pages/result-dashboard.html" class="folder-card auth-only" style="--card-accent:rgba(0,229,255,0.5);--card-shadow:0 0 40px rgba(0,229,255,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(0,229,255,0.15),transparent 70%);--icon-bg:rgba(0,229,255,0.1);--icon-border:rgba(0,229,255,0.25);">
+        <span class="folder-arrow">↗</span>
+        <div class="folder-icon-wrap" data-anim="bounce">📊</div>
+        <div class="folder-name">Check Result</div>
+        <div class="folder-desc">CGPA, grades & analytics</div>
+      </a>
+      <a href="pages/games.html" class="folder-card" style="--card-accent:rgba(251,146,60,0.5);--card-shadow:0 0 40px rgba(251,146,60,0.12);--card-glow:radial-gradient(circle at 50% 0%,rgba(251,146,60,0.15),transparent 70%);--icon-bg:rgba(251,146,60,0.1);--icon-border:rgba(251,146,60,0.25);">
+        <span class="folder-arrow">↗</span>
+        <div class="folder-icon-wrap" data-anim="bounce">🎮</div>
+        <div class="folder-name">Games</div>
+        <div class="folder-desc">Play with friends — Discord</div>
+      </a>
+      <a href="pages/attendance.html" class="folder-card attendance-admin-only" style="display:none;--card-accent:rgba(16,185,129,0.6);--card-shadow:0 0 40px rgba(16,185,129,0.15);--card-glow:radial-gradient(circle at 50% 0%,rgba(16,185,129,0.18),transparent 70%);--icon-bg:rgba(16,185,129,0.1);--icon-border:rgba(16,185,129,0.3);">
+        <span class="folder-arrow">↗</span>
+        <div class="folder-icon-wrap" data-anim="pulse">📋</div>
+        <div class="folder-name">Attendance</div>
+        <div class="folder-desc">Mark & report class attendance</div>
+      </a>
+    </div>
+    <script>
+      (function(){
+        var raw = localStorage.getItem('lu62b_student') || sessionStorage.getItem('lu62b_student');
+        try {
+          var s = raw ? JSON.parse(raw) : null;
+          if (s && s.id === '0182320012101068') {
+            var el = document.querySelector('.attendance-admin-only');
+            if (el) el.style.display = '';
+          }
+        } catch(e) {}
+      })();
+    </script>
 
     <div class="divider fade-in delay-2"></div>
 
@@ -1705,6 +1671,5 @@
     setTimeout(type, 400);
   })();
 </script>
-<script src="assets/js/cinematic.js?v=1"></script>
 </body>
 </html>
