@@ -18,12 +18,14 @@ chat. **No secrets are in this file** — the keystore and its password live out
 | Certificate SHA-256 | `4de19cfc6cf7d55d514c0b9b56ece9e7d1b7ffc8681025fc478a56160efb4d1b` |
 
 Copies (keep at least two, on different devices):
-- `D:\Keys\lucse62b\` — working copy: `lucse62b-release.jks` + `key.properties`
-- `E:\Backup\lucse62b-signing\` — backup of the same two files
+- `APK\android\keystore\lucse62b-release.jks` + `APK\android\key.properties` — the copy the build
+  uses (both gitignored, so they are never pushed, but `git clean -fdx` would delete them)
+- `D:\Keys\lucse62b\` — backup: `lucse62b-release.jks` + `key.properties`
+- `E:\Backup\lucse62b-signing\` — second backup of the same two files
 - The owner's own private copy (Google Drive / pendrive / password manager) — **the password is only in `key.properties`**
 
-Keep the keystore **outside the repo**. `git clean -fdx` deletes every gitignored file, which is
-the most likely reason the previous key disappeared.
+`git clean -fdx` deletes every gitignored file, which is the most likely reason the previous key
+disappeared — so never rely on the in-project copy alone; keep the `D:\Keys` / `E:\Backup` copies.
 
 ### `android/key.properties` (create it on every machine; never commit)
 
@@ -31,10 +33,11 @@ the most likely reason the previous key disappeared.
 storePassword=<password>
 keyPassword=<same password>
 keyAlias=lucse62b
-storeFile=D:/Keys/lucse62b/lucse62b-release.jks
+storeFile=../keystore/lucse62b-release.jks
 ```
 
-Use forward slashes in `storeFile` (backslashes are escapes in `.properties` files).
+`storeFile` is resolved relative to `android/app`, so `../keystore/…` points at
+`android/keystore/`. Use forward slashes (backslashes are escapes in `.properties` files).
 
 ### The previous key is gone
 
