@@ -86,3 +86,18 @@ differs; that is noise — `git checkout` those two files instead of committing 
   are stuck on the update screen. From 2026-09-26 the shipped key is the one above; the very first
   build after the key change must be handed out as a manual download with an "uninstall the old
   app first" note, not pushed through `publish.bat`, until everybody has switched.
+
+## Smaller APKs for manual sharing
+
+The default `flutter build apk --release` is a "fat" APK (~71 MB) carrying native code for three
+CPU types; a phone only uses one. Same features, much smaller:
+
+| Command | Size | Works on |
+|---|---|---|
+| `flutter build apk --release --target-platform android-arm64` | ~27 MB | nearly every phone since ~2017 (share this one) |
+| `flutter build apk --release --target-platform android-arm` | ~25 MB | old 32-bit-only phones ("App not compatible" with the arm64 file) |
+| `flutter build apk --release` (fat) | ~71 MB | everything, incl. emulators — what `publish.bat` uploads |
+
+Each build overwrites `app-release.apk`, so copy it out before the next one. Do **not** use
+`--split-per-abi`: it adds an ABI offset to the versionCode (e.g. 2051), which would make the
+in-app updater think a later fat build (52) is older than the installed one.
