@@ -45,6 +45,13 @@ class HomeScreen extends StatefulWidget {
   // categories.
   static const _items = <_NavItem>[
     _NavItem(
+      Icons.calendar_month_rounded,
+      'Class Routine',
+      'Weekly schedule & your courses',
+      Color(0xFF0EA5E9),
+      '/info/routine',
+    ),
+    _NavItem(
       Icons.assignment_rounded,
       'Classwork',
       'Tasks, categories & deadlines',
