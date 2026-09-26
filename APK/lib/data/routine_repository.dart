@@ -1,3 +1,4 @@
+import '../core/routine_cells.dart';
 import '../core/sheets_api.dart';
 
 /// One slot in a day's routine: either a class or a break.
@@ -100,13 +101,10 @@ class RoutineRepository {
   SheetTable? _merge(List<SheetTable> tables) {
     final valid = tables.where((t) => t.rows.isNotEmpty || t.cols.isNotEmpty).toList();
     if (valid.isEmpty) return null;
-    // Base = the table with the most columns; concat all rows.
+    // Base = the table with the most columns; rows from every sheet, except a
+    // batch/section an earlier sheet already lists (first link wins).
     final base = valid.reduce((a, b) => b.cols.length > a.cols.length ? b : a);
-    final rows = <List<String>>[];
-    for (final t in valid) {
-      rows.addAll(t.rows);
-    }
-    return SheetTable(cols: base.cols, rows: rows);
+    return SheetTable(cols: base.cols, rows: mergeSectionRows(valid));
   }
 
   List<RoutineSlot> _parseDay(SheetTable t, {String batch = '62', String section = 'B'}) {
@@ -172,7 +170,7 @@ class RoutineRepository {
 
   /// "CODE INITIALS ROOM" → (code, initials, room).
   (String, String, String)? _parseCell(String cell) {
-    final c = cell.trim();
+    final c = fixCourseCodeSpacing(cell.trim());
     if (c.isEmpty || c == '--' || c == '–') return null;
     final parts = c.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.length >= 3) return (parts[0], parts[1], parts.sublist(2).join(' '));

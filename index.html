@@ -732,6 +732,7 @@
         if (!cell) return null;
         cell = cell.trim();
         if (!cell || cell === '--' || cell === '–') return null;
+        cell = cell.replace(/^([A-Za-z]{2,5})\s*[-–]\s*(?=\d)/, '$1-');   /* "CSE -4116" → "CSE-4116" */
         const parts = cell.split(/\s+/).filter(Boolean);
         if (parts.length >= 3) return { code: parts[0], room: parts.slice(2).join(' ') };
         if (parts.length >= 1) return { code: parts[0], room: '' };

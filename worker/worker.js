@@ -1623,6 +1623,32 @@ function mergeGvizTables(tables) {
   return { cols: base.cols || [], rows };
 }
 
+/* ── Merge one day's tables from several linked routine sheets ──
+   A batch/section listed in more than one sheet belongs to the FIRST sheet that
+   lists it (Link 1 is the current routine; a later link often still carries last
+   semester's rows for the same section). Sections only a later sheet lists are
+   still added. Mirrors mergeRoutineDayTables in pages/info.html. */
+function mergeGvizDayTables(tables) {
+  const valid = tables.filter(t => t);
+  if (valid.length < 2) return mergeGvizTables(valid);
+  const claimed = new Set();
+  const deduped = valid.map(t => {
+    const own = new Set();
+    const rows = (t.rows || []).filter(r => {
+      const cells = (r.c || []).map(c => c?.v != null ? String(c.v).trim() : '');
+      const batch = (cells[1] || '').replace(/\.0+$/, '');
+      if (!/^\d+$/.test(batch) || !cells[2]) return true;
+      const key = `${batch}-${cells[2].toUpperCase()}`;
+      if (claimed.has(key)) return false;
+      own.add(key);
+      return true;
+    });
+    own.forEach(k => claimed.add(k));
+    return { ...t, rows };
+  });
+  return mergeGvizTables(deduped);
+}
+
 /* ── Fetch + merge every day tab across all sheets linked for a keyword ──
    Returns one merged table per MONITOR_DAY (aligned to MONITOR_DAYS). */
 async function fetchMergedDayTabs(env, ids) {
@@ -1630,7 +1656,13 @@ async function fetchMergedDayTabs(env, ids) {
   const perSheet = await Promise.all(
     ids.map(id => Promise.all(MONITOR_DAYS.map(d => fetchSheetGviz(id, d).catch(() => null))))
   );
-  return MONITOR_DAYS.map((_, i) => mergeGvizTables(perSheet.map(s => s[i])));
+  return MONITOR_DAYS.map((_, i) => mergeGvizDayTables(perSheet.map(s => s[i])));
+}
+
+/* "CSE -4116 NJN NL" (stray space before the dash) → "CSE-4116 NJN NL", so the
+   code isn't split into "CSE" + teacher "-4116". */
+function fixCourseCodeSpacing(cell) {
+  return cell.replace(/^([A-Za-z]{2,5})\s*[-–]\s*(?=\d)/, '$1-');
 }
 
 /* ── Fetch + merge a single-tab sheet (e.g. exam routine) across all IDs ── */
@@ -1673,7 +1705,7 @@ function parse62BSlots(table, dayName) {
   const slots = [];
   timeSlots.forEach((time, i) => {
     if (!time || i === breakSlotIdx || !merged[i]) return;
-    const parts = merged[i].trim().split(/\s+/).filter(Boolean);
+    const parts = fixCourseCodeSpacing(merged[i].trim()).split(/\s+/).filter(Boolean);
     if (!parts[0]) return;
     slots.push({ day: dayName, time: time.trim(), code: parts[0], teacher: parts[1] || '', room: parts.slice(2).join(' ') });
   });
@@ -2805,7 +2837,7 @@ function parseClassCellWorker(cell) {
   if (!cell) return null;
   cell = cell.trim();
   if (!cell || cell === '--' || cell === '–') return null;
-  const parts = cell.split(/\s+/).filter(Boolean);
+  const parts = fixCourseCodeSpacing(cell).split(/\s+/).filter(Boolean);
   if (parts.length >= 3) return { code: parts[0], initials: parts[1], room: parts.slice(2).join(' ') };
   if (parts.length === 2) return { code: parts[0], initials: '', room: parts[1] };
   return parts.length ? { code: parts[0], initials: '', room: '' } : null;

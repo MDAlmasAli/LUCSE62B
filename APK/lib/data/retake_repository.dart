@@ -1,3 +1,4 @@
+import '../core/routine_cells.dart';
 import '../core/sheets_api.dart';
 import '../core/supa.dart';
 import '../core/worker_api.dart';
@@ -606,7 +607,7 @@ class RetakeRepository {
   }
 
   (String, String, String)? _parseCell(String cell) {
-    final c = cell.trim();
+    final c = fixCourseCodeSpacing(cell.trim());
     if (c.isEmpty || c == '--' || c == '–') return null;
     final parts = c.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.length >= 3) {

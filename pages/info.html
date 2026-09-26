@@ -889,6 +889,9 @@
       if (!cell) return null;
       cell = cell.trim();
       if (!cell || cell === '--' || cell === '–') return null;
+      /* Sheet typos like "CSE -4116" would otherwise split into code "CSE" +
+         teacher "-4116" — glue the dash back on so the code stays "CSE-4116". */
+      cell = cell.replace(/^([A-Za-z]{2,5})\s*[-–]\s*(?=\d)/, '$1-');
       const parts = cell.split(/\s+/).filter(Boolean);
       if (parts.length >= 3) return { code: parts[0], initials: parts[1], room: parts.slice(2).join(' ') };
       if (parts.length === 2) return { code: parts[0], initials: '', room: parts[1] };
@@ -1106,8 +1109,35 @@
         return ROUTINE_DAY_NAMES.map((d, i) => stripHiddenCols(days[i], hiddenForTab(hidden, d)));
       }));
       return ROUTINE_DAY_NAMES.map((_, dayIdx) =>
-        mergeSheetTables(perSheet.map(s => s[dayIdx]))
+        mergeRoutineDayTables(perSheet.map(s => s[dayIdx]))
       );
+    }
+
+    /* Merge one day's tables from several linked routine sheets. A batch/section
+       listed in more than one sheet belongs to the FIRST sheet that lists it:
+       Link 1 is the current routine, while a later link (e.g. "everything else")
+       often still carries last semester's rows for the same section, which would
+       otherwise blend into it and clash with the new courses. Sections that only
+       a later sheet lists are still added. */
+    function mergeRoutineDayTables(tables) {
+      const valid = tables.filter(t => t?.table);
+      if (valid.length < 2) return mergeSheetTables(valid);
+      const claimed = new Set();
+      const deduped = valid.map(t => {
+        const own = new Set();
+        const rows = (t.table.rows || []).filter(r => {
+          const cells = (r.c || []).map(c => c?.v != null ? String(c.v).trim() : '');
+          const batch = (cells[1] || '').replace(/\.0+$/, '');
+          if (!/^\d+$/.test(batch) || !cells[2]) return true;
+          const key = `${batch}-${cells[2].toUpperCase()}`;
+          if (claimed.has(key)) return false;
+          own.add(key);
+          return true;
+        });
+        own.forEach(k => claimed.add(k));
+        return { table: { ...t.table, rows } };
+      });
+      return mergeSheetTables(deduped);
     }
 
     /* ── Fetch a single-tab sheet (e.g. an exam routine) from EVERY linked ID

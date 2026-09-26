@@ -1,3 +1,4 @@
+import '../core/routine_cells.dart';
 import '../core/sheets_api.dart';
 
 /// A course a teacher takes this semester, with the sections ("62-B").
@@ -65,7 +66,7 @@ class CourseTeachersRepository {
   }
 
   static (String, String)? _parseCell(String cell) {
-    final c = cell.trim();
+    final c = fixCourseCodeSpacing(cell.trim());
     if (c.isEmpty || c == '--' || c == '–') return null;
     final parts = c.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return null;
@@ -173,14 +174,13 @@ class CourseTeachersRepository {
   Future<List<List<List<String>>>> _allDayRows(List<String> ids) async {
     final out = <List<List<String>>>[];
     for (final day in _days) {
-      final merged = <List<String>>[];
+      final tables = <SheetTable>[];
       for (final id in ids) {
         try {
-          final t = await _api.tableById(id, tab: day);
-          merged.addAll(t.rows);
+          tables.add(await _api.tableById(id, tab: day));
         } catch (_) {}
       }
-      out.add(merged);
+      out.add(mergeSectionRows(tables));
     }
     return out;
   }

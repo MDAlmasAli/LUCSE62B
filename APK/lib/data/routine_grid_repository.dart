@@ -1,3 +1,4 @@
+import '../core/routine_cells.dart';
 import '../core/sheets_api.dart';
 import '../core/supa.dart';
 
@@ -195,7 +196,7 @@ class RoutineGridRepository {
   }
 
   static (String, String, String)? _parseCell(String cell) {
-    final c = cell.trim();
+    final c = fixCourseCodeSpacing(cell.trim());
     if (c.isEmpty || c == '--' || c == '–') return null;
     final parts = c.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.length >= 3) {
@@ -399,9 +400,7 @@ class RoutineGridRepository {
       final base = valid.reduce(
         (a, b) => b.cols.length > a.cols.length ? b : a,
       );
-      out.add(
-        SheetTable(cols: base.cols, rows: [for (final t in valid) ...t.rows]),
-      );
+      out.add(SheetTable(cols: base.cols, rows: mergeSectionRows(valid)));
     }
     return out;
   }

@@ -41,7 +41,7 @@ curl -sS -X POST https://lucse62b-api.sy164425.workers.dev/release-apk ^
   -H "x-version-name: %VNAME%" ^
   -H "x-version-code: %VCODE%" ^
   -H "x-release-features: []" ^
-  -H "x-release-fixes: [\"Custom courses and retake/improve enrollments no longer clash with a new semester routine\"]" ^
+  -H "x-release-fixes: [\"Old-semester courses no longer mix into the new class routine\", \"Course codes typed like CSE -4116 now show correctly\"]" ^
   -H "Content-Type: application/vnd.android.package-archive" ^
   --data-binary @build/app/outputs/flutter-apk/app-release.apk
 echo.
