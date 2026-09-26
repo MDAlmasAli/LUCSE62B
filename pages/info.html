@@ -895,8 +895,58 @@
       return parts.length ? { code: parts[0], initials: '', room: '' } : null;
     }
 
-    function escH(s) {
-      return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    /* Merged routine → { "62-B": { "CSE-3214": [{day, time, initials, room}] } } */
+    function buildSectionCourseSlots(dayResults) {
+      const out = {};
+      ROUTINE_DAY_NAMES.forEach((dayName, idx) => {
+        const data = dayResults[idx];
+        if (!data?.table) return;
+        const rows = data.table.rows || [];
+        const cols = data.table.cols || [];
+        if (!rows.length) return;
+
+        let timeSlots = cols.slice(3).map(c => (c.label || '').trim());
+        let dataStart = 0;
+        if (!timeSlots.some(t => /\d+:\d+/.test(t))) {
+          for (let r = 0; r < Math.min(rows.length, 3); r++) {
+            const cells = (rows[r].c || []).map(c => c?.v != null ? String(c.v).trim() : '');
+            if (cells.slice(3).some(c => /\d+:\d+/.test(c))) {
+              timeSlots = cells.slice(3); dataStart = r + 1; break;
+            }
+          }
+        }
+
+        for (let r = dataStart; r < rows.length; r++) {
+          const cells   = (rows[r].c || []).map(c => c?.v != null ? String(c.v).trim() : '');
+          const batch   = (cells[1] || '').replace(/\.0+$/, '');
+          const section = (cells[2] || '').toUpperCase();
+          if (!batch || !section) continue;
+          const key = `${batch}-${section}`;
+
+          cells.slice(3).forEach((cell, i) => {
+            if (!cell || /break/i.test(cell)) return;
+            const parsed = parseClassCell(cell);
+            const time   = timeSlots[i] || '';
+            if (!parsed?.code || !/\d+:\d+/.test(time)) return;
+            const code = parsed.code.toUpperCase();
+            const list = ((out[key] ||= {})[code] ||= []);
+            if (!list.some(s => s.day === dayName && s.time === time))
+              list.push({ day: dayName, time, initials: parsed.initials || '', room: parsed.room || '' });
+          });
+        }
+      });
+      return out;
+    }
+
+    /* An enrollment row (student_retake_enrollments) keeps the schedule it had
+       when the student enrolled. Once a new semester's routine replaces the
+       sheet that snapshot is wrong, so read the enrollment's slots from the
+       LIVE routine instead. Empty = the current routine doesn't offer it. */
+    function liveEnrollmentSlots(enr, sectionCourseSlots) {
+      const batch   = String(enr.batch || '').trim().replace(/\.0+$/, '');
+      const section = String(enr.section || '').trim().toUpperCase();
+      const code    = String(enr.course_code || '').trim().toUpperCase();
+      return sectionCourseSlots[`${batch}-${section}`]?.[code] || [];
     }
 
     const SECTION_SCRIPTS = {

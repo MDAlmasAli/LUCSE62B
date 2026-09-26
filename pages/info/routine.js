@@ -100,9 +100,17 @@ function _rtSaveCustomAll(userId, courses) {
   _rtSaveCustomToSupa(userId, courses);
 }
 
+/* Custom courses carry a fixed day/time, so they go stale when the semester
+   changes. Each one is tagged with the semester it was added in and only that
+   semester's are applied; older ones stay stored (hidden), never deleted. */
+function _rtCustomThisSem(courses) {
+  return (courses || []).filter(c => c.sem === _semLabel);
+}
+
 /* Merge custom course entries into a cache copy, rebuilding groups so new times
    get their own column (the grid already handles slots at unlisted times). */
 function _rtApplyCustom(baseCache, customCourses) {
+  customCourses = _rtCustomThisSem(customCourses);
   if (!baseCache || !customCourses.length) return baseCache;
   const schedule = {};
   ROUTINE_DAY_NAMES.forEach(d => { schedule[d] = baseCache.schedule[d] ? [...baseCache.schedule[d]] : []; });
@@ -134,12 +142,16 @@ function _rtRebuildCaches() {
 function _rtRenderCustomList() {
   const list = document.getElementById('rt-cc-list');
   if (!list) return;
-  if (!_customCourses.length) {
-    list.innerHTML = `<p style="font-size:0.7rem;color:var(--text-secondary);text-align:center;margin:8px 0 0;">No custom courses added yet.</p>`;
+  const active = _rtCustomThisSem(_customCourses);
+  const hidden = _customCourses.length - active.length;
+  const oldNote = hidden ? `<p style="font-size:0.66rem;color:var(--text-secondary);text-align:center;margin:8px 0 0;opacity:.7;">
+    ${hidden} custom course${hidden !== 1 ? 's' : ''} from an earlier semester hidden.</p>` : '';
+  if (!active.length) {
+    list.innerHTML = `<p style="font-size:0.7rem;color:var(--text-secondary);text-align:center;margin:8px 0 0;">No custom courses added yet.</p>${oldNote}`;
     return;
   }
   const dayShort = { SATURDAY:'Sat', SUNDAY:'Sun', MONDAY:'Mon', TUESDAY:'Tue', WEDNESDAY:'Wed', THURSDAY:'Thu', FRIDAY:'Fri' };
-  list.innerHTML = _customCourses.map(c => `
+  list.innerHTML = oldNote + active.map(c => `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:9px;
       border:1px solid var(--border);background:rgba(16,185,129,.05);margin-bottom:6px;">
       <span style="width:6px;height:6px;border-radius:50%;background:#10b981;flex-shrink:0;"></span>
@@ -352,7 +364,7 @@ window._rtAddCustomCourse = function() {
   if (!name || !day || !time) { alert('Course Name, Day, and Time are required.'); return; }
   if (!/\d+:\d+/.test(time))  { alert('Time must be a range like 09:00 - 10:30'); return; }
 
-  _customCourses = [..._customCourses, { id: `custom_${Date.now()}`, name, code, teacher, room, day, time }];
+  _customCourses = [..._customCourses, { id: `custom_${Date.now()}`, name, code, teacher, room, day, time, sem: _semLabel }];
   const user = JSON.parse(localStorage.getItem('lu62b_student') || 'null');
   if (user?.id) _rtSaveCustomAll(user.id, _customCourses);
 
@@ -382,6 +394,17 @@ async function _rtFetchEnrollments(userId) {
     );
     return r.ok ? await r.json() : [];
   } catch(e) { return []; }
+}
+
+/* Re-read each enrollment's slots from the live routine (the stored snapshot
+   is from whichever semester the student enrolled in) and drop the ones the
+   current routine no longer offers, so old-semester sections can't clash. */
+function _rtLiveEnrollments(enrollments) {
+  if (!_allDayResults) return enrollments;
+  const live = buildSectionCourseSlots(_allDayResults);
+  return enrollments
+    .map(e => ({ ...e, schedule: liveEnrollmentSlots(e, live) }))
+    .filter(e => e.schedule.length);
 }
 
 /* ── Build improved cache (62B selected courses + enrolled) ── */
@@ -956,7 +979,8 @@ async function loadRoutine(body) {
 
     /* Background: fetch enrollments — show Improved tab if any */
     if (user?.id) {
-      _rtFetchEnrollments(user.id).then(enrollments => {
+      _rtFetchEnrollments(user.id).then(rows => {
+        const enrollments = _rtLiveEnrollments(rows);
         if (!enrollments.length) return;
         _rtLastEnrollments = enrollments;
         _improvedCache = _rtApplyCustom(_buildImprovedCache(enrollments), _customCourses);

@@ -17,9 +17,7 @@ async function _rrFetchEnrollments(userId) {
   } catch(e) { return []; }
 }
 
-async function _rrBuild62BSchedule() {
-  const dayResults = await fetchAllRoutineDays();   /* merges Link 1 + extra Routine Link N */
-
+function _rrBuild62BSchedule(dayResults) {
   const schedule = {};
 
   ROUTINE_DAY_NAMES.forEach((dayName, idx) => {
@@ -83,11 +81,19 @@ async function loadRetakeRoutine(body) {
   }
 
   try {
-    const [enrollments, sem, cpgData] = await Promise.all([
+    const [savedEnrollments, sem, cpgData, dayResults] = await Promise.all([
       _rrFetchEnrollments(user.id),
       getSemesterLabel(),
       fetchSheet('CPG_Courses').catch(() => null),
+      fetchAllRoutineDays(),   /* merges Link 1 + extra Routine Link N */
     ]);
+
+    /* The schedule saved on an enrollment is from the semester it was made in —
+       use the live routine's slots, and skip sections it no longer offers. */
+    const liveSlots   = buildSectionCourseSlots(dayResults);
+    const enrollments = savedEnrollments
+      .map(e => ({ ...e, schedule: liveEnrollmentSlots(e, liveSlots) }))
+      .filter(e => e.schedule.length);
 
     /* Course name map */
     const courseNameMap = {};
@@ -102,7 +108,7 @@ async function loadRetakeRoutine(body) {
     });
 
     /* 62B regular schedule */
-    const schedule62B = await _rrBuild62BSchedule();
+    const schedule62B = _rrBuild62BSchedule(dayResults);
 
     /* Combine */
     const combined = {};

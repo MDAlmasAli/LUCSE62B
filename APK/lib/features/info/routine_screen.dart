@@ -768,7 +768,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                 ),
                 const SizedBox(height: 14),
                 // Existing list
-                if (_customs.isEmpty)
+                if (!_customs.any((c) => c.appliesTo(d.semester)))
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 6),
                     child: Text(
@@ -777,7 +777,9 @@ class _RoutineScreenState extends State<RoutineScreen> {
                     ),
                   )
                 else
-                  ..._customs.map(
+                  ..._customs
+                      .where((c) => c.appliesTo(d.semester))
+                      .map(
                     (c) => Container(
                       margin: const EdgeInsets.only(bottom: 7),
                       padding: const EdgeInsets.symmetric(
@@ -930,6 +932,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                           room: roomC.text.trim(),
                           day: day,
                           time: time!,
+                          sem: d.semester,
                         ),
                       ];
                       await persist();

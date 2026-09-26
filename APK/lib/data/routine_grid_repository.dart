@@ -38,6 +38,10 @@ class GridSlot {
 /// A user-added custom course (stored in `student_custom_courses.courses`).
 class CustomCourse {
   final String id, name, code, teacher, room, day, time;
+
+  /// Semester label it was added in. A custom course has a fixed day/time, so it
+  /// only applies to that semester; older ones stay stored but are ignored.
+  final String sem;
   const CustomCourse({
     required this.id,
     required this.name,
@@ -46,7 +50,13 @@ class CustomCourse {
     required this.room,
     required this.day,
     required this.time,
+    this.sem = '',
   });
+
+  /// Enrollment entries are rebuilt from the live routine every load, so they
+  /// are never stale; user-added ones must match the current semester.
+  bool appliesTo(String semester) =>
+      id.startsWith('enrollment:') || sem == semester;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -56,6 +66,7 @@ class CustomCourse {
     'room': room,
     'day': day,
     'time': time,
+    'sem': sem,
   };
 
   factory CustomCourse.fromJson(Map<String, dynamic> m) => CustomCourse(
@@ -66,6 +77,7 @@ class CustomCourse {
     room: '${m['room'] ?? ''}',
     day: '${m['day'] ?? ''}',
     time: '${m['time'] ?? ''}',
+    sem: '${m['sem'] ?? ''}',
   );
 }
 
@@ -280,6 +292,7 @@ class RoutineGridRepository {
     final built = _scheduleFor(batch, section);
     if (customs.isNotEmpty && batch == '62' && section == 'B') {
       for (final c in customs) {
+        if (!c.appliesTo(_semester)) continue;
         if (!_days.contains(c.day) || c.time.trim().isEmpty) continue;
         built.schedule
             .putIfAbsent(c.day, () => [])

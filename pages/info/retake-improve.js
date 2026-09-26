@@ -84,6 +84,19 @@ async function _riLoadEnrollments(userId) {
   } catch(e) { return {}; }
 }
 
+/* Enrollment rows keep the schedule from when they were made, which is wrong
+   once a new semester's routine replaces the sheet. Swap in the live slots so
+   clash checks use today's routine; `stale` marks a section it no longer offers.
+   Rows are kept (not deleted) so the student can still see and remove them. */
+function _riLiveEnrollments(map, sectionCourseSlots) {
+  const out = {};
+  Object.entries(map || {}).forEach(([code, e]) => {
+    const schedule = liveEnrollmentSlots(e, sectionCourseSlots);
+    out[code] = { ...e, schedule, stale: !schedule.length };
+  });
+  return out;
+}
+
 /* Shared helper — update localStorage, Supabase, _riData, re-render */
 function _riMutateManual(code, action, type) {
   /* action: 'add' | 'remove'   type: 'retake' | 'improve' */
@@ -593,7 +606,7 @@ async function loadRetakeImprove(body) {
     let enrollments = {};
     try {
       const cached = JSON.parse(localStorage.getItem(`lu62b_enrollments_${user?.id}`) || 'null');
-      if (cached && typeof cached === 'object') enrollments = cached;
+      if (cached && typeof cached === 'object') enrollments = _riLiveEnrollments(cached, sectionCourseSlots);
     } catch(e) {}
 
     /* Days with NO regular 62B class = student's off days */
@@ -622,8 +635,8 @@ async function loadRetakeImprove(body) {
               { method: 'DELETE', headers: { 'apikey': _RI_KEY, 'Authorization': `Bearer ${_RI_KEY}`, 'Prefer': 'return=minimal' } }).catch(() => {});
           });
         }
-        window._riData.enrollments = fresh;
         try { localStorage.setItem(`lu62b_enrollments_${user.id}`, JSON.stringify(fresh)); } catch(e) {}
+        window._riData.enrollments = _riLiveEnrollments(fresh, sectionCourseSlots);
         riSwitchTab(_riActiveTab);
       });
 
@@ -1142,6 +1155,8 @@ function _riRenderMyList(el) {
             background:rgba(196,181,253,.1);padding:1px 7px;border-radius:5px;">${escH(e.teacher)}</span>
             ${teacherFull ? `<span style="font-size:0.72rem;">${escH(teacherFull)}</span>` : ''}` : ''}
           ${scheduleStr ? `<span>${scheduleStr}</span>` : ''}
+          ${e.stale ? `<span style="font-size:0.62rem;font-weight:700;padding:1px 7px;border-radius:5px;
+            background:rgba(251,191,36,.14);color:#fbbf24;">Not in current routine</span>` : ''}
         </div>
       </div>
       <div style="display:flex;align-items:center;padding:0 14px;flex-shrink:0;">
