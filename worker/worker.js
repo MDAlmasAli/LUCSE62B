@@ -1289,7 +1289,13 @@ async function luResultCached(env, student_id, birth_date) {
       if (stale) return stale;
     } catch (e) {}
   }
-  return text || '{"success":false,"error":"unavailable","message":"LU portal unavailable. Please try again shortly."}';
+  /* Leading University retired this endpoint: its result page no longer carries
+     the AJAX nonce, and admin-ajax answers {"error":"endpoint_disabled",
+     "message":"Result lookup now requires the secure results form."}. Waiting
+     will not fix it, so tell the student what actually works - open the LU page,
+     clear its verification, and import the result once. The apps and the
+     dashboard already show their own version of this and ignore the code. */
+  return text || '{"success":false,"error":"import_required","message":"Leading University now requires a verification (CAPTCHA) on its result page, so results cannot be fetched automatically. Open lus.ac.bd/result/, view your result, then import it here once - it is saved for next time."}';
 }
 
 /* DOB on file for a student (via SECURITY DEFINER RPC, service_role). */
