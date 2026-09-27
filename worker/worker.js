@@ -689,6 +689,59 @@ export default {
         });
       }
 
+      /* Owner-only push diagnostics. Says whether the push secrets are present
+         and whether Firebase actually authenticates, without revealing any of
+         them and without notifying anybody: the probe message is data-only and
+         goes to a topic nothing subscribes to. Gated by the release key so it
+         can be run while holding only the publishing credential. */
+      if (p === '/push-status' && request.method === 'POST') {
+        const token = request.headers.get('x-release-key') || '';
+        if (!env.RELEASE_PUBLISH_KEY || token !== env.RELEASE_PUBLISH_KEY) {
+          return errResp(cors, 403, 'Forbidden');
+        }
+        const configured = {
+          FIREBASE_PROJECT_ID: !!env.FIREBASE_PROJECT_ID,
+          FIREBASE_CLIENT_EMAIL: !!env.FIREBASE_CLIENT_EMAIL,
+          FIREBASE_PRIVATE_KEY: !!env.FIREBASE_PRIVATE_KEY,
+          VAPID_PRIVATE_KEY: !!env.VAPID_PRIVATE_KEY,
+          SUPA_KEY: !!env.SUPA_KEY,
+        };
+        let firebaseAuth = 'skipped';
+        let probe = 'skipped';
+        if (configured.FIREBASE_PROJECT_ID &&
+            configured.FIREBASE_CLIENT_EMAIL &&
+            configured.FIREBASE_PRIVATE_KEY) {
+          try {
+            const accessToken = await firebaseAccessToken(env);
+            firebaseAuth = accessToken ? 'ok' : 'no_token';
+            if (accessToken) {
+              const r = await fetch(
+                `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(env.FIREBASE_PROJECT_ID)}/messages:send`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    message: { topic: 'diag_selftest', data: { probe: '1' } },
+                  }),
+                },
+              );
+              probe = `${r.status}: ${(await r.text()).slice(0, 300)}`;
+            }
+          } catch (e) {
+            firebaseAuth = `error: ${String(e && e.message || e).slice(0, 200)}`;
+          }
+        }
+        return jsonResp(cors, {
+          configured,
+          firebaseAuth,
+          probe,
+          lastPushSent: await supabaseGetState(env, 'push_last_sent'),
+        });
+      }
+
       // Owner-only end-to-end push test. Inserts a visible test notification,
       // wakes every web subscription, and sends the same message to the APK's
       // all_users FCM topic.
@@ -701,8 +754,8 @@ export default {
         const title = String(payload.title || '🔔 Push notification test').slice(0, 100);
         const body = String(payload.body || 'CSE 62B notification delivery is working.').slice(0, 500);
         const link = String(payload.link || '/');
-        await insertNotification(env, 'push_test', title, body, link);
-        const delivery = await sendPushToAll(env);
+        await insertNotification(env, 'push_test', title, body, link, { allowDuplicate: true });
+        const delivery = await sendPushToAll(env, { force: true });
         return jsonResp(cors, { ok: true, delivery, at: new Date().toISOString() });
       }
 
@@ -1565,15 +1618,38 @@ async function clearSupabaseState(env, key) {
   }).catch(() => {});
 }
 
-async function insertNotification(env, type, title, body, link) {
-  await fetch(`${SUPA_URL}/rest/v1/notifications`, {
+/* Insert a public notification. Returns true when a row was actually written.
+   A monitor can re-detect the same change when a sheet read flaps between two
+   versions, so an identical type+body inside [DUPLICATE_WINDOW_MS] is dropped
+   rather than shown to everyone twice. */
+const DUPLICATE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+async function insertNotification(env, type, title, body, link, opts = {}) {
+  if (!opts.allowDuplicate && await isDuplicateNotification(env, type, body)) {
+    return false;
+  }
+  const r = await fetch(`${SUPA_URL}/rest/v1/notifications`, {
     method: 'POST',
     headers: {
       'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ type, title, body, link }),
-  }).catch(() => {});
+  }).catch(() => null);
+  return !!(r && r.ok);
+}
+
+async function isDuplicateNotification(env, type, body) {
+  const r = await fetch(
+    `${SUPA_URL}/rest/v1/notifications?student_id=is.null&type=eq.${encodeURIComponent(type)}` +
+    `&select=body,created_at&order=created_at.desc&limit=1`,
+    { headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` } },
+  ).catch(() => null);
+  if (!r || !r.ok) return false;          // never suppress on a lookup failure
+  const previous = (await r.json())[0];
+  if (!previous || previous.body !== body) return false;
+  const age = Date.now() - Date.parse(previous.created_at);
+  return Number.isFinite(age) && age >= 0 && age < DUPLICATE_WINDOW_MS;
 }
 
 /* ── Sheet fetch helper (no CORS needed for scheduled) ── */
@@ -1745,11 +1821,16 @@ function computeSlotDiff(oldSlots, newSlots) {
       const n = candidates[0];
       matched.add(`${n.day}|${n.time}|${n.code}`);
       const fc = [];
-      if (o.day  !== n.day)  fc.push(`Day: ${o.day} → ${n.day}`);
       if (o.time !== n.time) fc.push(`Time: ${o.time} → ${n.time}`);
       if (o.teacher !== n.teacher && (o.teacher || n.teacher)) fc.push(`Teacher: ${o.teacher||'?'} → ${n.teacher||'?'}`);
       if (o.room    !== n.room    && (o.room    || n.room   )) fc.push(`Room: ${o.room||'?'} → ${n.room||'?'}`);
-      if (fc.length) changes.push(`• ${o.code}: ${fc.join(', ')}`);
+      /* Always name the day. "Time: 10:05 → 12:15" on its own doesn't say which
+         class moved, which is the whole point of the notification. */
+      const dayMoved = o.day !== n.day;
+      if (fc.length || dayMoved) {
+        const when = dayMoved ? `${o.day} → ${n.day}` : o.day;
+        changes.push(`• ${o.code} (${when})${fc.length ? ': ' + fc.join(', ') : ''}`);
+      }
     } else {
       changes.push(`• ${o.code}: Removed from ${o.day} at ${o.time}`);
     }
@@ -3153,19 +3234,39 @@ function notificationCategory(type) {
   return 'general';
 }
 
-async function sendPushToAll(env) {
+async function sendPushToAll(env, opts = {}) {
   if (!env.SUPA_KEY) return { web: { status: 'not_configured' }, fcm: { status: 'not_configured' } };
   const notification = await latestPublicNotification(env);
+  /* A monitor that re-detects the same change inserts nothing (see
+     insertNotification) but still reaches here, which would buzz every phone a
+     second time for a message they already have. Remember what went out last. */
+  const fingerprint = await sha256(JSON.stringify([
+    notification?.type || '', notification?.title || '', notification?.body || '',
+  ]));
+  if (!opts.force) {
+    const lastSent = await supabaseGetState(env, 'push_last_sent');
+    if (lastSent?.state_hash === fingerprint) {
+      return { skipped: 'duplicate', type: notification?.type || null };
+    }
+  }
   const category = notificationCategory(notification?.type);
   const fcmPromise = sendFcmToAll(env, notification);
+  const remember = () => supabaseUpsertState(env, 'push_last_sent', fingerprint, {
+    at: new Date().toISOString(),
+    type: notification?.type || null,
+  });
   if (!env.VAPID_PRIVATE_KEY) {
-    return { web: { status: 'not_configured' }, fcm: await fcmPromise };
+    const fcm = await fcmPromise;
+    await remember();
+    return { web: { status: 'not_configured' }, fcm };
   }
   const r = await fetch(`${SUPA_URL}/rest/v1/push_subscriptions?select=endpoint`, {
     headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` },
   }).catch(() => null);
   if (!r || !r.ok) {
-    return { web: { status: 'subscription_fetch_failed' }, fcm: await fcmPromise };
+    const fcm = await fcmPromise;
+    await remember();
+    return { web: { status: 'subscription_fetch_failed' }, fcm };
   }
   const subs = await r.json();
   const expired = [];
@@ -3192,6 +3293,10 @@ async function sendPushToAll(env) {
       headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` },
     }).catch(() => {});
   }
+  await supabaseUpsertState(env, 'push_last_sent', fingerprint, {
+    at: new Date().toISOString(),
+    type: notification?.type || null,
+  });
   return {
     web: {
       status: 'sent',
