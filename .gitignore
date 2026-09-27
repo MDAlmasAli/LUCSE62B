@@ -21,3 +21,9 @@ worker/.wrangler/
 # Saved LU result pages (personal data, local-only)
 Result *Leading University*.html
 *Leading University*.html
+
+# Signing material — must never reach the repo, wherever it lands
+*.jks
+*.keystore
+key.properties
+.release-key
