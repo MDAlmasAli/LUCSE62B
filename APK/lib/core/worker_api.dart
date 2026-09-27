@@ -367,17 +367,23 @@ class WorkerApi {
     String studentName,
     bool present,
   ) async {
-    try {
-      await _post('/attendance', {
-        'action': present ? 'mark' : 'unmark',
-        'admin_id': adminId,
-        'student_id': studentId,
-        'student_name': studentName,
-      });
-      return true;
-    } catch (_) {
-      return false;
+    /* A failed save flips the tick back on screen, which looks like the mark
+       undoing itself. Both actions are idempotent — mark upserts, unmark
+       deletes — so one retry costs nothing and absorbs a dropped request. */
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        await _post('/attendance', {
+          'action': present ? 'mark' : 'unmark',
+          'admin_id': adminId,
+          'student_id': studentId,
+          'student_name': studentName,
+        });
+        return true;
+      } catch (_) {
+        if (attempt == 0) await Future<void>.delayed(const Duration(milliseconds: 600));
+      }
     }
+    return false;
   }
 
   /// POST /attendance → clear all of today's attendance (admin only).

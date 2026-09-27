@@ -38,6 +38,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   final _course = TextEditingController();
   final _teacher = TextEditingController();
   List<_Student> _students = [];
+  /// Marks made on this device in the last few seconds, so an overlapping
+  /// refresh cannot answer with pre-tap state and undo them.
+  final Map<String, ({bool present, DateTime at})> _recentLocal = {};
+  static const _localWins = Duration(seconds: 15);
+
   final Set<String> _present = {};
   List<Suggestion> _courseSuggestions = [];
   String _query = '';
@@ -102,6 +107,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       }
     }
 
+    /* A refresh that overlaps a tap would otherwise answer with the state from
+       just before it and quietly undo the mark, so a recent local change wins. */
+    final now = DateTime.now();
+    _recentLocal.removeWhere((_, c) => now.difference(c.at) > _localWins);
+    _recentLocal.forEach((id, c) {
+      if (c.present) {
+        present.add(id);
+      } else {
+        present.remove(id);
+      }
+    });
     _present
       ..clear()
       ..addAll(present);
@@ -110,6 +126,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Future<void> _toggle(_Student s) async {
     final willPresent = !_present.contains(s.id);
+    _recentLocal[s.id] = (present: willPresent, at: DateTime.now());
     setState(() {
       if (willPresent) {
         _present.add(s.id);
@@ -123,7 +140,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       s.name,
       willPresent,
     );
-    if (!ok && mounted) {
+    if (!ok) {
+      _recentLocal.remove(s.id);
+      if (!mounted) return;
       setState(() {
         if (willPresent) {
           _present.remove(s.id);
@@ -132,7 +151,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         }
       });
       AppToast.show(context, 'Save failed — reverted', error: true);
+      return;
     }
+    _recentLocal[s.id] = (present: willPresent, at: DateTime.now());
   }
 
   Future<void> _clear() async {
@@ -165,6 +186,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
     if (yes != true) return;
     final ok = await WorkerApi.instance.attendanceClear(K.attendanceAdminId);
+    if (ok) _recentLocal.clear();   // a wipe outranks any pending mark
     if (ok && mounted) {
       setState(() => _present.clear());
       AppToast.show(context, 'Attendance cleared');

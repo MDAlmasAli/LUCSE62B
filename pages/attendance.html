@@ -394,6 +394,12 @@
     var allStudents   = [];  // { sl, id, name }
     var presentSet    = new Set();
     var pendingIds    = new Set();
+    /* studentId -> { present: bool, at: ms }. The 30s auto-refresh rebuilds
+       presentSet from the server, and a tap made just before it lands is not in
+       that response yet — which silently un-marked the student. A local change
+       therefore outranks the server for a few seconds. */
+    var recentLocal   = new Map();
+    var LOCAL_WINS_MS = 15000;
     var searchQuery   = '';
     var LU_LOGO       = null; // base64 data URL of LU logo, pre-fetched for PDF
 
@@ -447,7 +453,13 @@
       try {
         var r = await fetch(WORKER + '/attendance');
         var data = await r.json();
-        presentSet = new Set((data.records || []).map(function(rec) { return rec.student_id; }));
+        var fromServer = new Set((data.records || []).map(function(rec) { return rec.student_id; }));
+        var now = Date.now();
+        recentLocal.forEach(function(change, id) {
+          if (now - change.at > LOCAL_WINS_MS) { recentLocal.delete(id); return; }
+          if (change.present) fromServer.add(id); else fromServer.delete(id);
+        });
+        presentSet = fromServer;
         updateStats();
       } catch(e) {
         console.error('Attendance load failed', e);
@@ -519,8 +531,10 @@
     function toggleStudent(s) {
       var willBePresent = !presentSet.has(s.id);
 
-      // 1) update UI immediately
+      // 1) update UI immediately, and shield it from the auto-refresh
       if (willBePresent) presentSet.add(s.id); else presentSet.delete(s.id);
+      recentLocal.set(s.id, { present: willBePresent, at: Date.now() });
+      pendingIds.add(s.id);
       setCardVisual(s.id, willBePresent);
       updateStats();
 
@@ -532,8 +546,12 @@
         body: JSON.stringify({ action: action, admin_id: ADMIN_ID, student_id: s.id, student_name: s.name }),
       }).then(function(r) {
         if (!r.ok) throw new Error('save failed');
+        pendingIds.delete(s.id);
+        recentLocal.set(s.id, { present: willBePresent, at: Date.now() });
       }).catch(function() {
         // 3) revert on failure
+        pendingIds.delete(s.id);
+        recentLocal.delete(s.id);
         if (willBePresent) presentSet.delete(s.id); else presentSet.add(s.id);
         setCardVisual(s.id, presentSet.has(s.id));
         updateStats();
@@ -552,6 +570,8 @@
         });
         if (r.ok) {
           presentSet.clear();
+          recentLocal.clear();
+          pendingIds.clear();
           document.getElementById('attCourse').value = '';
           document.getElementById('courseDropdown').style.display = 'none';
           updateStats();
