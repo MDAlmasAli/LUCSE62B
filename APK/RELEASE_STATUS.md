@@ -7,25 +7,30 @@ days, then asked for it on 2026-09-27; that batch is now out.)
 
 ## What users have right now
 
-- **v1.1.41+52**, signed with the new key — published 2026-09-27 via `publish.bat`
-  (`app_updates` latest row). Everyone had already been handed v1.1.40+51 by hand, so this
-  went out as a normal in-app update; it is optional, not forced (`min_version_code` 35).
-- Before that: v1.1.40+51 handed out manually, and v1.1.38+49 was the last OLD-key release.
+- **v1.1.42+58**, published 2026-09-27 — the in-app LU result fetch plus the attendance
+  fixes. Optional, not forced (`min_version_code` 35).
+- Before that: v1.1.41+52 (light mode, Class Routine card) published the same day;
+  v1.1.40+51 handed out manually after the key change; v1.1.38+49 was the last OLD-key release.
 
 ## Built but NOT shipped
 
-- **v1.1.42+53** — `D:\Releases\lucse62b-v1.1.42-test.apk`, a test build of the item below.
-  Not handed to anyone: the in-app LU page has to be tried on a real phone first.
+- Nothing right now.
 
-## Waiting for the next release
+## Shipped in v1.1.42+58
 
 - **Get your result without copy/paste.** LU retired its JSON result endpoint and now
   serves results only from a form behind a Cloudflare Turnstile check, so the app could no
   longer fetch them. Results now offers "Get my result from LU", which opens LU's own page
   inside the app with the student ID and date of birth already filled in. The student ticks
   the verification themselves (we never touch it); once LU renders the result the page is
-  read from the DOM and imported automatically. The old paste flow stays as a fallback, and
-  the first build needs testing on a real phone — Cloudflare sometimes distrusts a WebView.
+  read from the DOM and imported automatically, and the form submits itself once Cloudflare
+  has issued its token. Opening Results triggers this on its own, at most once every 10
+  minutes. The old paste flow stays as a fallback, reachable from the Results app bar.
+- **Attendance no longer un-marks a student.** The site's 30-second auto-refresh rebuilt the
+  present list from the server and erased a tap made just before the response landed; local
+  changes now win for 15 seconds. The app keeps the same guard and retries a failed save once.
+- **Attendance is dated by the Bangladesh day**, not UTC, so marks taken between midnight
+  and 6am no longer land on the previous date.
 
 ## Shipped in v1.1.41+52
 

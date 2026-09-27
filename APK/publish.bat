@@ -45,8 +45,8 @@ curl -sS -X POST https://lucse62b-api.sy164425.workers.dev/release-apk ^
   -H "x-release-key: %RELKEY%" ^
   -H "x-version-name: %VNAME%" ^
   -H "x-version-code: %VCODE%" ^
-  -H "x-release-features: [\"Light mode -- pick Dark, Light or System under Profile, Appearance\", \"Class Routine shortcut on the home screen\"]" ^
-  -H "x-release-fixes: [\"Old-semester courses no longer mix into the new class routine\", \"Course codes typed like CSE -4116 now show correctly\"]" ^
+  -H "x-release-features: [\"Results now open the LU page inside the app with your ID and date of birth filled in, and save the result for you\"]" ^
+  -H "x-release-fixes: [\"Attendance no longer un-marks a student on its own\", \"Attendance is filed under the Bangladesh date instead of UTC\", \"A freshly imported result shows immediately instead of the previous one\"]" ^
   -H "Content-Type: application/vnd.android.package-archive" ^
   --data-binary @build/app/outputs/flutter-apk/app-release.apk
 echo.
