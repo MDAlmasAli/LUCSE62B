@@ -1923,7 +1923,17 @@ async function checkClassRoutine(env) {
   const sorted = [...allSlots].sort((a, b) => `${a.day}${a.time}${a.code}`.localeCompare(`${b.day}${b.time}${b.code}`));
   const hash   = await sha256(JSON.stringify(sorted));
   const stored = await supabaseGetState(env, 'class_routine');
-  const sourceData = { source_sheet_id: sheetId, slots: sorted };
+  const tabsRead = dayTabs.filter(Boolean).length;
+  const sourceData = { source_sheet_id: sheetId, slots: sorted, tabs_read: tabsRead };
+
+  /* Each weekday is a separate request, and a single failed one parses as "that
+     day has no classes" — which the diff then reports as every class of that day
+     being removed, followed by an "added" the minute the fetch recovers. That
+     was the source of the phantom remove/add notifications. Comparing fewer day
+     tabs than last time means an incomplete read, never a real edit, so wait for
+     a complete snapshot instead of announcing anything. */
+  const tabsBefore = Number(stored?.state_data?.tabs_read);
+  if (Number.isFinite(tabsBefore) && tabsRead < tabsBefore) return;
 
   if (!stored) {
     await supabaseUpsertState(env, 'class_routine', hash, sourceData);
