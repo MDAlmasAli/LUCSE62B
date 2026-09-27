@@ -939,7 +939,7 @@ export default {
       // ── GET /attendance — today's attendance records ──────────────────
       if (p === '/attendance' && request.method === 'GET') {
         if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
-        const today = new Date().toISOString().slice(0, 10);
+        const today = bdToday();
         const r = await fetch(
           `${SUPA_URL}/rest/v1/attendance_records?session_date=eq.${today}&select=student_id,student_name,marked_at&order=marked_at.asc`,
           { headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` } }
@@ -955,7 +955,7 @@ export default {
         const ATTENDANCE_ADMIN = '0182320012101068';
         const body = await request.json().catch(() => null);
         if (!body || !body.action) return errResp(cors, 400, 'Missing action');
-        const today = new Date().toISOString().slice(0, 10);
+        const today = bdToday();
 
         if (body.action === 'mark') {
           const { student_id, student_name, admin_id } = body;
@@ -2956,6 +2956,14 @@ async function pushToEndpoints(env, endpoints) {
 }
 
 function sanitizeKey(s) { return String(s).replace(/[^a-zA-Z0-9]/g, ''); }
+
+/* Today in Bangladesh (UTC+6, no DST). Workers run on UTC, so a plain
+   toISOString() dates anything marked between midnight and 6am to the previous
+   day — and a mark made just before 6am vanishes from the list the moment UTC
+   rolls over. Attendance is a local-day thing, so compute the local day. */
+function bdToday() {
+  return new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
 
 /* ── Class routine: build {`batch-section`: {CODE: [{day,time,teacher,room}]}} ── */
 function buildClassSectionSlots(dayTabs) {
