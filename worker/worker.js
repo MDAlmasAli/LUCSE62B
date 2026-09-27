@@ -1578,6 +1578,7 @@ async function runFastMonitor(env) {
     checkDeadlines(env),
     checkDeadlineReminders(env),
     checkNotices(env),
+    checkBirthdays(env),
     checkClassRoutine(env),
     checkExamRoutine(env, 'mid'),
     checkExamRoutine(env, 'final'),
@@ -2801,6 +2802,124 @@ async function insertPersonalNotification(env, studentId, type, title, body, lin
     },
     body: JSON.stringify({ type, title, body, link, student_id: studentId }),
   }).catch(() => {});
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   BIRTHDAYS
+   At the first cron tick of a Bangladeshi day, tell the class whose birthday
+   it is and wish the birthday student personally. Runs once per day: the day is
+   claimed in monitor_state before anything is sent, so a failure halfway
+   through costs one day's wishes rather than sending them twice.
+   ════════════════════════════════════════════════════════════════════ */
+
+async function checkBirthdays(env) {
+  if (!env.SUPA_KEY) return;
+  const today = bdToday();                  // YYYY-MM-DD, Bangladesh
+  const monthDay = today.slice(5);          // MM-DD
+
+  const state = await supabaseGetState(env, 'birthday_wishes');
+  if (state?.state_hash === today) return;  // already wished today
+  await supabaseUpsertState(env, 'birthday_wishes', today, { at: new Date().toISOString() });
+
+  const r = await fetch(
+    `${SUPA_URL}/rest/v1/student_passwords?select=student_id,name,dob,h_dob`,
+    { headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` } },
+  ).catch(() => null);
+  if (!r || !r.ok) return;
+  const rows = await r.json().catch(() => []);
+
+  const celebrating = (rows || []).filter(row => {
+    if (String(row.student_id || '').toUpperCase() === 'DEMO') return false;
+    const m = String(row.h_dob || row.dob || '').trim().match(/^\d{4}-(\d{2}-\d{2})/);
+    return !!m && m[1] === monthDay;
+  });
+  if (!celebrating.length) return;
+
+  const nameOf = row => String(row.name || '').trim() || String(row.student_id);
+  const shortNameOf = row => nameOf(row).split(/\s+/).slice(0, 2).join(' ');
+  const names = celebrating.map(nameOf);
+  const list = names.length === 1
+    ? names[0]
+    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+
+  /* Everyone gets the notification row, but the push skips whoever it is about
+     so nobody is told to go and wish themselves. */
+  const title = names.length === 1 ? `🎂 It's ${list}'s birthday` : '🎂 Birthdays today';
+  const body = `Wish ${list} a happy birthday from CSE 62B!`;
+  await insertNotification(env, 'birthday', title, body, '/');
+
+  const celebratingIds = new Set(celebrating.map(row => String(row.student_id)));
+  const tokens = await fcmTokens(env);
+  await sendFcmToTokens(
+    env,
+    tokens.filter(t => !celebratingIds.has(String(t.student_id))),
+    { title, body, link: '/', type: 'birthday' },
+  );
+
+  for (const row of celebrating) {
+    const personalTitle = `🎂 Happy birthday, ${shortNameOf(row)}!`;
+    const personalBody = 'Wishing you a wonderful year ahead, from everyone at CSE 62B.';
+    await insertPersonalNotification(env, String(row.student_id), 'birthday', personalTitle, personalBody, '/');
+    await sendFcmToTokens(
+      env,
+      tokens.filter(t => String(t.student_id) === String(row.student_id)),
+      { title: personalTitle, body: personalBody, link: '/', type: 'birthday' },
+    );
+  }
+}
+
+/* Every registered device. */
+async function fcmTokens(env) {
+  const r = await fetch(
+    `${SUPA_URL}/rest/v1/fcm_tokens?select=token,student_id&order=updated_at.desc`,
+    { headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` } },
+  ).catch(() => null);
+  if (!r || !r.ok) return [];
+  return (await r.json().catch(() => [])) || [];
+}
+
+/* Push straight to a set of devices. A topic cannot leave one member out, which
+   is exactly what a birthday or a personal message needs. Tokens Firebase says
+   are gone get deleted, so the table stops filling with dead installs. */
+async function sendFcmToTokens(env, tokens, message) {
+  if (!tokens.length || !env.FIREBASE_PROJECT_ID) return;
+  const accessToken = await firebaseAccessToken(env).catch(() => '');
+  if (!accessToken) return;
+  const dead = [];
+  await Promise.allSettled(tokens.map(async ({ token }) => {
+    const r = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(env.FIREBASE_PROJECT_ID)}/messages:send`,
+      {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: {
+            token,
+            notification: { title: message.title, body: message.body },
+            data: {
+              title: message.title,
+              body: message.body,
+              link: message.link || '/',
+              type: message.type || 'general',
+              category: notificationCategory(message.type),
+            },
+            android: {
+              priority: 'HIGH',
+              notification: { channel_id: 'lu62b_default', sound: 'default' },
+            },
+            apns: { payload: { aps: { sound: 'default' } } },
+          },
+        }),
+      },
+    ).catch(() => null);
+    if (r && (r.status === 404 || r.status === 400)) dead.push(token);
+  }));
+  for (const token of dead) {
+    await fetch(`${SUPA_URL}/rest/v1/fcm_tokens?token=eq.${encodeURIComponent(token)}`, {
+      method: 'DELETE',
+      headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` },
+    }).catch(() => {});
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════════
