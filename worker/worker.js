@@ -699,6 +699,7 @@ export default {
         if (!env.RELEASE_PUBLISH_KEY || token !== env.RELEASE_PUBLISH_KEY) {
           return errResp(cors, 403, 'Forbidden');
         }
+        const reqBody = await request.json().catch(() => ({}));
         const configured = {
           FIREBASE_PROJECT_ID: !!env.FIREBASE_PROJECT_ID,
           FIREBASE_CLIENT_EMAIL: !!env.FIREBASE_CLIENT_EMAIL,
@@ -734,38 +735,61 @@ export default {
             firebaseAuth = `error: ${String(e && e.message || e).slice(0, 200)}`;
           }
         }
-        /* Which topics the registered devices actually listen to. A phone that
-           subscribed to nothing gets no push however healthy the sender is.
-           Device tokens stay server-side; only the topic names come back. */
+        /* Are the registered devices still reachable? Addressing a token
+           directly is the authoritative check - the legacy iid/info endpoint
+           answers InvalidToken for tokens minted by current SDKs, so it cannot
+           be trusted here. The probe is data-only, which the app's background
+           handler does not display, so nobody is disturbed. Pass
+           {"notifyNewest": true} to also send one real, visible test
+           notification to the most recently seen device. */
+        const notifyNewest = reqBody?.notifyNewest === true;
         let devices = 'skipped';
         if (firebaseAuth === 'ok' && env.SUPA_KEY) {
           try {
             const tokenRes = await fetch(
-              `${SUPA_URL}/rest/v1/fcm_tokens?select=token,platform,updated_at&order=updated_at.desc&limit=5`,
+              `${SUPA_URL}/rest/v1/fcm_tokens?select=token,platform,student_id,updated_at&order=updated_at.desc&limit=8`,
               { headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` } },
             );
             const rows = tokenRes.ok ? await tokenRes.json() : [];
             const accessToken = await firebaseAccessToken(env);
-            devices = await Promise.all(rows.map(async row => {
-              const info = await fetch(
-                `https://iid.googleapis.com/iid/info/${encodeURIComponent(row.token)}?details=true`,
+            devices = await Promise.all(rows.map(async (row, index) => {
+              const visible = notifyNewest && index === 0;
+              const message = visible
+                ? {
+                    token: row.token,
+                    notification: {
+                      title: 'Push test',
+                      body: 'If you can see this outside the app, push notifications work.',
+                    },
+                    data: { link: '/', type: 'push_test', category: 'general' },
+                    android: {
+                      priority: 'HIGH',
+                      notification: { channel_id: 'lu62b_default', sound: 'default' },
+                    },
+                  }
+                : { token: row.token, data: { probe: '1' } };
+              const r = await fetch(
+                `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(env.FIREBASE_PROJECT_ID)}/messages:send`,
                 {
+                  method: 'POST',
                   headers: {
                     'Authorization': `Bearer ${accessToken}`,
-                    'access_token_auth': 'true',
+                    'Content-Type': 'application/json',
                   },
+                  body: JSON.stringify({ message }),
                 },
               ).catch(() => null);
-              if (!info) return { platform: row.platform, error: 'lookup_failed' };
-              if (!info.ok) {
-                return { platform: row.platform, status: info.status, body: (await info.text()).slice(0, 160) };
-              }
-              const data = await info.json();
-              return {
+              const out = {
+                student: String(row.student_id || '').slice(-4) || 'none',
                 platform: row.platform,
-                updated_at: row.updated_at,
-                topics: Object.keys(data?.rel?.topics || {}),
+                seen: row.updated_at,
+                visible,
               };
+              if (!r) return { ...out, status: 'send_failed' };
+              if (r.ok) return { ...out, status: 'reachable' };
+              const text = await r.text();
+              const code = text.match(/"status"\s*:\s*"([A-Z_]+)"/);
+              return { ...out, status: r.status, error: code ? code[1] : text.slice(0, 120) };
             }));
           } catch (e) {
             devices = `error: ${String(e && e.message || e).slice(0, 160)}`;
