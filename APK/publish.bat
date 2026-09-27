@@ -30,7 +30,10 @@ if errorlevel 1 ( echo pub get FAILED & pause & exit /b 1 )
 echo.
 
 echo [2/3] Building release APK (signed) ...
-call flutter build apk --release
+REM  arm64 + arm32 only. The default "fat" APK also carries x86_64 (emulator
+REM  only) and lands around 71 MB, which the Worker rejects with 413 -- its
+REM  /release-apk limit is 50 MB. This build is ~48 MB and runs on every phone.
+call flutter build apk --release --target-platform android-arm,android-arm64
 if errorlevel 1 ( echo build FAILED & pause & exit /b 1 )
 echo.
 
@@ -40,7 +43,7 @@ curl -sS -X POST https://lucse62b-api.sy164425.workers.dev/release-apk ^
   -H "x-release-key: %RELKEY%" ^
   -H "x-version-name: %VNAME%" ^
   -H "x-version-code: %VCODE%" ^
-  -H "x-release-features: [\"Class Routine shortcut on the home screen\"]" ^
+  -H "x-release-features: [\"Light mode -- pick Dark, Light or System in Profile > Appearance, or tap the toggle on the home screen\", \"Class Routine shortcut on the home screen\"]" ^
   -H "x-release-fixes: [\"Old-semester courses no longer mix into the new class routine\", \"Course codes typed like CSE -4116 now show correctly\"]" ^
   -H "Content-Type: application/vnd.android.package-archive" ^
   --data-binary @build/app/outputs/flutter-apk/app-release.apk

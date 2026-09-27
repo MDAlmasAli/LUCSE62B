@@ -1,6 +1,9 @@
 name: Deploy Cloudflare Worker
 
 on:
+  # Manual run — use this after rotating a secret (e.g. RELEASE_PUBLISH_KEY),
+  # since the worker only picks a new value up on a deploy.
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
