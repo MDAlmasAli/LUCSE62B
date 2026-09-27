@@ -8,6 +8,7 @@ import '../../core/sheets_api.dart';
 import '../../data/session.dart';
 import '../../core/worker_api.dart';
 import '../../shared/app_toast.dart';
+import 'lu_result_webview.dart';
 import 'result_import.dart';
 import 'results_model.dart';
 
@@ -99,6 +100,31 @@ class _ResultsScreenState extends State<ResultsScreen>
         _blocked = true;
       });
     }
+  }
+
+  /// Open LU's own result page in-app. The student clears LU's verification
+  /// there; we only prefill and then read the rendered result.
+  Future<void> _getFromLu() async {
+    final s = Session.instance.student;
+    if (s == null || s.isDemo) return;
+    final dob = _dob ?? await Session.instance.storedDob(s.id);
+    if (!mounted) return;
+    if (dob == null || dob.isEmpty) {
+      AppToast.show(
+        context,
+        'Verify your date of birth first (re-open the app).',
+        error: true,
+      );
+      return;
+    }
+    final imported = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => LuResultWebView(studentId: s.id, birthDate: dob),
+      ),
+    );
+    if (!mounted || imported != true) return;
+    AppToast.show(context, 'Result imported successfully.');
+    _load();
   }
 
   void _openImport() {
@@ -518,9 +544,9 @@ class _ResultsScreenState extends State<ResultsScreen>
           ),
           const SizedBox(height: 20),
           ElevatedButton.icon(
-            onPressed: _openImport,
-            icon: const Icon(Icons.cloud_upload_rounded, size: 18),
-            label: const Text('Import my result'),
+            onPressed: _getFromLu,
+            icon: const Icon(Icons.download_rounded, size: 18),
+            label: const Text('Get my result from LU'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accent,
               foregroundColor: Colors.white,
@@ -532,17 +558,14 @@ class _ResultsScreenState extends State<ResultsScreen>
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
-            onPressed: () => launchUrl(
-              Uri.parse('https://lus.ac.bd/result/'),
-              mode: LaunchMode.externalApplication,
-            ),
+            onPressed: _openImport,
             icon: Icon(
-              Icons.open_in_new_rounded,
+              Icons.content_paste_rounded,
               size: 16,
               color: AppColors.accentBright,
             ),
             label: Text(
-              'Open LU Result Page',
+              'Paste it manually instead',
               style: TextStyle(color: AppColors.accentBright),
             ),
             style: OutlinedButton.styleFrom(

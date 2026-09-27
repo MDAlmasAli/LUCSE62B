@@ -14,7 +14,18 @@ days, then asked for it on 2026-09-27; that batch is now out.)
 
 ## Built but NOT shipped
 
-- Nothing right now — everything below has shipped in v1.1.41+52.
+- **v1.1.42+53** — `D:\Releases\lucse62b-v1.1.42-test.apk`, a test build of the item below.
+  Not handed to anyone: the in-app LU page has to be tried on a real phone first.
+
+## Waiting for the next release
+
+- **Get your result without copy/paste.** LU retired its JSON result endpoint and now
+  serves results only from a form behind a Cloudflare Turnstile check, so the app could no
+  longer fetch them. Results now offers "Get my result from LU", which opens LU's own page
+  inside the app with the student ID and date of birth already filled in. The student ticks
+  the verification themselves (we never touch it); once LU renders the result the page is
+  read from the DOM and imported automatically. The old paste flow stays as a fallback, and
+  the first build needs testing on a real phone — Cloudflare sometimes distrusts a WebView.
 
 ## Shipped in v1.1.41+52
 
