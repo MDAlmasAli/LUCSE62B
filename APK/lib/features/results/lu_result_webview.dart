@@ -85,6 +85,27 @@ class _LuResultWebViewState extends State<LuResultWebView> {
 
   if (window.__luPortalWatch) return;
   window.__luPortalWatch = true;
+
+  // Submit for the student once Cloudflare's widget has issued its token. The
+  // token is produced by Turnstile itself - we never solve or fake it, we only
+  // save a tap once it is already there.
+  var submitted = false;
+  var submitTimer = setInterval(function () {
+    if (submitted || document.querySelector('table.result-table')) {
+      clearInterval(submitTimer);
+      return;
+    }
+    var token = document.querySelector('[name="cf-turnstile-response"]');
+    var form = document.getElementById('lu-results-form');
+    var id = document.querySelector('#student_id');
+    var dob = document.querySelector('#birth_date');
+    if (!token || !token.value || !form || !id || !id.value || !dob || !dob.value) return;
+    submitted = true;
+    clearInterval(submitTimer);
+    var button = form.querySelector('button[type="submit"]');
+    if (button) button.click(); else form.submit();
+  }, 600);
+
   var ticks = 0;
   var timer = setInterval(function () {
     ticks++;
@@ -187,9 +208,9 @@ class _LuResultWebViewState extends State<LuResultWebView> {
               problem ??
                   (_importing
                       ? 'Reading your result…'
-                      : 'Your ID and date of birth are filled in. Tick the '
-                            '"Verify you are human" box, then tap View Result — '
-                            'the rest is automatic.'),
+                      : 'Everything is filled in for you. If Cloudflare shows a '
+                            '"Verify you are human" box, tick it — the result is '
+                            'then fetched and saved automatically.'),
               style: TextStyle(
                 color: problem != null ? AppColors.red : AppColors.text,
                 fontSize: 12.5,

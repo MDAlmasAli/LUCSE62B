@@ -274,7 +274,12 @@ class WorkerApi {
           .timeout(const Duration(seconds: 15));
       if (r.statusCode < 200 || r.statusCode >= 300) return false;
       final j = jsonDecode(r.body) as Map<String, dynamic>;
-      return j['ok'] == true;
+      final ok = j['ok'] == true;
+      /* The result we just replaced is still sitting in the in-memory cache, so
+         reloading right after an import would show the old copy until the app
+         is restarted. Drop this student's entries. */
+      if (ok) _resultCache.removeWhere((k, _) => k.startsWith('$studentId|'));
+      return ok;
     } catch (_) {
       return false;
     }

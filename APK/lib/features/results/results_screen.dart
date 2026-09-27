@@ -29,6 +29,12 @@ class _ResultsScreenState extends State<ResultsScreen>
   bool _loading = true;
   String? _error;
   bool _blocked = false;
+  bool _autoTried = false;
+
+  /// When LU was last opened automatically. Static so walking out of Results
+  /// and back in does not ask for a fresh verification every single time.
+  static DateTime? _lastAutoFetch;
+  static const _autoFetchGap = Duration(minutes: 10);
   ResultData? _data;
   String? _dob; // verified DOB (needed to store an imported result)
 
@@ -88,18 +94,43 @@ class _ResultsScreenState extends State<ResultsScreen>
           _loading = false;
           _blocked = true;
         });
+        _autoFetch();
         return;
       }
       setState(() {
         _loading = false;
         _data = data;
       });
+      /* The saved copy is whatever was imported last, and grades change. Go
+         and get the current one — the student sees their existing result
+         behind the LU page and can back out of it at any time. */
+      _autoFetch();
     } catch (_) {
       setState(() {
         _loading = false;
         _blocked = true;
       });
+      _autoFetch();
     }
+  }
+
+  /// Open LU's page by itself so nobody has to hunt for a button. With no saved
+  /// result this is the only way forward, so it always runs; with one on screen
+  /// it refreshes, but not more often than [_autoFetchGap] so that bouncing in
+  /// and out of Results does not mean verification after verification.
+  void _autoFetch() {
+    if (_autoTried) return;
+    final last = _lastAutoFetch;
+    if (_data != null &&
+        last != null &&
+        DateTime.now().difference(last) < _autoFetchGap) {
+      return;
+    }
+    _autoTried = true;
+    _lastAutoFetch = DateTime.now();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _getFromLu();
+    });
   }
 
   /// Open LU's own result page in-app. The student clears LU's verification
