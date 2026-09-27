@@ -1933,7 +1933,30 @@ async function checkClassRoutine(env) {
      tabs than last time means an incomplete read, never a real edit, so wait for
      a complete snapshot instead of announcing anything. */
   const tabsBefore = Number(stored?.state_data?.tabs_read);
-  if (Number.isFinite(tabsBefore) && tabsRead < tabsBefore) return;
+  if (Number.isFinite(tabsBefore) && tabsRead < tabsBefore) {
+    /* Tolerate the outage, but a tab that was genuinely deleted from the sheet
+       would otherwise silence this monitor for good, so accept a smaller read
+       as the new normal once it has held for ten consecutive runs. */
+    const low = await supabaseGetState(env, 'class_routine_low_tabs');
+    const lastAt = Date.parse(low?.state_data?.at || '');
+    const consecutive =
+      low?.state_hash === String(tabsRead) &&
+      Number.isFinite(lastAt) &&
+      Date.now() - lastAt < 30 * 60 * 1000
+        ? Number(low.state_data?.count || 0) + 1
+        : 1;
+    if (consecutive < 10) {
+      await supabaseUpsertState(env, 'class_routine_low_tabs', String(tabsRead), {
+        count: consecutive,
+        at: new Date().toISOString(),
+      });
+      return;
+    }
+    await clearSupabaseState(env, 'class_routine_low_tabs');
+    await supabaseUpsertState(env, 'class_routine', hash, sourceData);
+    await clearSupabaseState(env, 'class_routine_pending');
+    return;
+  }
 
   if (!stored) {
     await supabaseUpsertState(env, 'class_routine', hash, sourceData);
