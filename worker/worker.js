@@ -734,10 +734,48 @@ export default {
             firebaseAuth = `error: ${String(e && e.message || e).slice(0, 200)}`;
           }
         }
+        /* Which topics the registered devices actually listen to. A phone that
+           subscribed to nothing gets no push however healthy the sender is.
+           Device tokens stay server-side; only the topic names come back. */
+        let devices = 'skipped';
+        if (firebaseAuth === 'ok' && env.SUPA_KEY) {
+          try {
+            const tokenRes = await fetch(
+              `${SUPA_URL}/rest/v1/fcm_tokens?select=token,platform,updated_at&order=updated_at.desc&limit=5`,
+              { headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` } },
+            );
+            const rows = tokenRes.ok ? await tokenRes.json() : [];
+            const accessToken = await firebaseAccessToken(env);
+            devices = await Promise.all(rows.map(async row => {
+              const info = await fetch(
+                `https://iid.googleapis.com/iid/info/${encodeURIComponent(row.token)}?details=true`,
+                {
+                  headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'access_token_auth': 'true',
+                  },
+                },
+              ).catch(() => null);
+              if (!info) return { platform: row.platform, error: 'lookup_failed' };
+              if (!info.ok) {
+                return { platform: row.platform, status: info.status, body: (await info.text()).slice(0, 160) };
+              }
+              const data = await info.json();
+              return {
+                platform: row.platform,
+                updated_at: row.updated_at,
+                topics: Object.keys(data?.rel?.topics || {}),
+              };
+            }));
+          } catch (e) {
+            devices = `error: ${String(e && e.message || e).slice(0, 160)}`;
+          }
+        }
         return jsonResp(cors, {
           configured,
           firebaseAuth,
           probe,
+          devices,
           lastPushSent: await supabaseGetState(env, 'push_last_sent'),
         });
       }
