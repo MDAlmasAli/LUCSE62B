@@ -166,11 +166,37 @@ class _ResultsScreenState extends State<ResultsScreen>
           onPressed: () => context.canPop() ? context.pop() : context.go('/'),
         ),
         actions: [
+          /* Reachable even when a result is already on screen: grades change
+             every semester, and the saved copy is only as fresh as the last
+             import. */
           if (!_loading && Session.instance.student?.isDemo == false)
-            IconButton(
-              icon: const Icon(Icons.cloud_upload_rounded, size: 22),
-              tooltip: 'Import result',
-              onPressed: _openImport,
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.download_rounded, size: 22),
+              tooltip: 'Update result',
+              color: AppColors.surface,
+              onSelected: (v) => v == 'lu' ? _getFromLu() : _openImport(),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'lu',
+                  child: Row(
+                    children: [
+                      Icon(Icons.download_rounded, size: 18, color: AppColors.accentBright),
+                      const SizedBox(width: 10),
+                      Text('Get from LU', style: TextStyle(color: AppColors.text)),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'paste',
+                  child: Row(
+                    children: [
+                      Icon(Icons.content_paste_rounded, size: 18, color: AppColors.muted),
+                      const SizedBox(width: 10),
+                      Text('Paste manually', style: TextStyle(color: AppColors.text)),
+                    ],
+                  ),
+                ),
+              ],
             ),
           if (!_loading)
             IconButton(
