@@ -103,7 +103,7 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
               ],
             ),
             const SizedBox(height: 4),
-            const Text('Combined across all games · logged-in players only',
+            Text('Combined across all games · logged-in players only',
                 style: TextStyle(color: AppColors.muted, fontSize: 11.5)),
             const SizedBox(height: 12),
             _standings(),
@@ -146,7 +146,7 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      Text(title, style: const TextStyle(color: AppColors.textBright, fontSize: 17, fontWeight: FontWeight.w800)),
+                      Text(title, style: TextStyle(color: AppColors.textBright, fontSize: 17, fontWeight: FontWeight.w800)),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -155,11 +155,11 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
                       ),
                     ]),
                     const SizedBox(height: 5),
-                    Text(desc, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5, height: 1.4)),
+                    Text(desc, style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5, height: 1.4)),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+              Icon(Icons.chevron_right_rounded, color: AppColors.muted),
             ],
           ),
         ),
@@ -172,7 +172,7 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
       future: _future,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Padding(
+          return Padding(
             padding: EdgeInsets.symmetric(vertical: 30),
             child: Center(child: CircularProgressIndicator(color: AppColors.accent)),
           );
@@ -182,7 +182,7 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
           return Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.border)),
-            child: const Center(
+            child: Center(
               child: Text('No games played yet. Be the first to top the board! 🎮',
                   textAlign: TextAlign.center, style: TextStyle(color: AppColors.muted, fontSize: 13)),
             ),
@@ -193,7 +193,7 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
           decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.border)),
           child: Column(
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.fromLTRB(14, 11, 14, 9),
                 child: Row(children: [
                   SizedBox(width: 28, child: Text('#', textAlign: TextAlign.center, style: _hStyle)),
@@ -220,7 +220,7 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
       child: Row(children: [
-        SizedBox(width: 28, child: Text(rank, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textBright))),
+        SizedBox(width: 28, child: Text(rank, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textBright))),
         Expanded(
           child: Row(children: [
             Flexible(
@@ -235,14 +235,14 @@ class _GamesHubScreenState extends State<GamesHubScreen> {
               ),
           ]),
         ),
-        SizedBox(width: 52, child: Text('${p.rating.round()}', textAlign: TextAlign.right, style: const TextStyle(color: AppColors.accentBright, fontSize: 13, fontWeight: FontWeight.w800))),
-        SizedBox(width: 42, child: Text('${p.wins}', textAlign: TextAlign.right, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13))),
-        SizedBox(width: 46, child: Text('${p.games}', textAlign: TextAlign.right, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+        SizedBox(width: 52, child: Text('${p.rating.round()}', textAlign: TextAlign.right, style: TextStyle(color: AppColors.accentBright, fontSize: 13, fontWeight: FontWeight.w800))),
+        SizedBox(width: 42, child: Text('${p.wins}', textAlign: TextAlign.right, style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+        SizedBox(width: 46, child: Text('${p.games}', textAlign: TextAlign.right, style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
       ]),
     );
   }
 
-  static const _hStyle = TextStyle(color: AppColors.muted, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.4);
+  static TextStyle get _hStyle => TextStyle(color: AppColors.muted, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.4);
 }
 
 class _Standing {

@@ -31,9 +31,9 @@ class _RetakeScreenState extends State<RetakeScreen> {
   List<RetakeEnrollment> _allEnroll = [];
   bool _enrollBusy = false;
 
-  static const _retakeColor = Color(0xFFF43F5E);
-  static const _improveColor = Color(0xFFFB923C);
-  static const _green = Color(0xFF34D399);
+  static Color get _retakeColor => AppColors.red;
+  static Color get _improveColor => AppColors.orangeBright;
+  static Color get _green => AppColors.greenBright;
 
   @override
   void initState() {
@@ -155,7 +155,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+          ? Center(child: CircularProgressIndicator(color: AppColors.accent))
           : Column(
               children: [
                 _topTabs(),
@@ -213,7 +213,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text('$count',
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppColors.accentBright, fontSize: 10, fontWeight: FontWeight.w800)),
                   ),
                 ],
@@ -225,7 +225,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
     }
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Row(
@@ -381,7 +381,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
             children: [
               Expanded(child: _codeTitle(code, title)),
               IconButton(
-                icon: const Icon(Icons.close, size: 18, color: AppColors.muted),
+                icon: Icon(Icons.close, size: 18, color: AppColors.muted),
                 onPressed: () => setState(() => _searchCode = null),
               ),
             ],
@@ -420,7 +420,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 8),
                       child: Text('${credit.toStringAsFixed(credit % 1 == 0 ? 0 : 1)} cr',
-                          style: const TextStyle(color: AppColors.muted, fontSize: 11.5)),
+                          style: TextStyle(color: AppColors.muted, fontSize: 11.5)),
                     ),
                 ],
               ),
@@ -430,13 +430,13 @@ class _RetakeScreenState extends State<RetakeScreen> {
                   _pill(retake ? 'RETAKE' : 'IMPROVE', color, null, filled: true, small: true),
                   if (isManual) ...[
                     const SizedBox(width: 6),
-                    _pill('Manual', const Color(0xFF818CF8), Icons.edit, filled: true, small: true),
+                    _pill('Manual', AppColors.indigoBright, Icons.edit, filled: true, small: true),
                   ],
                   const Spacer(),
                   if (isManual)
                     GestureDetector(
                       onTap: () => _mutateManual(code, add: false, retake: retake),
-                      child: const Text('× Remove',
+                      child: Text('× Remove',
                           style: TextStyle(color: AppColors.muted, fontSize: 11.5)),
                     ),
                 ],
@@ -454,7 +454,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
     final sections = d.sectionsFor(code);
     if (sections.isEmpty) {
       return Row(
-        children: const [
+        children: [
           Icon(Icons.info_outline, size: 14, color: AppColors.muted),
           SizedBox(width: 6),
           Expanded(
@@ -472,7 +472,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
         Row(
           children: [
             Text('${sections.length} section${sections.length == 1 ? '' : 's'}',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 11.5)),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 11.5)),
             const SizedBox(width: 8),
             if (free > 0) _miniBadge('$free Free', _green),
             if (clash > 0) ...[
@@ -494,7 +494,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
     final isThis = enrolled != null && enrolled.batch == s.batch && enrolled.section == s.section;
     // Section sits entirely on the student's off days → ideal pick.
     final allOff = s.slots.isNotEmpty && s.slots.every((sl) => offDays.contains(sl.day));
-    const offColor = Color(0xFF2DD4BF);
+    final offColor = AppColors.tealBright;
     return Container(
       margin: const EdgeInsets.only(bottom: 7),
       padding: const EdgeInsets.all(10),
@@ -509,11 +509,11 @@ class _RetakeScreenState extends State<RetakeScreen> {
           Row(
             children: [
               Text('Batch ${s.batch} · Sec ${s.section}',
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppColors.textBright, fontWeight: FontWeight.w700, fontSize: 12.5)),
               if (s.initials.isNotEmpty) ...[
                 const SizedBox(width: 8),
-                Text(s.initials, style: const TextStyle(color: AppColors.muted, fontSize: 11)),
+                Text(s.initials, style: TextStyle(color: AppColors.muted, fontSize: 11)),
               ],
               const Spacer(),
               if (allOff) ...[
@@ -544,7 +544,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
                             color: off ? offColor : AppColors.textSecondary, fontSize: 10.5)),
                     if (off) ...[
                       const SizedBox(width: 4),
-                      const Text('· Off',
+                      Text('· Off',
                           style: TextStyle(
                               color: offColor, fontSize: 9, fontWeight: FontWeight.w800)),
                     ],
@@ -556,7 +556,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
           if (s.hasConflict && s.clashCourses.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text('Clashes with: ${s.clashCourses.join(', ')}',
-                style: const TextStyle(color: _retakeColor, fontSize: 10.5)),
+                style: TextStyle(color: _retakeColor, fontSize: 10.5)),
           ],
           const SizedBox(height: 8),
           GestureDetector(
@@ -595,7 +595,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(code,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.accentBright,
                   fontWeight: FontWeight.w800,
                   fontSize: 13,
@@ -604,7 +604,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 2),
               child: Text(title,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppColors.text, fontSize: 13.5, fontWeight: FontWeight.w600)),
             ),
         ],
@@ -659,11 +659,11 @@ class _RetakeScreenState extends State<RetakeScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.info_outline, color: _improveColor, size: 16),
+            Icon(Icons.info_outline, color: _improveColor, size: 16),
             const SizedBox(width: 8),
             Expanded(
               child: Text(text,
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.45)),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.45)),
             ),
           ],
         ),
@@ -677,13 +677,13 @@ class _RetakeScreenState extends State<RetakeScreen> {
         child: Column(
           children: [
             Icon(retake ? Icons.check_circle_rounded : Icons.star_rounded,
-                size: 44, color: (retake ? _green : const Color(0xFFFBBF24)).withValues(alpha: 0.5)),
+                size: 44, color: (retake ? _green : AppColors.amberBright).withValues(alpha: 0.5)),
             const SizedBox(height: 14),
             Text(retake ? 'No retake courses — great job!' : 'No improve courses found.',
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppColors.textBright, fontWeight: FontWeight.w700, fontSize: 14.5)),
             const SizedBox(height: 6),
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: 40),
               child: Text(
                 'Add a course with the search above, or check that your date of birth is set so results can load.',
@@ -737,7 +737,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
                       Row(
                         children: [
                           Text(e.courseCode,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppColors.accentBright,
                                   fontWeight: FontWeight.w800,
                                   fontFamily: 'monospace',
@@ -750,17 +750,17 @@ class _RetakeScreenState extends State<RetakeScreen> {
                       if (e.courseName.isNotEmpty) ...[
                         const SizedBox(height: 3),
                         Text(e.courseName,
-                            style: const TextStyle(color: AppColors.text, fontSize: 13, fontWeight: FontWeight.w600)),
+                            style: TextStyle(color: AppColors.text, fontSize: 13, fontWeight: FontWeight.w600)),
                       ],
                       const SizedBox(height: 5),
                       Text(
                           'Batch ${e.batch} · Sec ${e.section}${e.teacher.isNotEmpty ? ' · ${e.teacher}' : ''}',
-                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 11.5)),
+                          style: TextStyle(color: AppColors.textSecondary, fontSize: 11.5)),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, color: AppColors.muted, size: 20),
+                  icon: Icon(Icons.delete_outline_rounded, color: AppColors.muted, size: 20),
                   tooltip: 'Remove',
                   onPressed: () => _unenroll(e.courseCode),
                 ),
@@ -813,7 +813,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
                           color: AppColors.accent.withValues(alpha: 0.16),
                           borderRadius: BorderRadius.circular(5)),
                       child: Text(code,
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppColors.accentBright, fontWeight: FontWeight.w800, fontSize: 12)),
                     ),
                     const Spacer(),
@@ -823,7 +823,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
                 if (name.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(name,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppColors.textBright, fontSize: 14, fontWeight: FontWeight.w700, height: 1.3)),
                 ],
                 const SizedBox(height: 10),
@@ -846,7 +846,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
                                   fontWeight: isMe ? FontWeight.w700 : FontWeight.w500)),
                         ),
                         Text('${p.batch}${p.section}',
-                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
                         const SizedBox(width: 8),
                         _pill(p.type == 'improve' ? 'IMP' : 'RET', color, null, filled: true, small: true),
                       ],
@@ -866,7 +866,7 @@ class _RetakeScreenState extends State<RetakeScreen> {
           padding: const EdgeInsets.all(34),
           child: Text(text,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted, fontSize: 13.5, height: 1.6)),
+              style: TextStyle(color: AppColors.muted, fontSize: 13.5, height: 1.6)),
         ),
       );
 

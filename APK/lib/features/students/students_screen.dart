@@ -71,7 +71,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                   padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
                   child: TextField(
                     onChanged: (v) => setState(() => _query = v.toLowerCase().trim()),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Search by name or ID…',
                       prefixIcon: Icon(Icons.search, size: 18, color: AppColors.muted),
                     ),
@@ -82,7 +82,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                     future: _future,
                     builder: (context, snap) {
                       if (snap.connectionState == ConnectionState.waiting) {
-                        return const Center(
+                        return Center(
                             child: CircularProgressIndicator(color: AppColors.accent));
                       }
                       if (snap.hasError || !snap.hasData) {
@@ -111,7 +111,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
         setState(() => _future = _load());
       },
       child: items.isEmpty
-          ? ListView(children: const [
+          ? ListView(children: [
               Padding(
                 padding: EdgeInsets.only(top: 90),
                 child: Center(
@@ -159,12 +159,12 @@ class _StudentsScreenState extends State<StudentsScreen> {
                 color: AppColors.accent.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: const Icon(Icons.groups_rounded, size: 16, color: AppColors.accentBright),
+              child: Icon(Icons.groups_rounded, size: 16, color: AppColors.accentBright),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(g.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppColors.textBright,
                       fontSize: 15.5,
                       fontWeight: FontWeight.w700)),
@@ -177,7 +177,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                 border: Border.all(color: AppColors.border),
               ),
               child: Text('${filtered.length}',
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
             ),
           ],
@@ -235,7 +235,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                             border: Border.all(color: AppColors.border),
                           ),
                           child: Text(sl,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700)),
@@ -249,7 +249,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(name,
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppColors.textBright,
                               fontWeight: FontWeight.w700,
                               fontSize: 14.5,
@@ -258,7 +258,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                         Padding(
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(id,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 12,
                                   fontFamily: 'monospace')),
@@ -270,21 +270,21 @@ class _StudentsScreenState extends State<StudentsScreen> {
               ],
             ),
             if (details.isNotEmpty) ...[
-              const Divider(height: 18, color: AppColors.border),
+              Divider(height: 18, color: AppColors.border),
               ...details.map((e) => Padding(
                     padding: const EdgeInsets.only(bottom: 7),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(e.key.toUpperCase(),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppColors.muted,
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: 0.4)),
                         const SizedBox(height: 2),
                         Text(e.value,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppColors.text, fontSize: 13, height: 1.3)),
                       ],
                     ),
@@ -349,7 +349,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
     return d;
   }
 
-  Widget _restricted() => const Center(
+  Widget _restricted() => Center(
         child: Padding(
           padding: EdgeInsets.all(32),
           child: Column(
@@ -369,9 +369,9 @@ class _StudentsScreenState extends State<StudentsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off, color: AppColors.muted, size: 34),
+            Icon(Icons.cloud_off, color: AppColors.muted, size: 34),
             const SizedBox(height: 12),
-            const Text('Unable to load student data right now.',
+            Text('Unable to load student data right now.',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
             const SizedBox(height: 14),
             OutlinedButton(

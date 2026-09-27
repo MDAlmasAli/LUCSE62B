@@ -16,15 +16,15 @@ class _CatMeta {
   const _CatMeta(this.icon, this.color, this.label);
 }
 
-const Map<String, _CatMeta> _catMeta = {
-  'assignment': _CatMeta(Icons.edit_rounded, Color(0xFF34D399), 'Assignment'),
-  'tutorial': _CatMeta(Icons.menu_book_rounded, Color(0xFF818CF8), 'Tutorial'),
-  'lab report': _CatMeta(Icons.science_rounded, Color(0xFF34D399), 'Lab Report'),
-  'lab test': _CatMeta(Icons.biotech_rounded, Color(0xFF2DD4BF), 'Lab Test'),
+Map<String, _CatMeta> get _catMeta => {
+  'assignment': _CatMeta(Icons.edit_rounded, AppColors.greenBright, 'Assignment'),
+  'tutorial': _CatMeta(Icons.menu_book_rounded, AppColors.indigoBright, 'Tutorial'),
+  'lab report': _CatMeta(Icons.science_rounded, AppColors.greenBright, 'Lab Report'),
+  'lab test': _CatMeta(Icons.biotech_rounded, AppColors.tealBright, 'Lab Test'),
   'viva': _CatMeta(Icons.mic_rounded, Color(0xFFFB7185), 'Viva'),
-  'lab final': _CatMeta(Icons.local_fire_department_rounded, Color(0xFFFBBF24), 'Lab Final'),
+  'lab final': _CatMeta(Icons.local_fire_department_rounded, AppColors.amberBright, 'Lab Final'),
   'project': _CatMeta(Icons.account_tree_rounded, Color(0xFFC4B5FD), 'Project'),
-  'presentation': _CatMeta(Icons.co_present_rounded, Color(0xFFFB923C), 'Presentation'),
+  'presentation': _CatMeta(Icons.co_present_rounded, AppColors.orangeBright, 'Presentation'),
 };
 
 /// Resolve a keyword to a category bucket — mirrors category.html's KEYWORD_MAP.
@@ -80,7 +80,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
   Timer? _ticker;
 
   _CatMeta get _meta =>
-      _catMeta[widget.cat] ?? const _CatMeta(Icons.folder_rounded, AppColors.accentBright, 'Category');
+      _catMeta[widget.cat] ?? _CatMeta(Icons.folder_rounded, AppColors.accentBright, 'Category');
 
   @override
   void dispose() {
@@ -178,7 +178,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+            return Center(child: CircularProgressIndicator(color: AppColors.accent));
           }
           return RefreshIndicator(
             color: AppColors.accent,
@@ -207,7 +207,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                         _entries.isEmpty
                             ? 'No entries posted yet for ${meta.label}.'
                             : 'No matches found.',
-                        style: const TextStyle(color: AppColors.muted, fontSize: 14),
+                        style: TextStyle(color: AppColors.muted, fontSize: 14),
                       ),
                     ),
                   )
@@ -222,11 +222,11 @@ class _CategoryScreenState extends State<CategoryScreen> {
   }
 
   Widget _searchBar(_CatMeta meta) => TextField(
-        style: const TextStyle(color: AppColors.text, fontSize: 14),
+        style: TextStyle(color: AppColors.text, fontSize: 14),
         onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
         decoration: InputDecoration(
           hintText: 'Search ${meta.label}...',
-          prefixIcon: const Icon(Icons.search, color: AppColors.muted, size: 20),
+          prefixIcon: Icon(Icons.search, color: AppColors.muted, size: 20),
           isDense: true,
         ),
       );
@@ -236,7 +236,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
           Icon(icon, color: AppColors.accentBright, size: 15),
           const SizedBox(width: 6),
           Text(s.toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.accentBright,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -267,7 +267,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(e.keyword,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppColors.textBright,
                           fontWeight: FontWeight.w700,
                           fontSize: 14)),
@@ -277,7 +277,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
             const SizedBox(height: 10),
             SelectableText.rich(
               TextSpan(
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppColors.textSecondary, fontSize: 13, height: 1.5),
                 children: _linkify(e.reply, meta.color),
               ),
@@ -295,8 +295,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
     final c = urgent
         ? AppColors.red
         : warn
-            ? const Color(0xFFFBBF24)
-            : const Color(0xFF34D399);
+            ? AppColors.amberBright
+            : AppColors.greenBright;
     String two(int n) => n.toString().padLeft(2, '0');
     final days = diff.inDays;
     final cd = '${days}d ${two(diff.inHours % 24)}h ${two(diff.inMinutes % 60)}m ${two(diff.inSeconds % 60)}s';
@@ -346,14 +346,14 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   ),
                   const SizedBox(height: 5),
                   Text(d.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppColors.textBright,
                           fontWeight: FontWeight.w600,
                           fontSize: 13.5,
                           height: 1.3)),
                   const SizedBox(height: 3),
                   Text('Due: $due',
-                      style: const TextStyle(color: AppColors.muted, fontSize: 11.5)),
+                      style: TextStyle(color: AppColors.muted, fontSize: 11.5)),
                   const SizedBox(height: 5),
                   Text(cd,
                       style: TextStyle(

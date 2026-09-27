@@ -39,7 +39,7 @@ class _TeachersScreenState extends State<TeachersScreen> {
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
               child: TextField(
                 onChanged: (v) => setState(() => _query = v.toLowerCase().trim()),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Search teacher…',
                   prefixIcon: Icon(Icons.search, size: 18, color: AppColors.muted),
                 ),
@@ -97,17 +97,17 @@ class _TeachersScreenState extends State<TeachersScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(t.name,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppColors.textBright,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14.5)),
                         if (t.designation.isNotEmpty)
                           Text(t.designation,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppColors.textSecondary, fontSize: 12)),
                         if (t.department.isNotEmpty)
                           Text(t.department,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppColors.muted, fontSize: 11)),
                       ],
                     ),
@@ -120,7 +120,7 @@ class _TeachersScreenState extends State<TeachersScreen> {
                         borderRadius: BorderRadius.circular(7),
                       ),
                       child: Text(t.acronym,
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppColors.accentBright,
                               fontWeight: FontWeight.w700,
                               fontSize: 11)),

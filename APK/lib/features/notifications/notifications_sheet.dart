@@ -19,7 +19,7 @@ class NotificationsSheet extends StatelessWidget {
       expand: false,
       builder: (context, scrollController) {
         return Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
           ),
@@ -38,22 +38,22 @@ class NotificationsSheet extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
                 child: Row(
                   children: [
-                    const Icon(Icons.notifications,
+                    Icon(Icons.notifications,
                         color: AppColors.accentBright, size: 18),
                     const SizedBox(width: 8),
-                    const Text('Notifications',
+                    Text('Notifications',
                         style: TextStyle(
                             color: AppColors.text,
                             fontWeight: FontWeight.w700,
                             fontSize: 15)),
                     const Spacer(),
                     Text('${items.length}',
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppColors.muted, fontSize: 13)),
                   ],
                 ),
               ),
-              const Divider(height: 1, color: AppColors.border),
+              Divider(height: 1, color: AppColors.border),
               Expanded(
                 child: items.isEmpty
                     ? _empty()
@@ -62,7 +62,7 @@ class NotificationsSheet extends StatelessWidget {
                         padding: EdgeInsets.zero,
                         itemCount: items.length,
                         separatorBuilder: (_, _) =>
-                            const Divider(height: 1, color: AppColors.border),
+                            Divider(height: 1, color: AppColors.border),
                         itemBuilder: (_, i) => _tile(context, items[i]),
                       ),
               ),
@@ -73,7 +73,7 @@ class NotificationsSheet extends StatelessWidget {
     );
   }
 
-  Widget _empty() => const Center(
+  Widget _empty() => Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -106,22 +106,22 @@ class NotificationsSheet extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(n.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppColors.text,
                           fontWeight: FontWeight.w700,
                           fontSize: 13.5)),
                   const SizedBox(height: 4),
                   Text(n.body,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppColors.textSecondary, fontSize: 12, height: 1.5)),
                   const SizedBox(height: 5),
                   Text(_relTime(n.createdAt),
-                      style: const TextStyle(color: AppColors.muted, fontSize: 11)),
+                      style: TextStyle(color: AppColors.muted, fontSize: 11)),
                 ],
               ),
             ),
             if (route != null)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(left: 8, top: 2),
                 child: Icon(Icons.chevron_right, color: AppColors.muted, size: 20),
               ),

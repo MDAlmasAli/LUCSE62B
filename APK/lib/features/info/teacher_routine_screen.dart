@@ -39,7 +39,7 @@ class _TeacherRoutineScreenState extends State<TeacherRoutineScreen> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(
+            return Center(
               child: CircularProgressIndicator(color: AppColors.accent),
             );
           }
@@ -63,7 +63,7 @@ class _TeacherRoutineScreenState extends State<TeacherRoutineScreen> {
                 child: TextField(
                   onChanged: (v) =>
                       setState(() => _query = v.toLowerCase().trim()),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Search teacher by name or initials…',
                     prefixIcon: Icon(
                       Icons.search,
@@ -161,7 +161,7 @@ class _TeacherRoutineScreenState extends State<TeacherRoutineScreen> {
                         name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textBright,
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
@@ -171,7 +171,7 @@ class _TeacherRoutineScreenState extends State<TeacherRoutineScreen> {
                       const SizedBox(height: 3),
                       Text(
                         '$acr · $classes class${classes == 1 ? '' : 'es'} / week',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.muted,
                           fontSize: 11.5,
                         ),
@@ -179,7 +179,7 @@ class _TeacherRoutineScreenState extends State<TeacherRoutineScreen> {
                     ],
                   ),
                 ),
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
                   color: AppColors.muted,
                   size: 22,
@@ -215,13 +215,13 @@ class _TeacherRoutineScreenState extends State<TeacherRoutineScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          Icon(
             Icons.person_search_rounded,
             color: AppColors.muted,
             size: 40,
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'No teacher routine available right now.',
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
@@ -340,7 +340,7 @@ class _TeacherDetailScreen extends StatelessWidget {
                 defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                 children: [
                   TableRow(
-                    decoration: const BoxDecoration(color: AppColors.surface),
+                    decoration: BoxDecoration(color: AppColors.surface),
                     children: [
                       _headCell('Day'),
                       for (final t in times) _headCell(t),
@@ -420,7 +420,7 @@ class _TeacherDetailScreen extends StatelessWidget {
     child: Text(
       text,
       textAlign: TextAlign.center,
-      style: const TextStyle(
+      style: TextStyle(
         color: AppColors.textSecondary,
         fontSize: 10.5,
         fontWeight: FontWeight.w700,
@@ -466,7 +466,7 @@ class _TeacherDetailScreen extends StatelessWidget {
 
   Widget _cell(List<TeacherClass> list) {
     if (list.isEmpty) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.all(8),
         child: Center(
           child: Text(
@@ -522,7 +522,7 @@ class _TeacherDetailScreen extends StatelessWidget {
             child: Text(
               '${c.batch}-${c.section}',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 8.5,
                 fontWeight: FontWeight.w700,
@@ -533,7 +533,7 @@ class _TeacherDetailScreen extends StatelessWidget {
             Text(
               c.room,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted, fontSize: 8),
+              style: TextStyle(color: AppColors.muted, fontSize: 8),
             ),
         ],
       ),
@@ -545,14 +545,14 @@ class _TeacherDetailScreen extends StatelessWidget {
     for (var i = 0; i < code.length; i++) {
       h = (h * 31 + code.codeUnitAt(i)) & 0x7FFFFFFF;
     }
-    const palette = [
-      Color(0xFFA78BFA),
-      Color(0xFF38BDF8),
-      Color(0xFF34D399),
-      Color(0xFFF87171),
-      Color(0xFFFBBF24),
-      Color(0xFFF472B6),
-      Color(0xFF22D3EE),
+    final palette = [
+      AppColors.accentBright,
+      AppColors.blueBright,
+      AppColors.greenBright,
+      AppColors.redBright,
+      AppColors.amberBright,
+      AppColors.pinkBright,
+      AppColors.cyanBright,
       Color(0xFFC084FC),
     ];
     return palette[h % palette.length];
@@ -572,7 +572,7 @@ class _TeacherDetailScreen extends StatelessWidget {
         Expanded(
           child: Text(
             '$acr · ${classes.length} class${classes.length == 1 ? '' : 'es'} per week',
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textBright,
               fontWeight: FontWeight.w700,
               fontSize: 13.5,

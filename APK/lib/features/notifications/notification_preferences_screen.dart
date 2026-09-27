@@ -57,7 +57,7 @@ class _NotificationPreferencesScreenState
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.border),
             ),
-            child: const Text(
+            child: Text(
               'Choose which updates may send push notifications. Disabled '
               'categories are also hidden from the in-app notification list.',
               style: TextStyle(
@@ -82,7 +82,7 @@ class _NotificationPreferencesScreenState
                 activeThumbColor: AppColors.accentBright,
                 title: Text(
                   item.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.text,
                     fontWeight: FontWeight.w700,
                     fontSize: 13.5,
@@ -90,7 +90,7 @@ class _NotificationPreferencesScreenState
                 ),
                 subtitle: Text(
                   item.description,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.muted,
                     fontSize: 11.5,
                     height: 1.35,

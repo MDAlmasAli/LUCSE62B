@@ -23,7 +23,7 @@ class SemesterScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 28),
           children: [
             for (final g in groups) _semesterBlock(g),
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(top: 4, left: 4),
               child: Row(
                 children: [
@@ -70,9 +70,9 @@ class SemesterScreen extends StatelessWidget {
     final (semStatus, semColor) = hasActive
         ? ('Ongoing', AppColors.accentBright)
         : pastCount == total
-            ? ('Completed', const Color(0xFF34D399))
+            ? ('Completed', AppColors.greenBright)
             : pastCount == 0
-                ? ('Upcoming', const Color(0xFFFBBF24))
+                ? ('Upcoming', AppColors.amberBright)
                 : ('In Progress', AppColors.accentBright);
 
     return Padding(
@@ -98,7 +98,7 @@ class SemesterScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('ACADEMIC CALENDAR',
+                      Text('ACADEMIC CALENDAR',
                           style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 10,
@@ -106,7 +106,7 @@ class SemesterScreen extends StatelessWidget {
                               letterSpacing: 1)),
                       const SizedBox(height: 3),
                       Text(sem.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppColors.textBright, fontSize: 17, fontWeight: FontWeight.w800)),
                     ],
                   ),
@@ -136,12 +136,12 @@ class SemesterScreen extends StatelessWidget {
                               value: progress,
                               minHeight: 4,
                               backgroundColor: AppColors.surface,
-                              valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+                              valueColor: AlwaysStoppedAnimation(AppColors.accent),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text('$pastCount / $total completed',
-                              style: const TextStyle(color: AppColors.muted, fontSize: 9.5)),
+                              style: TextStyle(color: AppColors.muted, fontSize: 9.5)),
                         ],
                       ),
                     ),
@@ -164,7 +164,7 @@ class SemesterScreen extends StatelessWidget {
     final st = e.status;
     final (label, color) = switch (st) {
       _Status.active => ('Active Now', AppColors.accentBright),
-      _Status.past => ('Completed', const Color(0xFF34D399)),
+      _Status.past => ('Completed', AppColors.greenBright),
       _Status.upcoming => ('Upcoming', AppColors.textSecondary),
     };
     final dateStr = (e.start == e.end || e.end.isEmpty)
@@ -238,11 +238,11 @@ class SemesterScreen extends StatelessWidget {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                const Icon(Icons.calendar_today_rounded, size: 11, color: AppColors.muted),
+                                Icon(Icons.calendar_today_rounded, size: 11, color: AppColors.muted),
                                 const SizedBox(width: 5),
                                 Flexible(
                                   child: Text(dateStr,
-                                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11.5)),
+                                      style: TextStyle(color: AppColors.textSecondary, fontSize: 11.5)),
                                 ),
                               ],
                             ),
@@ -309,14 +309,14 @@ class _Event {
 
   _EventMeta get meta {
     final n = event.toLowerCase();
-    if (n.contains('final')) return const _EventMeta(Icons.school_rounded, Color(0xFFF87171));
-    if (n.contains('mid') || n.contains('exam')) return const _EventMeta(Icons.edit_note_rounded, Color(0xFFFB923C));
-    if (n.contains('class')) return const _EventMeta(Icons.co_present_rounded, Color(0xFF38BDF8));
-    if (n.contains('late') || n.contains('fine')) return const _EventMeta(Icons.warning_amber_rounded, Color(0xFFFBBF24));
-    if (n.contains('registr') || n.contains('advising')) return const _EventMeta(Icons.edit_calendar_rounded, Color(0xFFA78BFA));
-    if (n.contains('withdraw') || n.contains('refund')) return const _EventMeta(Icons.history_rounded, Color(0xFF34D399));
+    if (n.contains('final')) return _EventMeta(Icons.school_rounded, AppColors.redBright);
+    if (n.contains('mid') || n.contains('exam')) return _EventMeta(Icons.edit_note_rounded, AppColors.orangeBright);
+    if (n.contains('class')) return _EventMeta(Icons.co_present_rounded, AppColors.blueBright);
+    if (n.contains('late') || n.contains('fine')) return _EventMeta(Icons.warning_amber_rounded, AppColors.amberBright);
+    if (n.contains('registr') || n.contains('advising')) return _EventMeta(Icons.edit_calendar_rounded, AppColors.accentBright);
+    if (n.contains('withdraw') || n.contains('refund')) return _EventMeta(Icons.history_rounded, AppColors.greenBright);
     if (n.contains('grade') || n.contains('submission')) return const _EventMeta(Icons.check_circle_rounded, Color(0xFF4ADE80));
-    return const _EventMeta(Icons.calendar_month_rounded, Color(0xFF818CF8));
+    return _EventMeta(Icons.calendar_month_rounded, AppColors.indigoBright);
   }
 }
 

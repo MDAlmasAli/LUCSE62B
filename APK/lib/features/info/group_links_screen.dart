@@ -83,18 +83,18 @@ class GroupLinksScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(c.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppColors.textBright,
                           fontWeight: FontWeight.w700,
                           fontSize: 15)),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.person, size: 13, color: AppColors.muted),
+                      Icon(Icons.person, size: 13, color: AppColors.muted),
                       const SizedBox(width: 5),
                       Expanded(
                         child: Text(c.teacher,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppColors.textSecondary, fontSize: 12.5)),
                       ),
                     ],
@@ -155,10 +155,10 @@ class GroupLinksScreen extends StatelessWidget {
     for (var i = 0; i < code.length; i++) {
       h = (h * 31 + code.codeUnitAt(i)) & 0x7FFFFFFF;
     }
-    const palette = [
-      Color(0xFFA78BFA), Color(0xFF38BDF8), Color(0xFF34D399),
-      Color(0xFFF87171), Color(0xFFFBBF24), Color(0xFFF472B6),
-      Color(0xFF22D3EE), Color(0xFFC084FC),
+    final palette = [
+      AppColors.accentBright, AppColors.blueBright, AppColors.greenBright,
+      AppColors.redBright, AppColors.amberBright, AppColors.pinkBright,
+      AppColors.cyanBright, Color(0xFFC084FC),
     ];
     return palette[h % palette.length];
   }

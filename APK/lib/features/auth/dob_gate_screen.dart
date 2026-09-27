@@ -110,7 +110,7 @@ class _DobGateScreenState extends State<DobGateScreen> {
                             ),
                           ),
                           const SizedBox(height: 18),
-                          const Center(
+                          Center(
                             child: Text('One Quick Step',
                                 style: TextStyle(
                                     color: AppColors.textBright,
@@ -118,7 +118,7 @@ class _DobGateScreenState extends State<DobGateScreen> {
                                     fontWeight: FontWeight.w700)),
                           ),
                           const SizedBox(height: 10),
-                          const Text(
+                          Text(
                             'Enter your Date of Birth exactly as written on your certificate. This verifies your identity with the LU portal.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
@@ -161,7 +161,7 @@ class _DobGateScreenState extends State<DobGateScreen> {
                             Padding(
                               padding: const EdgeInsets.only(bottom: 12),
                               child: Text(_error!,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       color: AppColors.red, fontSize: 12.5)),
                             ),
                           GradientButton(
@@ -203,8 +203,8 @@ class _DobGateScreenState extends State<DobGateScreen> {
       initialValue: value,
       isExpanded: true,
       dropdownColor: AppColors.card,
-      hint: Text(hint, style: const TextStyle(color: AppColors.muted, fontSize: 13)),
-      style: const TextStyle(color: AppColors.text, fontSize: 14),
+      hint: Text(hint, style: TextStyle(color: AppColors.muted, fontSize: 13)),
+      style: TextStyle(color: AppColors.text, fontSize: 14),
       items: items
           .map((e) => DropdownMenuItem<T>(value: e, child: Text(label(e))))
           .toList(),
@@ -218,7 +218,7 @@ class _Checking extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         CircularProgressIndicator(color: AppColors.accent),

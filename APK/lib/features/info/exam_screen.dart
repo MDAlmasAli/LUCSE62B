@@ -118,7 +118,7 @@ class _ExamScreenState extends State<ExamScreen> {
               future: _future,
               builder: (context, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(
+                  return Center(
                     child: CircularProgressIndicator(color: AppColors.accent),
                   );
                 }
@@ -251,7 +251,7 @@ class _ExamScreenState extends State<ExamScreen> {
           width: 90,
           child: TextField(
             controller: _batch,
-            style: const TextStyle(color: AppColors.text, fontSize: 14),
+            style: TextStyle(color: AppColors.text, fontSize: 14),
             decoration: dec('Batch'),
             onSubmitted: (_) => _search(),
           ),
@@ -261,7 +261,7 @@ class _ExamScreenState extends State<ExamScreen> {
           width: 80,
           child: TextField(
             controller: _section,
-            style: const TextStyle(color: AppColors.text, fontSize: 14),
+            style: TextStyle(color: AppColors.text, fontSize: 14),
             decoration: dec('Section'),
             onSubmitted: (_) => _search(),
           ),
@@ -296,8 +296,8 @@ class _ExamScreenState extends State<ExamScreen> {
         Container(
           width: 7,
           height: 7,
-          decoration: const BoxDecoration(
-            color: Color(0xFF34D399),
+          decoration: BoxDecoration(
+            color: AppColors.greenBright,
             shape: BoxShape.circle,
           ),
         ),
@@ -305,7 +305,7 @@ class _ExamScreenState extends State<ExamScreen> {
         Expanded(
           child: Text(
             contextLabel,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
@@ -320,7 +320,7 @@ class _ExamScreenState extends State<ExamScreen> {
           ),
           child: Text(
             '$total exam${total == 1 ? '' : 's'}',
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.accentBright,
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
@@ -349,7 +349,7 @@ class _ExamScreenState extends State<ExamScreen> {
 
   Widget _sourceBadge(String source) {
     final improve = source.toLowerCase().contains('improve');
-    final color = improve ? const Color(0xFFFB923C) : const Color(0xFFF43F5E);
+    final color = improve ? AppColors.orangeBright : AppColors.red;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
@@ -407,7 +407,7 @@ class _ExamScreenState extends State<ExamScreen> {
                     if (e.dayLabel.isNotEmpty)
                       Text(
                         e.dayLabel.toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.muted,
                           fontSize: 8.5,
                           fontWeight: FontWeight.w800,
@@ -429,7 +429,7 @@ class _ExamScreenState extends State<ExamScreen> {
                       e.dateObj != null
                           ? DateFormat('MMM').format(e.dateObj!)
                           : '',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 10.5,
                         fontWeight: FontWeight.w600,
@@ -440,7 +440,7 @@ class _ExamScreenState extends State<ExamScreen> {
                         e.weekday.length > 3
                             ? e.weekday.substring(0, 3)
                             : e.weekday,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.muted,
                           fontSize: 9,
                         ),
@@ -492,10 +492,10 @@ class _ExamScreenState extends State<ExamScreen> {
                               ).withValues(alpha: 0.16),
                               borderRadius: BorderRadius.circular(5),
                             ),
-                            child: const Text(
+                            child: Text(
                               'TODAY',
                               style: TextStyle(
-                                color: Color(0xFF34D399),
+                                color: AppColors.greenBright,
                                 fontSize: 9,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -508,7 +508,7 @@ class _ExamScreenState extends State<ExamScreen> {
                       const SizedBox(height: 4),
                       Text(
                         e.courseName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.text,
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
@@ -520,7 +520,7 @@ class _ExamScreenState extends State<ExamScreen> {
                       const SizedBox(height: 5),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.schedule_rounded,
                             size: 12,
                             color: AppColors.muted,
@@ -528,7 +528,7 @@ class _ExamScreenState extends State<ExamScreen> {
                           const SizedBox(width: 5),
                           Text(
                             e.time,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 11.5,
                             ),
@@ -541,7 +541,7 @@ class _ExamScreenState extends State<ExamScreen> {
                       const SizedBox(height: 5),
                       Text(
                         'Batch ${e.enrolledBatch}, Section ${e.enrolledSection}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.muted,
                           fontSize: 10.5,
                           fontWeight: FontWeight.w600,
@@ -554,7 +554,7 @@ class _ExamScreenState extends State<ExamScreen> {
               if (!past && e.dateObj != null)
                 IconButton(
                   tooltip: 'Add to calendar',
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.event_available_rounded,
                     color: AppColors.accentBright,
                     size: 20,
@@ -622,7 +622,7 @@ class _ExamScreenState extends State<ExamScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          Icon(
             Icons.event_busy_rounded,
             color: AppColors.muted,
             size: 44,
@@ -633,7 +633,7 @@ class _ExamScreenState extends State<ExamScreen> {
                 ? 'No final-term exams for Batch $_batchVal, Section $_sectionVal yet.'
                 : 'No mid-term exams for Batch $_batchVal, Section $_sectionVal yet.',
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 13.5,
               height: 1.5,

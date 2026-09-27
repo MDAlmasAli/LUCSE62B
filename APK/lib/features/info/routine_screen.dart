@@ -133,7 +133,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
         ],
       ),
       body: _loading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(color: AppColors.accent),
             )
           : _error != null || _data == null
@@ -159,7 +159,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
               child: Center(
                 child: Text(
                   'No schedule found for Batch ${d.batch}, Section ${d.section}.',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.muted,
                     fontSize: 13.5,
                   ),
@@ -192,9 +192,9 @@ class _RoutineScreenState extends State<RoutineScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, size: 16, color: AppColors.accentBright),
+          Icon(Icons.search, size: 16, color: AppColors.accentBright),
           const SizedBox(width: 8),
-          const Text(
+          Text(
             'Batch',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
           ),
@@ -213,7 +213,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
             );
           }),
           const SizedBox(width: 14),
-          const Text(
+          Text(
             'Section',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5),
           ),
@@ -239,12 +239,12 @@ class _RoutineScreenState extends State<RoutineScreen> {
       isDense: true,
       dropdownColor: AppColors.card,
       underline: const SizedBox.shrink(),
-      style: const TextStyle(
+      style: TextStyle(
         color: AppColors.text,
         fontSize: 13,
         fontWeight: FontWeight.w700,
       ),
-      icon: const Icon(Icons.arrow_drop_down, color: AppColors.muted, size: 20),
+      icon: Icon(Icons.arrow_drop_down, color: AppColors.muted, size: 20),
       items: items
           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
           .toList(),
@@ -262,8 +262,8 @@ class _RoutineScreenState extends State<RoutineScreen> {
         Container(
           width: 7,
           height: 7,
-          decoration: const BoxDecoration(
-            color: Color(0xFF34D399),
+          decoration: BoxDecoration(
+            color: AppColors.greenBright,
             shape: BoxShape.circle,
           ),
         ),
@@ -271,7 +271,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
         Expanded(
           child: Text(
             'Live sync · ${d.semester} · Updated $t',
-            style: const TextStyle(color: AppColors.muted, fontSize: 11.5),
+            style: TextStyle(color: AppColors.muted, fontSize: 11.5),
           ),
         ),
       ],
@@ -293,7 +293,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
 
     final rows = <TableRow>[
       TableRow(
-        decoration: const BoxDecoration(color: AppColors.surface),
+        decoration: BoxDecoration(color: AppColors.surface),
         children: [
           _headCell('Day'),
           for (final time in g.allTimes)
@@ -393,7 +393,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
         child: Center(
           child: Text(
             isBreak ? '☕ Break' : '',
-            style: const TextStyle(color: AppColors.muted, fontSize: 10),
+            style: TextStyle(color: AppColors.muted, fontSize: 10),
           ),
         ),
       );
@@ -404,7 +404,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
       return true;
     }).toList();
     if (courses.isEmpty) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.all(8),
         child: Center(
           child: Text(
@@ -425,9 +425,9 @@ class _RoutineScreenState extends State<RoutineScreen> {
 
   Widget _courseCard(RoutineGridData d, GridSlot s) {
     final color = s.isEnrollment
-        ? const Color(0xFF38BDF8)
+        ? AppColors.blueBright
         : s.isCustom
-        ? const Color(0xFF10B981)
+        ? AppColors.green
         : _courseColor(s.code);
     final name = d.nameFor(s);
     final teacher = d.teacherFor(s);
@@ -453,8 +453,8 @@ class _RoutineScreenState extends State<RoutineScreen> {
                   Container(
                     width: 5,
                     height: 5,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
+                    decoration: BoxDecoration(
+                      color: AppColors.green,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -499,7 +499,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 8.5,
                   height: 1.2,
@@ -510,7 +510,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
             Text(
               s.room,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted, fontSize: 8),
+              style: TextStyle(color: AppColors.muted, fontSize: 8),
             ),
         ],
       ),
@@ -559,7 +559,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.fromLTRB(18, 14, 18, 4),
                 child: Text(
                   'My 62B Courses',
@@ -570,7 +570,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                   ),
                 ),
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.fromLTRB(18, 0, 18, 8),
                 child: Text(
                   'Uncheck the courses you are NOT taking this semester. They’ll be hidden from your routine.',
@@ -595,7 +595,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                       dense: true,
                       title: Text(
                         e.key,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.accentBright,
                           fontWeight: FontWeight.w700,
                           fontFamily: 'monospace',
@@ -606,7 +606,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                           ? null
                           : Text(
                               e.value,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 12,
                               ),
@@ -740,10 +740,10 @@ class _RoutineScreenState extends State<RoutineScreen> {
                 ),
                 const SizedBox(height: 14),
                 Row(
-                  children: const [
+                  children: [
                     Icon(
                       Icons.add_circle_outline_rounded,
-                      color: Color(0xFF10B981),
+                      color: AppColors.green,
                       size: 20,
                     ),
                     SizedBox(width: 8),
@@ -758,7 +758,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Add a course to your 62B routine (e.g. a retake or a course not in the default schedule). Saved to your account.',
                   style: TextStyle(
                     color: AppColors.textSecondary,
@@ -769,7 +769,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                 const SizedBox(height: 14),
                 // Existing list
                 if (!_customs.any((c) => c.appliesTo(d.semester)))
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(vertical: 6),
                     child: Text(
                       'No custom courses added yet.',
@@ -787,7 +787,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                         vertical: 9,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.06),
+                        color: AppColors.green.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: AppColors.border),
                       ),
@@ -796,8 +796,8 @@ class _RoutineScreenState extends State<RoutineScreen> {
                           Container(
                             width: 6,
                             height: 6,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF10B981),
+                            decoration: BoxDecoration(
+                              color: AppColors.green,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -810,7 +810,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                                   c.name.isEmpty ? c.code : c.name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: AppColors.text,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
@@ -825,7 +825,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                                     if (c.room.isNotEmpty) c.room,
                                     if (c.code.isNotEmpty) c.code,
                                   ].join(' · '),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: AppColors.textSecondary,
                                     fontSize: 11,
                                   ),
@@ -841,7 +841,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                               await persist();
                               setSheet(() {});
                             },
-                            child: const Text(
+                            child: Text(
                               'Remove',
                               style: TextStyle(
                                 color: AppColors.red,
@@ -853,8 +853,8 @@ class _RoutineScreenState extends State<RoutineScreen> {
                       ),
                     ),
                   ),
-                const Divider(color: AppColors.border, height: 28),
-                const Text(
+                Divider(color: AppColors.border, height: 28),
+                Text(
                   'ADD A COURSE',
                   style: TextStyle(
                     color: AppColors.accentBright,
@@ -945,7 +945,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                     icon: const Icon(Icons.add, size: 18),
                     label: const Text('Add to my routine'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
+                      backgroundColor: AppColors.green,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(
@@ -969,7 +969,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
   Widget _field(TextEditingController c, String label, String hint) =>
       TextField(
         controller: c,
-        style: const TextStyle(color: AppColors.text, fontSize: 14),
+        style: TextStyle(color: AppColors.text, fontSize: 14),
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
@@ -1002,7 +1002,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
           value: value,
           isExpanded: true,
           dropdownColor: AppColors.card,
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.text,
             fontSize: 13.5,
             fontWeight: FontWeight.w600,
@@ -1098,7 +1098,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(
+        Icon(
           Icons.calendar_month_rounded,
           color: AppColors.muted,
           size: 34,
@@ -1106,7 +1106,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
         const SizedBox(height: 12),
         Text(
           _error ?? 'Could not load the routine.',
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
         ),
         const SizedBox(height: 14),
         OutlinedButton(onPressed: _load, child: const Text('Retry')),
@@ -1121,14 +1121,14 @@ class _RoutineScreenState extends State<RoutineScreen> {
     for (var i = 0; i < code.length; i++) {
       h = (h * 31 + code.codeUnitAt(i)) & 0x7FFFFFFF;
     }
-    const palette = [
-      Color(0xFFA78BFA),
-      Color(0xFF38BDF8),
-      Color(0xFF34D399),
-      Color(0xFFF87171),
-      Color(0xFFFBBF24),
-      Color(0xFFF472B6),
-      Color(0xFF22D3EE),
+    final palette = [
+      AppColors.accentBright,
+      AppColors.blueBright,
+      AppColors.greenBright,
+      AppColors.redBright,
+      AppColors.amberBright,
+      AppColors.pinkBright,
+      AppColors.cyanBright,
       Color(0xFFC084FC),
     ];
     return palette[h % palette.length];

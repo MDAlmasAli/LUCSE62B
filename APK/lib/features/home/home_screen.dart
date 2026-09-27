@@ -11,6 +11,7 @@ import '../../data/connectivity_service.dart';
 import '../../data/exam_repository.dart';
 import '../../data/home_widget_service.dart';
 import '../../data/routine_grid_repository.dart';
+import '../../data/theme_controller.dart';
 import '../../data/session.dart';
 import '../../shared/app_toast.dart';
 import '../../shared/avatar_badge.dart';
@@ -43,7 +44,7 @@ class HomeScreen extends StatefulWidget {
   // the slide-out drawer instead. Classwork is a content hub here that also
   // holds the Presentation / Tutorial / Lab Report / Viva / Lab Final / Project
   // categories.
-  static const _items = <_NavItem>[
+  static List<_NavItem> get _items => <_NavItem>[
     _NavItem(
       Icons.calendar_month_rounded,
       'Class Routine',
@@ -76,7 +77,7 @@ class HomeScreen extends StatefulWidget {
       Icons.sports_esports_rounded,
       'Games',
       'Imposter & Draw — multiplayer',
-      Color(0xFFFB923C),
+      AppColors.orangeBright,
       '/games',
     ),
   ];
@@ -121,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
               titleSpacing: 4,
               leading: Builder(
                 builder: (ctx) => IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.menu_rounded,
                     color: AppColors.textSecondary,
                   ),
@@ -129,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: () => Scaffold.of(ctx).openDrawer(),
                 ),
               ),
-              title: const Text(
+              title: Text(
                 'CSE 62B · PORTAL',
                 style: TextStyle(
                   fontSize: 15,
@@ -153,12 +154,26 @@ class _HomeScreenState extends State<HomeScreen> {
                               : Icons.cloud_off_rounded,
                           size: 18,
                           color: on
-                              ? const Color(0xFF34D399)
-                              : const Color(0xFFFBBF24),
+                              ? AppColors.greenBright
+                              : AppColors.amberBright,
                         ),
                       ),
                     );
                   },
+                ),
+                IconButton(
+                  icon: Icon(
+                    AppColors.isDark
+                        ? Icons.light_mode_rounded
+                        : Icons.dark_mode_rounded,
+                    size: 20,
+                    color: AppColors.textSecondary,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  tooltip: AppColors.isDark
+                      ? 'Switch to light mode'
+                      : 'Switch to dark mode',
+                  onPressed: ThemeController.instance.toggle,
                 ),
                 const NotificationBell(),
                 Padding(
@@ -166,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: GestureDetector(
                     onTap: () => context.push('/profile'),
                     child: student == null
-                        ? const Icon(
+                        ? Icon(
                             Icons.account_circle_outlined,
                             color: AppColors.textSecondary,
                           )
@@ -197,19 +212,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             ).withValues(alpha: 0.35),
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
                             Icon(
                               Icons.cloud_off_rounded,
                               size: 15,
-                              color: Color(0xFFFBBF24),
+                              color: AppColors.amberBright,
                             ),
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 "You're offline — showing saved data. Downloads still open.",
                                 style: TextStyle(
-                                  color: Color(0xFFFBBF24),
+                                  color: AppColors.amberBright,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -296,7 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(
             part,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 13,
             ),
@@ -304,7 +319,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 2),
           Text(
             name != null ? friendlyFirstName(name) : 'Welcome',
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textBright,
               fontSize: 24,
               fontWeight: FontWeight.w700,
@@ -338,13 +353,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.search_rounded,
                     color: AppColors.accentBright,
                     size: 20,
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Search anything in the portal…',
                       style: TextStyle(color: AppColors.muted, fontSize: 13.5),
@@ -359,7 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: AppColors.accent.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Search',
                       style: TextStyle(
                         color: AppColors.accentBright,
@@ -403,9 +418,9 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
   List<({String time, int t})> _toLU = const [];
   List<({String time, int t})> _fromLU = const [];
 
-  static const _green = Color(0xFF34D399);
-  static const _accent = Color(0xFF818CF8);
-  static const _busColor = Color(0xFF22D3EE);
+  static Color get _green => AppColors.greenBright;
+  static Color get _accent => AppColors.indigoBright;
+  static Color get _busColor => AppColors.cyanBright;
 
   static const Map<int, String> _weekdayName = {
     DateTime.saturday: 'SATURDAY',
@@ -731,11 +746,11 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
         children: [
           Row(
             children: [
-              const Icon(Icons.bolt_rounded, size: 16, color: _accent),
+              Icon(Icons.bolt_rounded, size: 16, color: _accent),
               const SizedBox(width: 6),
               Text(
                 dayName.isEmpty ? 'TODAY' : dayName,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.accentBright,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w800,
@@ -745,7 +760,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
               const Spacer(),
               Text(
                 clock,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textBright,
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
@@ -860,14 +875,14 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (showDivider)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 12, bottom: 8),
             child: Divider(height: 1, color: AppColors.border),
           ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(top: 1),
               child: Icon(
                 Icons.directions_bus_rounded,
@@ -876,7 +891,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
               ),
             ),
             const SizedBox(width: 10),
-            const Text(
+            Text(
               'NEXT BUS',
               style: TextStyle(
                 color: AppColors.muted,
@@ -918,7 +933,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
       children: [
         Text(
           dir,
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 10,
             fontWeight: FontWeight.w600,
@@ -929,7 +944,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
           children: [
             Text(
               bus.time,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textBright,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -939,7 +954,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
               const SizedBox(width: 6),
               Text(
                 cd,
-                style: const TextStyle(
+                style: TextStyle(
                   color: _busColor,
                   fontSize: 10.5,
                   fontWeight: FontWeight.w700,
@@ -968,7 +983,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
           const SizedBox(width: 5),
           Text(
             '$label ',
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.muted,
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
@@ -976,7 +991,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
           ),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textBright,
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -1025,7 +1040,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
             children: [
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.muted,
                   fontSize: 9.5,
                   fontWeight: FontWeight.w800,
@@ -1047,7 +1062,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
                   padding: const EdgeInsets.only(top: 2),
                   child: Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 11.5,
                     ),
@@ -1134,10 +1149,10 @@ class _UpcomingExamStripState extends State<_UpcomingExamStrip> {
       final all =
           <_ExamHit>[
               ...mid.map(
-                (e) => _ExamHit('Mid Term', const Color(0xFF34D399), e),
+                (e) => _ExamHit('Mid Term', AppColors.greenBright, e),
               ),
               ...fin.map(
-                (e) => _ExamHit('Final Term', const Color(0xFFF87171), e),
+                (e) => _ExamHit('Final Term', AppColors.redBright, e),
               ),
             ].where((hit) {
               final d = hit.exam.dateObj;
@@ -1183,7 +1198,7 @@ class _UpcomingExamStripState extends State<_UpcomingExamStrip> {
             end: Alignment.bottomRight,
             colors: [
               AppColors.accentBright.withValues(alpha: 0.12),
-              const Color(0xFF38BDF8).withValues(alpha: 0.06),
+              AppColors.blueBright.withValues(alpha: 0.06),
             ],
           ),
           borderRadius: BorderRadius.circular(18),
@@ -1192,7 +1207,7 @@ class _UpcomingExamStripState extends State<_UpcomingExamStrip> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
                 Icon(
                   Icons.event_available_rounded,
@@ -1220,7 +1235,7 @@ class _UpcomingExamStripState extends State<_UpcomingExamStrip> {
             const SizedBox(height: 8),
             for (var i = 0; i < _hits.length; i++) ...[
               if (i > 0)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
                   child: Divider(height: 1, color: AppColors.border),
                 ),
@@ -1267,7 +1282,7 @@ class _UpcomingExamStripState extends State<_UpcomingExamStrip> {
                 courseName.isEmpty ? 'Exam' : courseName,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textBright,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -1284,7 +1299,7 @@ class _UpcomingExamStripState extends State<_UpcomingExamStrip> {
               exam.course.trim(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.muted,
                 fontSize: 10.5,
                 fontWeight: FontWeight.w600,
@@ -1314,7 +1329,7 @@ class _UpcomingExamStripState extends State<_UpcomingExamStrip> {
                     ),
                     TextSpan(
                       text: '  ·  ${_fmtExamDate(exam)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.muted,
                         fontSize: 11,
                       ),
@@ -1585,8 +1600,8 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              const Color(0xFFF87171).withValues(alpha: 0.10),
-              const Color(0xFFFBBF24).withValues(alpha: 0.06),
+              AppColors.redBright.withValues(alpha: 0.10),
+              AppColors.amberBright.withValues(alpha: 0.06),
             ],
           ),
           borderRadius: BorderRadius.circular(18),
@@ -1597,15 +1612,15 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.alarm_rounded,
                   size: 16,
-                  color: Color(0xFFF87171),
+                  color: AppColors.redBright,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   cluster.length > 1 ? 'CLOSEST DEADLINES' : 'CLOSEST DEADLINE',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.accentBright,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,
@@ -1613,7 +1628,7 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
                   ),
                 ),
                 const Spacer(),
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
                   size: 18,
                   color: AppColors.muted,
@@ -1623,7 +1638,7 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
             const SizedBox(height: 8),
             for (var i = 0; i < cluster.length; i++) ...[
               if (i > 0)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
                   child: Divider(height: 1, color: AppColors.border),
                 ),
@@ -1641,8 +1656,8 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
     final cd = diff.inHours < 24
         ? AppColors.red
         : diff.inDays < 3
-        ? const Color(0xFFFBBF24)
-        : const Color(0xFF34D399);
+        ? AppColors.amberBright
+        : AppColors.greenBright;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1685,7 +1700,7 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
           it.title,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.textBright,
             fontSize: 13,
             fontWeight: FontWeight.w600,
@@ -1716,7 +1731,7 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
                     ),
                     TextSpan(
                       text: '  ·  ${_fmtDue(it.due!)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.muted,
                         fontSize: 11,
                       ),
@@ -1770,22 +1785,22 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
   static Color _typeColor(String type) {
     final t = type.toLowerCase();
     if (t.contains('lab final') || t.contains('lab exam')) {
-      return const Color(0xFFF87171);
+      return AppColors.redBright;
     }
-    if (t.contains('lab test')) return const Color(0xFF2DD4BF);
+    if (t.contains('lab test')) return AppColors.tealBright;
     if (t.contains('lab report') || t.contains('lab')) {
-      return const Color(0xFF34D399);
+      return AppColors.greenBright;
     }
-    if (t.contains('assign')) return const Color(0xFFA78BFA);
+    if (t.contains('assign')) return AppColors.accentBright;
     if (t.contains('quiz') || t.contains('tutorial')) {
-      return const Color(0xFF38BDF8);
+      return AppColors.blueBright;
     }
-    if (t.contains('present')) return const Color(0xFF818CF8);
-    if (t.contains('viva')) return const Color(0xFFFBBF24);
+    if (t.contains('present')) return AppColors.indigoBright;
+    if (t.contains('viva')) return AppColors.amberBright;
     if (t.contains('exam') || t.contains('mid') || t.contains('final')) {
-      return const Color(0xFFF87171);
+      return AppColors.redBright;
     }
-    if (t.contains('project')) return const Color(0xFFF472B6);
+    if (t.contains('project')) return AppColors.pinkBright;
     return AppColors.accentBright;
   }
 }
@@ -1834,11 +1849,11 @@ class _ClassworkBadgeState extends State<_ClassworkBadge> {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       constraints: const BoxConstraints(minWidth: 18),
       decoration: BoxDecoration(
-        color: const Color(0xFFF87171),
+        color: AppColors.redBright,
         borderRadius: BorderRadius.circular(9),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFF87171).withValues(alpha: 0.5),
+            color: AppColors.redBright.withValues(alpha: 0.5),
             blurRadius: 6,
           ),
         ],
@@ -1883,7 +1898,7 @@ class _HomeDrawer extends StatelessWidget {
               18,
               18,
             ),
-            decoration: const BoxDecoration(gradient: AppColors.accentGradient),
+            decoration: BoxDecoration(gradient: AppColors.accentGradient),
             child: Row(
               children: [
                 if (student != null)
@@ -1931,7 +1946,7 @@ class _HomeDrawer extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(height: 1, color: AppColors.border),
+          Divider(height: 1, color: AppColors.border),
           _tile(
             Icons.person_outline_rounded,
             'Profile',

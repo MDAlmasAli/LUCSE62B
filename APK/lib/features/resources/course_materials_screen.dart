@@ -70,7 +70,7 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> {
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
             child: Text(
               widget.course.name,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 12.5,
               ),
@@ -83,7 +83,7 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> {
           ),
           Expanded(
             child: _folderId.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       'No files in this folder yet.',
                       style: TextStyle(color: AppColors.muted, fontSize: 14),
@@ -139,14 +139,14 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> {
   }
 
   Widget _marksSection() {
-    const palette = [
-      Color(0xFFA78BFA),
-      Color(0xFF38BDF8),
-      Color(0xFF34D399),
-      Color(0xFFF87171),
-      Color(0xFFFBBF24),
-      Color(0xFFF472B6),
-      Color(0xFF22D3EE),
+    final palette = [
+      AppColors.accentBright,
+      AppColors.blueBright,
+      AppColors.greenBright,
+      AppColors.redBright,
+      AppColors.amberBright,
+      AppColors.pinkBright,
+      AppColors.cyanBright,
     ];
     final total = _marks.fold<double>(
       0,
@@ -164,15 +164,15 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> {
         ),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.pie_chart_rounded,
               size: 13,
-              color: Color(0xFFFBBF24),
+              color: AppColors.amberBright,
             ),
             const SizedBox(width: 5),
             Text(
               total > 0 ? 'Marks · ${_fmt(total)}' : 'Marks',
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 10.5,
                 fontWeight: FontWeight.w700,
@@ -222,7 +222,7 @@ class _CourseMaterialsScreenState extends State<CourseMaterialsScreen> {
           const SizedBox(width: 4),
           Text(
             m.component,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 10,
               fontWeight: FontWeight.w500,

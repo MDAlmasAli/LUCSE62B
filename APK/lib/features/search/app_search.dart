@@ -41,13 +41,13 @@ class SearchDest {
 }
 
 /// The full catalog of destinations the global search covers.
-const List<SearchDest> appDestinations = [
+List<SearchDest> get appDestinations => [
   // ── Core ──
   SearchDest(
     label: 'Cover Page',
     subtitle: 'Generate assignment / lab cover PDF',
     icon: Icons.description_rounded,
-    color: Color(0xFFA78BFA),
+    color: AppColors.accentBright,
     route: '/cover-page',
     keywords: [
       'cover',
@@ -63,7 +63,7 @@ const List<SearchDest> appDestinations = [
     label: 'Results',
     subtitle: 'CGPA, grades & analytics',
     icon: Icons.bar_chart_rounded,
-    color: Color(0xFF34D399),
+    color: AppColors.greenBright,
     route: '/results',
     keywords: [
       'cgpa',
@@ -118,7 +118,7 @@ const List<SearchDest> appDestinations = [
     label: 'Games',
     subtitle: 'Imposter & Draw — multiplayer',
     icon: Icons.sports_esports_rounded,
-    color: Color(0xFFFB923C),
+    color: AppColors.orangeBright,
     route: '/games',
     keywords: [
       'game',
@@ -136,7 +136,7 @@ const List<SearchDest> appDestinations = [
     label: 'Presentation',
     subtitle: 'Classwork · slides & presentations',
     icon: Icons.slideshow_rounded,
-    color: Color(0xFF818CF8),
+    color: AppColors.indigoBright,
     route: '/category/presentation',
     keywords: ['presentation', 'slides', 'classwork'],
   ),
@@ -144,7 +144,7 @@ const List<SearchDest> appDestinations = [
     label: 'Tutorial',
     subtitle: 'Classwork · tutorials & quizzes',
     icon: Icons.school_rounded,
-    color: Color(0xFF38BDF8),
+    color: AppColors.blueBright,
     route: '/category/tutorial',
     keywords: ['tutorial', 'quiz', 'classwork'],
   ),
@@ -152,7 +152,7 @@ const List<SearchDest> appDestinations = [
     label: 'Lab Report',
     subtitle: 'Classwork · lab experiments & reports',
     icon: Icons.science_rounded,
-    color: Color(0xFF34D399),
+    color: AppColors.greenBright,
     route: '/category/lab-report',
     keywords: ['lab report', 'lab', 'report', 'classwork'],
   ),
@@ -160,7 +160,7 @@ const List<SearchDest> appDestinations = [
     label: 'Lab Test',
     subtitle: 'Classwork · lab tests',
     icon: Icons.biotech_rounded,
-    color: Color(0xFF2DD4BF),
+    color: AppColors.tealBright,
     route: '/category/lab-test',
     keywords: ['lab test', 'lab', 'test', 'classwork'],
   ),
@@ -168,7 +168,7 @@ const List<SearchDest> appDestinations = [
     label: 'Viva',
     subtitle: 'Classwork · viva',
     icon: Icons.mic_rounded,
-    color: Color(0xFFFBBF24),
+    color: AppColors.amberBright,
     route: '/category/viva',
     keywords: ['viva', 'oral', 'classwork'],
   ),
@@ -176,7 +176,7 @@ const List<SearchDest> appDestinations = [
     label: 'Lab Final',
     subtitle: 'Classwork · lab final',
     icon: Icons.local_fire_department_rounded,
-    color: Color(0xFFF87171),
+    color: AppColors.redBright,
     route: '/category/lab-final',
     keywords: ['lab final', 'lab exam', 'final', 'classwork'],
   ),
@@ -184,7 +184,7 @@ const List<SearchDest> appDestinations = [
     label: 'Project',
     subtitle: 'Classwork · projects',
     icon: Icons.account_tree_rounded,
-    color: Color(0xFFF472B6),
+    color: AppColors.pinkBright,
     route: '/category/project',
     keywords: ['project', 'classwork'],
   ),
@@ -192,7 +192,7 @@ const List<SearchDest> appDestinations = [
     label: 'Assignment',
     subtitle: 'Classwork · assignments',
     icon: Icons.edit_rounded,
-    color: Color(0xFFA78BFA),
+    color: AppColors.accentBright,
     route: '/category/assignment',
     keywords: ['assignment', 'homework', 'classwork'],
   ),
@@ -200,7 +200,7 @@ const List<SearchDest> appDestinations = [
     label: 'Notice',
     subtitle: 'Latest announcements',
     icon: Icons.campaign_rounded,
-    color: Color(0xFFFBBF24),
+    color: AppColors.amberBright,
     route: '/notice',
     keywords: ['announcement', 'lu notice', 'news'],
     popular: true,
@@ -330,7 +330,7 @@ const List<SearchDest> appDestinations = [
     label: 'Profile',
     subtitle: 'Your account & academic info',
     icon: Icons.account_circle_rounded,
-    color: Color(0xFFA78BFA),
+    color: AppColors.accentBright,
     route: '/profile',
     keywords: ['account', 'my profile', 'dob', 'blood group', 'phone'],
   ),
@@ -338,7 +338,7 @@ const List<SearchDest> appDestinations = [
     label: 'User Guide',
     subtitle: 'How to use the portal',
     icon: Icons.help_outline_rounded,
-    color: Color(0xFF38BDF8),
+    color: AppColors.blueBright,
     route: '/user-guide',
     keywords: ['help', 'guide', 'how to'],
   ),
@@ -462,7 +462,7 @@ class _SearchSheetState extends State<_SearchSheet> {
       expand: false,
       builder: (context, scrollController) {
         return Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: AppColors.bg,
             borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
             border: Border(top: BorderSide(color: AppColors.borderAccent)),
@@ -484,19 +484,19 @@ class _SearchSheetState extends State<_SearchSheet> {
                 child: TextField(
                   controller: _controller,
                   focusNode: _focus,
-                  style: const TextStyle(color: AppColors.text, fontSize: 15),
+                  style: TextStyle(color: AppColors.text, fontSize: 15),
                   textInputAction: TextInputAction.search,
                   onChanged: (v) => setState(() => _query = v),
                   decoration: InputDecoration(
                     hintText: 'Search anything — cover page, results, routine…',
-                    prefixIcon: const Icon(
+                    prefixIcon: Icon(
                       Icons.search_rounded,
                       color: AppColors.accentBright,
                     ),
                     suffixIcon: _query.isEmpty
                         ? null
                         : IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.close_rounded,
                               color: AppColors.muted,
                               size: 20,
@@ -510,15 +510,15 @@ class _SearchSheetState extends State<_SearchSheet> {
                     fillColor: AppColors.card,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide(color: AppColors.border),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide(color: AppColors.border),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppColors.accent),
+                      borderSide: BorderSide(color: AppColors.accent),
                     ),
                   ),
                 ),
@@ -537,7 +537,7 @@ class _SearchSheetState extends State<_SearchSheet> {
                       empty
                           ? 'MOST USED'
                           : '${results.length} RESULT${results.length == 1 ? '' : 'S'}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.muted,
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -597,7 +597,7 @@ class _SearchSheetState extends State<_SearchSheet> {
                   children: [
                     Text(
                       d.label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textBright,
                         fontSize: 14.5,
                         fontWeight: FontWeight.w700,
@@ -608,7 +608,7 @@ class _SearchSheetState extends State<_SearchSheet> {
                       d.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
                       ),
@@ -616,7 +616,7 @@ class _SearchSheetState extends State<_SearchSheet> {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.north_east_rounded,
                 color: AppColors.muted,
                 size: 18,
@@ -628,7 +628,7 @@ class _SearchSheetState extends State<_SearchSheet> {
     );
   }
 
-  Widget _noResults() => const Center(
+  Widget _noResults() => Center(
     child: Padding(
       padding: EdgeInsets.all(28),
       child: Column(

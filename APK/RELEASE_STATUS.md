@@ -17,6 +17,9 @@ row in `app_updates`. Building local APKs for testing is fine. Committing/pushin
 
 ## Changes waiting for the next release (app side)
 
+- **Light mode.** Profile → Appearance picks Dark / Light / System (default stays Dark, so
+  nobody's app changes look unless they ask for it), plus a quick toggle in the home app bar.
+  The choice is saved on the phone and `System` follows the OS.
 - Home screen: **Class Routine** card added before Classwork (opens `/info/routine`).
 - Class routine: a batch/section listed in several routine links comes only from the first link, so
   last semester's rows no longer mix into the new routine (`lib/core/routine_cells.dart`).

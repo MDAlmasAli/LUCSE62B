@@ -162,7 +162,7 @@ class InfoHubScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   s.title,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: AppColors.textBright,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 15,
@@ -171,7 +171,7 @@ class InfoHubScreen extends StatelessWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   s.subtitle,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: AppColors.textSecondary,
                                     fontSize: 12,
                                   ),
@@ -179,7 +179,7 @@ class InfoHubScreen extends StatelessWidget {
                               ],
                             ),
                           ),
-                          const Icon(
+                          Icon(
                             Icons.chevron_right,
                             color: AppColors.muted,
                           ),

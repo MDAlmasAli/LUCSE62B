@@ -64,7 +64,7 @@ class _DriveFileListViewState extends State<DriveFileListView> {
       future: _future,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(
+          return Center(
             child: CircularProgressIndicator(color: AppColors.accent),
           );
         }
@@ -76,7 +76,7 @@ class _DriveFileListViewState extends State<DriveFileListView> {
             .where((f) => '${f['mimeType']}' != _kFolderMime)
             .toList();
         if (folders.isEmpty && files.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'No files in this folder yet.',
               style: TextStyle(color: AppColors.muted, fontSize: 14),
@@ -160,7 +160,7 @@ class _DriveFileListViewState extends State<DriveFileListView> {
         TextField(
           controller: _search,
           onChanged: (_) => setState(() {}),
-          style: const TextStyle(color: AppColors.text, fontSize: 14),
+          style: TextStyle(color: AppColors.text, fontSize: 14),
           decoration: InputDecoration(
             hintText: 'Search files in this folder...',
             prefixIcon: const Icon(Icons.search_rounded),
@@ -257,12 +257,12 @@ class _DriveFileListViewState extends State<DriveFileListView> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFFFBBF24).withValues(alpha: 0.14),
+                color: AppColors.amberBright.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.folder_rounded,
-                color: Color(0xFFFBBF24),
+                color: AppColors.amberBright,
                 size: 21,
               ),
             ),
@@ -270,14 +270,14 @@ class _DriveFileListViewState extends State<DriveFileListView> {
             Expanded(
               child: Text(
                 name,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.text,
                   fontWeight: FontWeight.w600,
                   fontSize: 13.5,
                 ),
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
               color: AppColors.muted,
               size: 22,
@@ -331,7 +331,7 @@ class _DriveFileListViewState extends State<DriveFileListView> {
                           Text(
                             name,
                             softWrap: true,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.text,
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
@@ -347,18 +347,18 @@ class _DriveFileListViewState extends State<DriveFileListView> {
                               ),
                               if (isDown) ...[
                                 const SizedBox(width: 8),
-                                const Icon(
+                                Icon(
                                   Icons.offline_pin_rounded,
                                   size: 12,
-                                  color: Color(0xFF34D399),
+                                  color: AppColors.greenBright,
                                 ),
                                 const SizedBox(width: 3),
                                 Text(
                                   entry.size > 0
                                       ? 'Saved · ${DownloadService.prettySize(entry.size)}'
                                       : 'Saved offline',
-                                  style: const TextStyle(
-                                    color: Color(0xFF34D399),
+                                  style: TextStyle(
+                                    color: AppColors.greenBright,
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -400,7 +400,7 @@ class _DriveFileListViewState extends State<DriveFileListView> {
             value: p.known ? p.fraction : null,
             minHeight: 6,
             backgroundColor: AppColors.border,
-            valueColor: const AlwaysStoppedAnimation(AppColors.accentBright),
+            valueColor: AlwaysStoppedAnimation(AppColors.accentBright),
           ),
         ),
         const SizedBox(height: 4),
@@ -413,12 +413,12 @@ class _DriveFileListViewState extends State<DriveFileListView> {
                   : p.paused
                   ? 'Paused · $sizeText'
                   : sizeText,
-              style: const TextStyle(color: AppColors.muted, fontSize: 10.5),
+              style: TextStyle(color: AppColors.muted, fontSize: 10.5),
             ),
             if (pct.isNotEmpty)
               Text(
                 pct,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.accentBright,
                   fontSize: 10.5,
                   fontWeight: FontWeight.w700,
@@ -468,7 +468,7 @@ class _DriveFileListViewState extends State<DriveFileListView> {
             onPressed: progress?.cancelling == true
                 ? null
                 : () => DownloadService.instance.cancel(id),
-            icon: const Icon(
+            icon: Icon(
               Icons.stop_circle_outlined,
               size: 21,
               color: AppColors.red,
@@ -479,7 +479,7 @@ class _DriveFileListViewState extends State<DriveFileListView> {
     }
     if (isDown) {
       return PopupMenuButton<String>(
-        icon: const Icon(
+        icon: Icon(
           Icons.more_vert_rounded,
           size: 20,
           color: AppColors.muted,
@@ -490,7 +490,7 @@ class _DriveFileListViewState extends State<DriveFileListView> {
           if (v == 'drive') _openInDrive(id);
           if (v == 'delete') _deleteDownload(id);
         },
-        itemBuilder: (_) => const [
+        itemBuilder: (_) => [
           PopupMenuItem(
             value: 'open',
             child: Text('Open', style: TextStyle(color: AppColors.text)),
@@ -512,17 +512,17 @@ class _DriveFileListViewState extends State<DriveFileListView> {
         ],
       );
     }
-    return const Icon(Icons.download_rounded, size: 20, color: AppColors.muted);
+    return Icon(Icons.download_rounded, size: 20, color: AppColors.muted);
   }
 
   (IconData, Color, String) _typeMeta(String mime, String name) {
     final ext = name.contains('.') ? name.split('.').last.toLowerCase() : '';
     if (mime == 'application/pdf' || ext == 'pdf') {
-      return (Icons.picture_as_pdf_rounded, const Color(0xFFF87171), 'PDF');
+      return (Icons.picture_as_pdf_rounded, AppColors.redBright, 'PDF');
     }
     if (mime.startsWith('video/') ||
         ['mp4', 'mkv', 'mov', 'avi', 'webm'].contains(ext)) {
-      return (Icons.play_circle_rounded, const Color(0xFF38BDF8), 'Video');
+      return (Icons.play_circle_rounded, AppColors.blueBright, 'Video');
     }
     if (mime.contains('powerpoint') ||
         mime.contains('presentation') ||
@@ -537,11 +537,11 @@ class _DriveFileListViewState extends State<DriveFileListView> {
     if (mime.contains('zip') ||
         mime.contains('rar') ||
         ['zip', 'rar', '7z'].contains(ext)) {
-      return (Icons.folder_zip_rounded, const Color(0xFFFBBF24), 'Archive');
+      return (Icons.folder_zip_rounded, AppColors.amberBright, 'Archive');
     }
     if (mime.startsWith('image/') ||
         ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'].contains(ext)) {
-      return (Icons.image_rounded, const Color(0xFF34D399), 'Image');
+      return (Icons.image_rounded, AppColors.greenBright, 'Image');
     }
     if (mime.contains('word') ||
         mime.contains('document') ||
@@ -576,7 +576,7 @@ class _DriveFileListViewState extends State<DriveFileListView> {
       'r',
     };
     if (codeExt.contains(ext)) {
-      return (Icons.code_rounded, const Color(0xFFA78BFA), ext.toUpperCase());
+      return (Icons.code_rounded, AppColors.accentBright, ext.toUpperCase());
     }
     if (mime.startsWith('text/') || ['txt', 'md', 'log'].contains(ext)) {
       return (Icons.notes_rounded, const Color(0xFF94A3B8), 'Text');
@@ -687,9 +687,9 @@ class DriveFolderScreen extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
+                Icon(
                   Icons.folder_rounded,
-                  color: Color(0xFFFBBF24),
+                  color: AppColors.amberBright,
                   size: 20,
                 ),
                 const SizedBox(width: 9),
@@ -697,7 +697,7 @@ class DriveFolderScreen extends StatelessWidget {
                   child: Text(
                     title,
                     softWrap: true,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textBright,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,

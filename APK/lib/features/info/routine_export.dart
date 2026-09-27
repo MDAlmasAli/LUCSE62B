@@ -128,7 +128,7 @@ class RoutineExport {
           children: [
             const SizedBox(height: 12),
             Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2))),
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(18, 16, 18, 6),
               child: Align(
                 alignment: Alignment.centerLeft,
@@ -137,13 +137,13 @@ class RoutineExport {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFF87171)),
-              title: const Text('Download as PDF', style: TextStyle(color: AppColors.text)),
+              leading: Icon(Icons.picture_as_pdf_rounded, color: AppColors.redBright),
+              title: Text('Download as PDF', style: TextStyle(color: AppColors.text)),
               onTap: () => Navigator.pop(ctx, 'pdf'),
             ),
             ListTile(
-              leading: const Icon(Icons.image_rounded, color: Color(0xFF34D399)),
-              title: const Text('Download as Image', style: TextStyle(color: AppColors.text)),
+              leading: Icon(Icons.image_rounded, color: AppColors.greenBright),
+              title: Text('Download as Image', style: TextStyle(color: AppColors.text)),
               onTap: () => Navigator.pop(ctx, 'image'),
             ),
             const SizedBox(height: 10),
@@ -278,7 +278,7 @@ class RoutineExport {
           children: [
             const SizedBox(height: 12),
             Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2))),
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(18, 16, 18, 6),
               child: Align(
                 alignment: Alignment.centerLeft,
@@ -287,13 +287,13 @@ class RoutineExport {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFF87171)),
-              title: const Text('Download as PDF', style: TextStyle(color: AppColors.text)),
+              leading: Icon(Icons.picture_as_pdf_rounded, color: AppColors.redBright),
+              title: Text('Download as PDF', style: TextStyle(color: AppColors.text)),
               onTap: () => Navigator.pop(ctx, 'pdf'),
             ),
             ListTile(
-              leading: const Icon(Icons.image_rounded, color: Color(0xFF34D399)),
-              title: const Text('Download as Image', style: TextStyle(color: AppColors.text)),
+              leading: Icon(Icons.image_rounded, color: AppColors.greenBright),
+              title: Text('Download as Image', style: TextStyle(color: AppColors.text)),
               onTap: () => Navigator.pop(ctx, 'image'),
             ),
             const SizedBox(height: 10),

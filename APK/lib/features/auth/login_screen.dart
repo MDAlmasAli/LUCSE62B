@@ -224,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: AppColors.bg,
       body: Container(
         // Top-down brand wash behind everything.
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -403,13 +403,13 @@ class _LoginScreenState extends State<LoginScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.accentBright,
                   fontSize: 22,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
           Text(sub,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.textSecondary, fontSize: 13.5, height: 1.5)),
           const SizedBox(height: 18),
         ],
@@ -426,7 +426,7 @@ class _LoginScreenState extends State<LoginScreen> {
             borderRadius: BorderRadius.circular(9),
           ),
           child: Text(_error!,
-              style: const TextStyle(color: AppColors.red, fontSize: 12.5)),
+              style: TextStyle(color: AppColors.red, fontSize: 12.5)),
         );
 
   Widget _field(TextEditingController c, String label, IconData icon,
@@ -437,7 +437,7 @@ class _LoginScreenState extends State<LoginScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label.toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.accentBright,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -447,7 +447,7 @@ class _LoginScreenState extends State<LoginScreen> {
             controller: c,
             obscureText: obscure,
             keyboardType: type,
-            style: const TextStyle(color: AppColors.text),
+            style: TextStyle(color: AppColors.text),
             decoration: InputDecoration(
               hintText: hint,
               prefixIcon: Icon(icon, size: 16, color: AppColors.muted),
@@ -475,12 +475,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(s.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppColors.text,
                           fontWeight: FontWeight.w600,
                           fontSize: 14)),
                   Text(sub,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppColors.muted, fontSize: 11)),
                 ],
               ),
@@ -527,7 +527,7 @@ class _LoginScreenState extends State<LoginScreen> {
               onChanged: (v) => setState(() => _keep = v ?? true),
               activeColor: AppColors.accent,
             ),
-            const Text('Keep me logged in',
+            Text('Keep me logged in',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
           ]),
         GradientButton(
@@ -540,14 +540,14 @@ class _LoginScreenState extends State<LoginScreen> {
             _forgotIdCtrl.text = _student?.id ?? '';
             _go(_Step.forgot);
           }),
-          const Text('·', style: TextStyle(color: AppColors.muted)),
+          Text('·', style: TextStyle(color: AppColors.muted)),
           _link('Back', () => _go(_Step.id)),
         ]),
       ]);
 
   Widget _stepOtp() => _wrap('otp', [
         _welcomeBadge(_student!, 'New account setup'),
-        const Text(
+        Text(
           "We'll send an OTP to your registered number to verify and set up your account.",
           style: TextStyle(color: AppColors.textSecondary, fontSize: 13.5, height: 1.6),
         ),

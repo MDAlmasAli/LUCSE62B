@@ -38,7 +38,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(
+            return Center(
               child: CircularProgressIndicator(color: AppColors.accent),
             );
           }
@@ -60,7 +60,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   }
 
   Widget _empty() => ListView(
-    children: const [
+    children: [
       SizedBox(height: 120),
       Icon(Icons.cloud_done_outlined, color: AppColors.muted, size: 42),
       SizedBox(height: 14),
@@ -134,7 +134,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                   Text(
                     e.name,
                     softWrap: true,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.text,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
@@ -144,7 +144,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                     const SizedBox(height: 2),
                     Text(
                       sub,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.muted,
                         fontSize: 11,
                       ),
@@ -154,7 +154,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
               ),
             ),
             IconButton(
-              icon: const Icon(
+              icon: Icon(
                 Icons.delete_outline_rounded,
                 size: 20,
                 color: AppColors.muted,
@@ -174,19 +174,19 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   (IconData, Color, String) _typeMeta(String mime) {
     final m = mime.toLowerCase();
     if (m == 'application/pdf') {
-      return (Icons.picture_as_pdf_rounded, const Color(0xFFF87171), 'PDF');
+      return (Icons.picture_as_pdf_rounded, AppColors.redBright, 'PDF');
     }
     if (m.startsWith('video/')) {
-      return (Icons.play_circle_rounded, const Color(0xFF38BDF8), 'Video');
+      return (Icons.play_circle_rounded, AppColors.blueBright, 'Video');
     }
     if (m.contains('powerpoint') || m.contains('presentation')) {
       return (Icons.slideshow_rounded, const Color(0xFFD97706), 'Slides');
     }
     if (m.contains('zip') || m.contains('rar')) {
-      return (Icons.folder_zip_rounded, const Color(0xFFFBBF24), 'Archive');
+      return (Icons.folder_zip_rounded, AppColors.amberBright, 'Archive');
     }
     if (m.startsWith('image/')) {
-      return (Icons.image_rounded, const Color(0xFF34D399), 'Image');
+      return (Icons.image_rounded, AppColors.greenBright, 'Image');
     }
     if (m.contains('word') || m.contains('document')) {
       return (Icons.description_rounded, const Color(0xFF60A5FA), 'Doc');

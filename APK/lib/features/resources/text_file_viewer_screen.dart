@@ -42,14 +42,14 @@ class TextFileViewerScreen extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 11),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.card,
               border: Border(bottom: BorderSide(color: AppColors.border)),
             ),
             child: Text(
               entry.name,
               softWrap: true,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textBright,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -61,12 +61,12 @@ class TextFileViewerScreen extends StatelessWidget {
               future: _read(),
               builder: (context, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(
+                  return Center(
                     child: CircularProgressIndicator(color: AppColors.accent),
                   );
                 }
                 if (snap.hasError) {
-                  return const Center(
+                  return Center(
                     child: Text(
                       'Could not read this file.',
                       style: TextStyle(color: AppColors.muted),
@@ -77,7 +77,7 @@ class TextFileViewerScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(14),
                   child: SelectableText(
                     snap.data ?? '',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.text,
                       fontSize: 12.5,
                       height: 1.45,

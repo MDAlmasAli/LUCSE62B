@@ -25,9 +25,9 @@ class _BusScreenState extends State<BusScreen> {
   String? _examDayGrp;
   bool _examDay = false;
 
-  static const _green = Color(0xFF34D399);
-  static const _blue = Color(0xFF38BDF8);
-  static const _red = Color(0xFFF87171);
+  static Color get _green => AppColors.greenBright;
+  static Color get _blue => AppColors.blueBright;
+  static Color get _red => AppColors.redBright;
 
   @override
   void initState() {
@@ -147,7 +147,7 @@ class _BusScreenState extends State<BusScreen> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(
+            return Center(
               child: CircularProgressIndicator(color: AppColors.accent),
             );
           }
@@ -219,7 +219,7 @@ class _BusScreenState extends State<BusScreen> {
         const SizedBox(height: 12),
         Row(
           children: [
-            const Icon(
+            Icon(
               Icons.info_outline_rounded,
               size: 12,
               color: AppColors.muted,
@@ -328,7 +328,7 @@ class _BusScreenState extends State<BusScreen> {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppColors.border),
         ),
-        child: const Row(
+        child: Row(
           children: [
             Icon(Icons.nightlight_round, color: AppColors.muted, size: 18),
             SizedBox(width: 10),
@@ -384,7 +384,7 @@ class _BusScreenState extends State<BusScreen> {
           const SizedBox(height: 8),
           Text(
             trip.time,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textBright,
               fontSize: 24,
               fontWeight: FontWeight.w900,
@@ -408,13 +408,13 @@ class _BusScreenState extends State<BusScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFFFBBF24).withValues(alpha: 0.13),
+                color: AppColors.amberBright.withValues(alpha: 0.13),
                 borderRadius: BorderRadius.circular(5),
               ),
               child: Text(
                 trip.note,
-                style: const TextStyle(
-                  color: Color(0xFFFBBF24),
+                style: TextStyle(
+                  color: AppColors.amberBright,
                   fontSize: 9.5,
                   fontWeight: FontWeight.w700,
                 ),
@@ -436,7 +436,7 @@ class _BusScreenState extends State<BusScreen> {
       spacing: 7,
       runSpacing: 7,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(top: 5, right: 2),
           child: Icon(
             Icons.calendar_today_rounded,
@@ -540,7 +540,7 @@ class _BusScreenState extends State<BusScreen> {
 
   Widget _timeline(List<_Trip> trips, Color color) {
     if (trips.isEmpty) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: 8),
         child: Text(
           'No buses scheduled',
@@ -618,8 +618,8 @@ class _BusScreenState extends State<BusScreen> {
                 padding: const EdgeInsets.only(top: 3),
                 child: Text(
                   t.note,
-                  style: const TextStyle(
-                    color: Color(0xFFFBBF24),
+                  style: TextStyle(
+                    color: AppColors.amberBright,
                     fontSize: 8.5,
                     fontWeight: FontWeight.w700,
                   ),
@@ -667,11 +667,11 @@ class _BusScreenState extends State<BusScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.schedule_rounded, size: 14, color: _red),
+                    Icon(Icons.schedule_rounded, size: 14, color: _red),
                     const SizedBox(width: 7),
                     Text(
                       '${key.replaceFirst('Exam: ', '')} Exam',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: _red,
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
@@ -714,7 +714,7 @@ class _BusScreenState extends State<BusScreen> {
       Center(
         child: Text(
           m,
-          style: const TextStyle(color: AppColors.muted, fontSize: 14),
+          style: TextStyle(color: AppColors.muted, fontSize: 14),
         ),
       ),
     ],

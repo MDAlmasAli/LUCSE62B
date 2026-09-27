@@ -43,7 +43,7 @@ class _SheetScaffoldState extends State<SheetScaffold> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(
+            return Center(
                 child: CircularProgressIndicator(color: AppColors.accent));
           }
           if (snap.hasError || !snap.hasData) {
@@ -66,7 +66,7 @@ class _SheetScaffoldState extends State<SheetScaffold> {
           children: [
             Icon(widget.icon, color: AppColors.muted, size: 34),
             const SizedBox(height: 12),
-            const Text('Unable to load right now.',
+            Text('Unable to load right now.',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
             const SizedBox(height: 14),
             OutlinedButton(onPressed: _reload, child: const Text('Retry')),
@@ -87,7 +87,7 @@ class SheetEmpty extends StatelessWidget {
         const SizedBox(height: 120),
         Center(
           child: Text(message,
-              style: const TextStyle(color: AppColors.muted, fontSize: 14)),
+              style: TextStyle(color: AppColors.muted, fontSize: 14)),
         ),
       ],
     );

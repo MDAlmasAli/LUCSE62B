@@ -94,7 +94,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
             color: AppColors.card,
             initialValue: _sort,
             onSelected: (v) => setState(() => _sort = v),
-            itemBuilder: (_) => const [
+            itemBuilder: (_) => [
               PopupMenuItem(
                 value: 'code',
                 child: Text(
@@ -125,13 +125,13 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(
+            return Center(
               child: CircularProgressIndicator(color: AppColors.accent),
             );
           }
           final courses = snap.data ?? [];
           if (courses.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
                 'No materials posted yet.',
                 style: TextStyle(color: AppColors.muted, fontSize: 14),
@@ -152,7 +152,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                 _searchBox(),
                 if (_recent.isNotEmpty) _recentStrip(courses),
                 if (visible.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 40),
                     child: Center(
                       child: Text(
@@ -201,7 +201,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     child: TextField(
       controller: _search,
       onChanged: (_) => setState(() {}),
-      style: const TextStyle(color: AppColors.text, fontSize: 14),
+      style: TextStyle(color: AppColors.text, fontSize: 14),
       decoration: InputDecoration(
         hintText: 'Search course code or resource name...',
         prefixIcon: const Icon(Icons.search_rounded),
@@ -230,7 +230,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Recently opened',
             style: TextStyle(
               color: AppColors.textSecondary,
@@ -251,7 +251,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                       side: BorderSide(color: AppColors.border),
                       label: Text(
                         c.code,
-                        style: const TextStyle(color: AppColors.text),
+                        style: TextStyle(color: AppColors.text),
                       ),
                       avatar: Icon(
                         _icon(c.code),
@@ -313,7 +313,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                   const SizedBox(height: 2),
                   Text(
                     c.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12.5,
                       height: 1.3,
@@ -322,7 +322,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.muted),
+            Icon(Icons.chevron_right, color: AppColors.muted),
           ],
         ),
       ),
@@ -352,14 +352,14 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     for (var i = 0; i < code.length; i++) {
       h = (h * 31 + code.codeUnitAt(i)) & 0x7FFFFFFF;
     }
-    const palette = [
-      Color(0xFFA78BFA),
-      Color(0xFF38BDF8),
-      Color(0xFF34D399),
-      Color(0xFFF87171),
-      Color(0xFFFBBF24),
-      Color(0xFFF472B6),
-      Color(0xFF22D3EE),
+    final palette = [
+      AppColors.accentBright,
+      AppColors.blueBright,
+      AppColors.greenBright,
+      AppColors.redBright,
+      AppColors.amberBright,
+      AppColors.pinkBright,
+      AppColors.cyanBright,
     ];
     return palette[h % palette.length];
   }

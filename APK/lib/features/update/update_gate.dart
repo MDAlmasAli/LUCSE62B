@@ -96,7 +96,7 @@ class _UpdateGateState extends State<UpdateGate> {
                     Center(
                       child: Text(
                         forced ? 'Update Required' : 'Update Available',
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppColors.textBright,
                             fontSize: 24,
                             fontWeight: FontWeight.w700),
@@ -106,7 +106,7 @@ class _UpdateGateState extends State<UpdateGate> {
                     Center(
                       child: Text(
                         'Version ${v.versionName}',
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppColors.accentBright, fontSize: 14),
                       ),
                     ),
@@ -137,7 +137,7 @@ class _UpdateGateState extends State<UpdateGate> {
                           value: _progress == 0 ? null : _progress,
                           minHeight: 8,
                           backgroundColor: AppColors.border,
-                          valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+                          valueColor: AlwaysStoppedAnimation(AppColors.accent),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -206,7 +206,7 @@ class _UpdateGateState extends State<UpdateGate> {
                         style: TextStyle(color: color, fontSize: 13, height: 1.4)),
                     Expanded(
                       child: Text(t,
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12.5,
                               height: 1.45)),

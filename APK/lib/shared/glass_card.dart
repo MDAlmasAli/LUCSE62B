@@ -3,7 +3,7 @@ import '../core/app_colors.dart';
 
 /// Frosted-glass container — the website's `backdrop-filter: blur()` panels.
 ///
-/// Note: the app background is a solid, opaque dark colour, so a real
+/// Note: the app background is a solid, opaque colour in both themes, so a real
 /// `BackdropFilter` blur is visually a no-op here while costing a separate
 /// render-layer + saveLayer per card — that made long lists (Students, Retake)
 /// stutter badly while scrolling. We render an equivalent opaque card instead,

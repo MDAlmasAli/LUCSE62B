@@ -140,25 +140,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: const Text(
+        title: Text(
           'Clear attendance?',
           style: TextStyle(color: AppColors.textBright, fontSize: 16),
         ),
-        content: const Text(
+        content: Text(
           "This clears everyone's attendance for today.",
           style: TextStyle(color: AppColors.textSecondary, fontSize: 13.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(
+            child: Text(
               'Cancel',
               style: TextStyle(color: AppColors.muted),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Clear', style: TextStyle(color: AppColors.red)),
+            child: Text('Clear', style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -272,7 +272,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             onPressed: () => context.canPop() ? context.pop() : context.go('/'),
           ),
         ),
-        body: const Center(
+        body: Center(
           child: Padding(
             padding: EdgeInsets.all(32),
             child: Text(
@@ -313,7 +313,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           IconButton(
             tooltip: 'Export PDF',
             icon: _busyPdf
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
@@ -332,7 +332,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ],
       ),
       body: _loading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(color: AppColors.accent),
             )
           : Column(
@@ -358,11 +358,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       const SizedBox(height: 10),
                       TextField(
                         controller: _teacher,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.text,
                           fontSize: 13.5,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Course teacher',
                           hintText: 'Auto-selected with the course',
                           prefixIcon: Icon(
@@ -374,13 +374,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       ),
                       const SizedBox(height: 10),
                       TextField(
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.text,
                           fontSize: 13.5,
                         ),
                         onChanged: (v) =>
                             setState(() => _query = v.trim().toLowerCase()),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Search name or ID...',
                           isDense: true,
                           prefixIcon: Icon(
@@ -400,7 +400,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     onRefresh: _refresh,
                     child: filtered.isEmpty
                         ? ListView(
-                            children: const [
+                            children: [
                               Padding(
                                 padding: EdgeInsets.only(top: 80),
                                 child: Center(
@@ -434,7 +434,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ),
         Text(
           label,
-          style: const TextStyle(color: AppColors.muted, fontSize: 11),
+          style: TextStyle(color: AppColors.muted, fontSize: 11),
         ),
       ],
     );
@@ -450,7 +450,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           stat('Total', total, AppColors.textBright),
-          stat('Present', present, const Color(0xFF34D399)),
+          stat('Present', present, AppColors.greenBright),
           stat('Absent', absent, AppColors.red),
         ],
       ),
@@ -459,7 +459,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Widget _card(_Student s, int serial) {
     final isPresent = _present.contains(s.id);
-    const green = Color(0xFF34D399);
+    final green = AppColors.greenBright;
     return Padding(
       padding: const EdgeInsets.only(bottom: 9),
       child: GestureDetector(
@@ -496,7 +496,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     : Center(
                         child: Text(
                           '$serial',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.muted,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -522,7 +522,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     const SizedBox(height: 2),
                     Text(
                       s.id,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.muted,
                         fontSize: 11.5,
                       ),
@@ -531,7 +531,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 ),
               ),
               if (isPresent)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(left: 8),
                   child: Text(
                     'Present',

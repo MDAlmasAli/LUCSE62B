@@ -73,7 +73,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
   Widget build(BuildContext context) {
     final g = _g;
     if (g == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.bg,
         body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
       );
@@ -219,7 +219,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
           ),
           child: Column(
             children: [
-              const Text('ROOM CODE', style: TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1)),
+              Text('ROOM CODE', style: TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1)),
               const SizedBox(height: 4),
               GestureDetector(
                 onTap: () {
@@ -230,14 +230,14 @@ class _ImposterScreenState extends State<ImposterScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(g.roomCode ?? '',
-                        style: const TextStyle(color: AppColors.textBright, fontSize: 30, fontWeight: FontWeight.w900, letterSpacing: 6)),
+                        style: TextStyle(color: AppColors.textBright, fontSize: 30, fontWeight: FontWeight.w900, letterSpacing: 6)),
                     const SizedBox(width: 8),
-                    const Icon(Icons.copy_rounded, size: 18, color: AppColors.accentBright),
+                    Icon(Icons.copy_rounded, size: 18, color: AppColors.accentBright),
                   ],
                 ),
               ),
               Text('${approved.length}/${g.room!.maxPlayers} players',
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12.5)),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5)),
             ],
           ),
         ),
@@ -255,14 +255,14 @@ class _ImposterScreenState extends State<ImposterScreen> {
           const SizedBox(height: 14),
           _primaryBtn('Start Game', Icons.play_arrow_rounded, approved.length < 2 ? null : () => _startGame(g)),
         ] else
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Center(child: Text('Waiting for the host to start…', style: TextStyle(color: AppColors.muted))),
           ),
         if (me != null && !me.isApproved)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 10),
-            child: Center(child: Text('Waiting for host approval…', style: TextStyle(color: Color(0xFFFBBF24)))),
+            child: Center(child: Text('Waiting for host approval…', style: TextStyle(color: AppColors.amberBright))),
           ),
         const SizedBox(height: 10),
         _secondaryBtn('Leave Room', Icons.logout_rounded, _leaveToHub),
@@ -279,16 +279,16 @@ class _ImposterScreenState extends State<ImposterScreen> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
-          color: const Color(0xFFFBBF24).withValues(alpha: 0.08),
+          color: AppColors.amberBright.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: const Color(0xFFFBBF24).withValues(alpha: 0.3)),
+          border: Border.all(color: AppColors.amberBright.withValues(alpha: 0.3)),
         ),
         child: Row(children: [
           _avatar(p.playerName, 34),
           const SizedBox(width: 10),
-          Expanded(child: Text(p.playerName, style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w600))),
-          IconButton(icon: const Icon(Icons.check_circle, color: Color(0xFF34D399)), onPressed: () => g.approve(p.playerId)),
-          IconButton(icon: const Icon(Icons.cancel, color: AppColors.red), onPressed: () => g.reject(p.playerId)),
+          Expanded(child: Text(p.playerName, style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w600))),
+          IconButton(icon: Icon(Icons.check_circle, color: AppColors.greenBright), onPressed: () => g.approve(p.playerId)),
+          IconButton(icon: Icon(Icons.cancel, color: AppColors.red), onPressed: () => g.reject(p.playerId)),
         ]),
       );
 
@@ -308,16 +308,16 @@ class _ImposterScreenState extends State<ImposterScreen> {
         const SizedBox(width: 11),
         Expanded(
           child: Text('${p.playerName}${isMe ? ' (You)' : ''}',
-              style: const TextStyle(color: AppColors.textBright, fontWeight: FontWeight.w600)),
+              style: TextStyle(color: AppColors.textBright, fontWeight: FontWeight.w600)),
         ),
         if (p.isHost)
           Container(
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
             decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(6)),
-            child: const Text('HOST', style: TextStyle(color: AppColors.accentBright, fontSize: 9.5, fontWeight: FontWeight.w800)),
+            child: Text('HOST', style: TextStyle(color: AppColors.accentBright, fontSize: 9.5, fontWeight: FontWeight.w800)),
           ),
-        Icon(Icons.circle, size: 9, color: isOnline ? const Color(0xFF34D399) : AppColors.muted),
+        Icon(Icons.circle, size: 9, color: isOnline ? AppColors.greenBright : AppColors.muted),
       ]),
     );
   }
@@ -327,7 +327,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
     final imp = g.me?.isImposter ?? false;
     final approved = g.players.where((p) => p.active).toList();
     final ready = approved.where((p) => p.isReady).length;
-    final color = imp ? AppColors.red : const Color(0xFF34D399);
+    final color = imp ? AppColors.red : AppColors.greenBright;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
       children: [
@@ -345,21 +345,21 @@ class _ImposterScreenState extends State<ImposterScreen> {
                 style: TextStyle(color: color, fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: 2)),
             const SizedBox(height: 14),
             if (!imp) ...[
-              const Text('THE WORD', style: TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1)),
+              Text('THE WORD', style: TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1)),
               const SizedBox(height: 4),
               Text(g.room!.word ?? '',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textBright, fontSize: 24, fontWeight: FontWeight.w800)),
+                  style: TextStyle(color: AppColors.textBright, fontSize: 24, fontWeight: FontWeight.w800)),
               const SizedBox(height: 10),
-              const Text('Give clues — but don\'t say it directly. Find the imposter!',
+              Text('Give clues — but don\'t say it directly. Find the imposter!',
                   textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             ] else
-              const Text("You don't know the word. Blend in — don't get caught!",
+              Text("You don't know the word. Blend in — don't get caught!",
                   textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary, fontSize: 13.5)),
           ]),
         ),
         const SizedBox(height: 18),
-        Center(child: Text('$ready/${approved.length} players ready', style: const TextStyle(color: AppColors.textSecondary))),
+        Center(child: Text('$ready/${approved.length} players ready', style: TextStyle(color: AppColors.textSecondary))),
         const SizedBox(height: 14),
         if (!(g.me?.isReady ?? false))
           _primaryBtn('I\'m Ready', Icons.check_rounded, () => g.markReady()),
@@ -388,7 +388,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.border)),
           child: Column(children: [
-            const Text('THE WORD', style: TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1)),
+            Text('THE WORD', style: TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1)),
             const SizedBox(height: 4),
             Text(imp ? '??? — You are the imposter!' : (g.room!.word ?? ''),
                 textAlign: TextAlign.center,
@@ -416,7 +416,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
       children: [
         _timerChip(g),
         const SizedBox(height: 8),
-        const Center(child: Text('Who is the imposter?', style: TextStyle(color: AppColors.textBright, fontSize: 17, fontWeight: FontWeight.w800))),
+        Center(child: Text('Who is the imposter?', style: TextStyle(color: AppColors.textBright, fontSize: 17, fontWeight: FontWeight.w800))),
         const SizedBox(height: 16),
         GridView.count(
           crossAxisCount: 3,
@@ -447,7 +447,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Text(p.playerName,
                             maxLines: 1, overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: AppColors.text, fontSize: 12, fontWeight: FontWeight.w600)),
+                            style: TextStyle(color: AppColors.text, fontSize: 12, fontWeight: FontWeight.w600)),
                       ),
                     ],
                   ),
@@ -461,7 +461,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
             padding: const EdgeInsets.only(top: 14),
             child: Center(
               child: Text('You voted for ${g.players.where((p) => p.playerId == g.myVote).map((p) => p.playerName).join()}',
-                  style: const TextStyle(color: AppColors.accentBright, fontWeight: FontWeight.w700)),
+                  style: TextStyle(color: AppColors.accentBright, fontWeight: FontWeight.w700)),
             ),
           ),
         if (g.isHost) ...[
@@ -502,15 +502,15 @@ class _ImposterScreenState extends State<ImposterScreen> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: (r.skipVote ? AppColors.accent : (crewWon ? const Color(0xFF34D399) : AppColors.red)).withValues(alpha: 0.12),
+            color: (r.skipVote ? AppColors.accent : (crewWon ? AppColors.greenBright : AppColors.red)).withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: (r.skipVote ? AppColors.accent : (crewWon ? const Color(0xFF34D399) : AppColors.red)).withValues(alpha: 0.4)),
+            border: Border.all(color: (r.skipVote ? AppColors.accent : (crewWon ? AppColors.greenBright : AppColors.red)).withValues(alpha: 0.4)),
           ),
           child: Column(children: [
             Text(
               r.skipVote ? 'Discussion Over! 🎉' : (crewWon ? 'Crewmates Win! 🎉' : 'Imposter Wins! 🕵️'),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textBright, fontSize: 22, fontWeight: FontWeight.w900),
+              style: TextStyle(color: AppColors.textBright, fontSize: 22, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 6),
             Text(
@@ -518,7 +518,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
                   ? 'No vote — discuss who you think it was!'
                   : (crewWon ? 'You identified the imposter!' : 'The imposter fooled everyone!'),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ]),
         ),
@@ -531,7 +531,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
         if (!r.skipVote) ...[
           _label('VOTE RESULTS'),
           if (voters.isEmpty)
-            const Text('No votes cast', style: TextStyle(color: AppColors.muted))
+            Text('No votes cast', style: TextStyle(color: AppColors.muted))
           else
             ...voters.map((p) {
               final target = approved.where((t) => t.playerId == p.voteFor).toList();
@@ -540,8 +540,8 @@ class _ImposterScreenState extends State<ImposterScreen> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Row(children: [
-                  Text(p.playerName, style: const TextStyle(color: AppColors.text, fontSize: 13)),
-                  const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.muted)),
+                  Text(p.playerName, style: TextStyle(color: AppColors.text, fontSize: 13)),
+                  Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.muted)),
                   Text('$tName${tImp ? ' 🕵️' : ''}',
                       style: TextStyle(color: tImp ? AppColors.red : AppColors.text, fontSize: 13, fontWeight: FontWeight.w700)),
                 ]),
@@ -551,7 +551,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
         ],
         if (r.roundsTotal > 1) ...[
           Row(children: [
-            Expanded(child: _scoreBox('Crewmates', r.crewmateScore, const Color(0xFF34D399))),
+            Expanded(child: _scoreBox('Crewmates', r.crewmateScore, AppColors.greenBright)),
             const SizedBox(width: 10),
             Expanded(child: _scoreBox('Imposters', r.imposterScore, AppColors.red)),
           ]),
@@ -563,7 +563,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
           const SizedBox(height: 10),
           _secondaryBtn('Back to Lobby', Icons.home_rounded, () => g.backToLobby()),
         ] else
-          const Center(child: Padding(padding: EdgeInsets.all(8), child: Text('Waiting for host…', style: TextStyle(color: AppColors.muted)))),
+          Center(child: Padding(padding: EdgeInsets.all(8), child: Text('Waiting for host…', style: TextStyle(color: AppColors.muted)))),
         const SizedBox(height: 10),
         _secondaryBtn('Leave Room', Icons.logout_rounded, _leaveToHub),
       ],
@@ -612,7 +612,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(p.playerName, maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: AppColors.text, fontSize: 11.5, fontWeight: FontWeight.w600)),
+              style: TextStyle(color: AppColors.text, fontSize: 11.5, fontWeight: FontWeight.w600)),
         ),
       ]),
     );
@@ -630,12 +630,12 @@ class _ImposterScreenState extends State<ImposterScreen> {
       return Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Row(children: [
-          Expanded(child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+          Expanded(child: Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
           DropdownButton<String>(
             value: value,
             dropdownColor: AppColors.surface,
             underline: const SizedBox.shrink(),
-            style: const TextStyle(color: AppColors.textBright, fontSize: 13, fontWeight: FontWeight.w600),
+            style: TextStyle(color: AppColors.textBright, fontSize: 13, fontWeight: FontWeight.w600),
             items: opts.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
             onChanged: (v) { if (v != null) onPick(v); },
           ),
@@ -647,10 +647,10 @@ class _ImposterScreenState extends State<ImposterScreen> {
       return Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Row(children: [
-          Expanded(child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13))),
-          IconButton(visualDensity: VisualDensity.compact, icon: const Icon(Icons.remove_circle_outline, size: 20, color: AppColors.muted), onPressed: value > minV ? () => onSet(value - 1) : null),
-          Text('$value', style: const TextStyle(color: AppColors.textBright, fontWeight: FontWeight.w700)),
-          IconButton(visualDensity: VisualDensity.compact, icon: const Icon(Icons.add_circle_outline, size: 20, color: AppColors.muted), onPressed: value < maxV ? () => onSet(value + 1) : null),
+          Expanded(child: Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+          IconButton(visualDensity: VisualDensity.compact, icon: Icon(Icons.remove_circle_outline, size: 20, color: AppColors.muted), onPressed: value > minV ? () => onSet(value - 1) : null),
+          Text('$value', style: TextStyle(color: AppColors.textBright, fontWeight: FontWeight.w700)),
+          IconButton(visualDensity: VisualDensity.compact, icon: Icon(Icons.add_circle_outline, size: 20, color: AppColors.muted), onPressed: value < maxV ? () => onSet(value + 1) : null),
         ]),
       );
     }
@@ -659,7 +659,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
       return Padding(
         padding: const EdgeInsets.only(bottom: 4),
         child: Row(children: [
-          Expanded(child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+          Expanded(child: Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
           Switch(value: value, activeThumbColor: AppColors.accent, onChanged: onSet),
         ]),
       );
@@ -699,16 +699,16 @@ class _ImposterScreenState extends State<ImposterScreen> {
   Widget _hero(String emoji, String title, String sub) => Column(children: [
         Text(emoji, style: const TextStyle(fontSize: 46)),
         const SizedBox(height: 8),
-        Text(title, style: const TextStyle(color: AppColors.textBright, fontSize: 24, fontWeight: FontWeight.w900)),
+        Text(title, style: TextStyle(color: AppColors.textBright, fontSize: 24, fontWeight: FontWeight.w900)),
         const SizedBox(height: 4),
-        Text(sub, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+        Text(sub, textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
       ]);
 
   Widget _card({required String title, required Widget child}) => Container(
         padding: const EdgeInsets.all(15),
         decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.border)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(color: AppColors.textBright, fontSize: 15, fontWeight: FontWeight.w800)),
+          Text(title, style: TextStyle(color: AppColors.textBright, fontSize: 15, fontWeight: FontWeight.w800)),
           const SizedBox(height: 12),
           child,
         ]),
@@ -716,7 +716,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
 
   Widget _label(String s) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Text(s, style: const TextStyle(color: AppColors.accentBright, fontSize: 11.5, fontWeight: FontWeight.w800, letterSpacing: 0.6)),
+        child: Text(s, style: TextStyle(color: AppColors.accentBright, fontSize: 11.5, fontWeight: FontWeight.w800, letterSpacing: 0.6)),
       );
 
   Widget _primaryBtn(String label, IconData icon, VoidCallback? onTap) => SizedBox(
@@ -733,7 +733,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
         width: double.infinity,
         child: OutlinedButton.icon(
           onPressed: onTap,
-          style: OutlinedButton.styleFrom(foregroundColor: AppColors.textSecondary, side: const BorderSide(color: AppColors.border), padding: const EdgeInsets.symmetric(vertical: 12)),
+          style: OutlinedButton.styleFrom(foregroundColor: AppColors.textSecondary, side: BorderSide(color: AppColors.border), padding: const EdgeInsets.symmetric(vertical: 12)),
           icon: Icon(icon, size: 16),
           label: Text(label),
         ),
@@ -744,7 +744,7 @@ class _ImposterScreenState extends State<ImposterScreen> {
         decoration: BoxDecoration(color: c.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: c.withValues(alpha: 0.3))),
         child: Column(children: [
           Text('$v', style: TextStyle(color: c, fontSize: 26, fontWeight: FontWeight.w900)),
-          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
         ]),
       );
 
@@ -782,10 +782,10 @@ class _ImposterScreenState extends State<ImposterScreen> {
           context: context,
           builder: (_) => AlertDialog(
             backgroundColor: AppColors.card,
-            content: Text(msg, style: const TextStyle(color: AppColors.text)),
+            content: Text(msg, style: TextStyle(color: AppColors.text)),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Stay', style: TextStyle(color: AppColors.muted))),
-              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Leave', style: TextStyle(color: AppColors.red))),
+              TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Stay', style: TextStyle(color: AppColors.muted))),
+              TextButton(onPressed: () => Navigator.pop(context, true), child: Text('Leave', style: TextStyle(color: AppColors.red))),
             ],
           ),
         ) ??

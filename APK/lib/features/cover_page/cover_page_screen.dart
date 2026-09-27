@@ -225,12 +225,12 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
       lastDate: DateTime(now.year + 2),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.dark(
+          colorScheme: ColorScheme.dark(
             primary: AppColors.accent,
             surface: AppColors.card,
             onSurface: AppColors.text,
           ),
-          dialogTheme: const DialogThemeData(backgroundColor: AppColors.bg),
+          dialogTheme: DialogThemeData(backgroundColor: AppColors.bg),
         ),
         child: child!,
       ),
@@ -339,8 +339,8 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
             const SizedBox(height: 4),
             TextButton.icon(
               onPressed: _addMember,
-              icon: const Icon(Icons.add, size: 18, color: AppColors.accentBright),
-              label: const Text('Add Member',
+              icon: Icon(Icons.add, size: 18, color: AppColors.accentBright),
+              label: Text('Add Member',
                   style: TextStyle(color: AppColors.accentBright)),
             ),
           ],
@@ -358,7 +358,7 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
             onPressed: _export,
           ),
           const SizedBox(height: 8),
-          const Center(
+          Center(
             child: Text('Generates the cover page and opens save / share',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.muted, fontSize: 11.5)),
@@ -460,7 +460,7 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
         const SizedBox(height: 10),
         Row(
           children: [
-            const Text('Group submission',
+            Text('Group submission',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             const Spacer(),
             Switch(
@@ -498,14 +498,14 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
               padding: const EdgeInsets.only(top: 6),
               child: TextField(
                 controller: m.id,
-                style: const TextStyle(color: AppColors.text, fontSize: 13),
+                style: TextStyle(color: AppColors.text, fontSize: 13),
                 decoration: const InputDecoration(labelText: 'ID', isDense: true),
               ),
             ),
           ),
           if (_members.length > 1)
             IconButton(
-              icon: const Icon(Icons.remove_circle_outline, color: AppColors.red, size: 20),
+              icon: Icon(Icons.remove_circle_outline, color: AppColors.red, size: 20),
               onPressed: () => setState(() {
                 m.name.dispose();
                 m.id.dispose();
@@ -543,7 +543,7 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
                       color: Colors.white, size: 18),
                 ),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -591,7 +591,7 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
   Widget _sectionLabel(String s) => Padding(
         padding: const EdgeInsets.fromLTRB(2, 16, 2, 8),
         child: Text(s.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
                 color: AppColors.accentBright,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -602,7 +602,7 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
         padding: const EdgeInsets.only(bottom: 10),
         child: TextField(
           controller: c,
-          style: const TextStyle(color: AppColors.text, fontSize: 14),
+          style: TextStyle(color: AppColors.text, fontSize: 14),
           decoration: InputDecoration(labelText: label, hintText: hint),
         ),
       );
@@ -611,13 +611,13 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
         padding: const EdgeInsets.only(bottom: 10),
         child: TextField(
           controller: _date,
-          style: const TextStyle(color: AppColors.text, fontSize: 14),
+          style: TextStyle(color: AppColors.text, fontSize: 14),
           decoration: InputDecoration(
             labelText: 'Date of Submission',
             hintText: 'e.g. 25th April 2026',
             suffixIcon: IconButton(
               tooltip: 'Pick a date',
-              icon: const Icon(Icons.calendar_month_rounded, color: AppColors.accentBright, size: 20),
+              icon: Icon(Icons.calendar_month_rounded, color: AppColors.accentBright, size: 20),
               onPressed: _pickDate,
             ),
           ),
@@ -631,7 +631,7 @@ class _CoverPageScreenState extends State<CoverPageScreen> {
         isExpanded: true,
         dropdownColor: AppColors.card,
         decoration: InputDecoration(labelText: label),
-        style: const TextStyle(color: AppColors.text, fontSize: 14),
+        style: TextStyle(color: AppColors.text, fontSize: 14),
         items: items
             .map((e) => DropdownMenuItem(value: e, child: Text(e)))
             .toList(),

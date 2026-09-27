@@ -105,7 +105,7 @@ class _CalendarWidgetScreenState extends State<CalendarWidgetScreen> {
             icon: const Icon(Icons.refresh_rounded),
             label: const Text('Refresh Home Widget'),
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(4, 8, 4, 4),
             child: Text(
               'Manual add: long-press an empty area on the Home screen → '
@@ -158,7 +158,7 @@ class _CalendarWidgetScreenState extends State<CalendarWidgetScreen> {
             const SizedBox(height: 10),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.text,
                 fontWeight: FontWeight.w800,
                 fontSize: 15,
@@ -167,7 +167,7 @@ class _CalendarWidgetScreenState extends State<CalendarWidgetScreen> {
             const SizedBox(height: 7),
             Text(
               body,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 12.5,
                 height: 1.5,

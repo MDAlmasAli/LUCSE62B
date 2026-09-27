@@ -145,7 +145,7 @@ class _SuggestFieldState extends State<SuggestField> {
               shrinkWrap: true,
               itemCount: _matches.length,
               separatorBuilder: (_, _) =>
-                  const Divider(height: 1, thickness: 1, color: AppColors.border),
+                  Divider(height: 1, thickness: 1, color: AppColors.border),
               itemBuilder: (_, i) {
                 final s = _matches[i];
                 final hasSecondary = s.secondary != null && s.secondary!.isNotEmpty;
@@ -160,12 +160,12 @@ class _SuggestFieldState extends State<SuggestField> {
                         // never cut off (the site shows them in full too).
                         Text(s.text,
                             softWrap: true,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppColors.text, fontSize: 13.5, height: 1.3)),
                         if (hasSecondary) ...[
                           const SizedBox(height: 2),
                           Text(s.secondary!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppColors.accentBright, fontSize: 11.5)),
                         ],
                       ],
@@ -188,7 +188,7 @@ class _SuggestFieldState extends State<SuggestField> {
         controller: widget.controller,
         focusNode: _focus,
         keyboardType: widget.keyboardType,
-        style: const TextStyle(color: AppColors.text, fontSize: 14),
+        style: TextStyle(color: AppColors.text, fontSize: 14),
         decoration: InputDecoration(labelText: widget.label, hintText: widget.hint),
         onChanged: (v) {
           widget.onChanged?.call(v);

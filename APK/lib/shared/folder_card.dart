@@ -60,7 +60,7 @@ class FolderCard extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               Text(title,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppColors.textBright,
                       fontWeight: FontWeight.w700,
                       fontSize: 15)),
@@ -68,7 +68,7 @@ class FolderCard extends StatelessWidget {
               Text(subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppColors.textSecondary, fontSize: 11.5, height: 1.3)),
             ],
           ),

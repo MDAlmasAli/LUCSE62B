@@ -52,7 +52,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+            return Center(child: CircularProgressIndicator(color: AppColors.accent));
           }
           final albums = snap.data ?? const <_Album>[];
           if (albums.isEmpty) {
@@ -80,7 +80,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   Widget _empty() => ListView(
-        children: const [
+        children: [
           SizedBox(height: 120),
           Icon(Icons.photo_library_outlined, color: AppColors.muted, size: 40),
           SizedBox(height: 12),
@@ -167,13 +167,13 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     Text(album.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppColors.textBright,
                             fontWeight: FontWeight.w700,
                             fontSize: 13.5)),
                     const SizedBox(height: 2),
                     Row(
-                      children: const [
+                      children: [
                         Icon(Icons.folder_open_rounded, size: 11, color: AppColors.accentBright),
                         SizedBox(width: 4),
                         Text('Tap to view photos',
@@ -192,7 +192,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
   Widget _coverPlaceholder() => Container(
         color: AppColors.cardElevated,
-        child: const Icon(Icons.photo_library_rounded, color: AppColors.muted, size: 30),
+        child: Icon(Icons.photo_library_rounded, color: AppColors.muted, size: 30),
       );
 }
 
@@ -218,7 +218,7 @@ class _AlbumScreen extends StatelessWidget {
             padding: const EdgeInsets.only(right: 14),
             child: Center(
               child: Text('${album.ids.length} photos',
-                  style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
+                  style: TextStyle(color: AppColors.muted, fontSize: 12.5)),
             ),
           ),
         ],
@@ -246,7 +246,7 @@ class _AlbumScreen extends StatelessWidget {
                 placeholder: (_, _) => Container(color: AppColors.cardElevated),
                 errorWidget: (_, _, _) => Container(
                   color: AppColors.cardElevated,
-                  child: const Icon(Icons.broken_image_outlined,
+                  child: Icon(Icons.broken_image_outlined,
                       color: AppColors.muted, size: 20),
                 ),
               ),
@@ -298,7 +298,7 @@ class _PhotoViewerState extends State<_PhotoViewer> {
             child: CachedNetworkImage(
               imageUrl: K.driveImage(widget.ids[i], 1080),
               fit: BoxFit.contain,
-              placeholder: (_, _) => const Center(
+              placeholder: (_, _) => Center(
                   child: CircularProgressIndicator(color: AppColors.accent)),
               errorWidget: (_, _, _) =>
                   const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 40),

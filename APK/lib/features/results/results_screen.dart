@@ -171,7 +171,7 @@ class _ResultsScreenState extends State<ResultsScreen>
             : null,
       ),
       body: _loading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(color: AppColors.accent),
             )
           : _blocked
@@ -241,7 +241,7 @@ class _ResultsScreenState extends State<ResultsScreen>
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 28),
       children: [
-        const Text(
+        Text(
           'Compare with another student',
           style: TextStyle(
             color: AppColors.textBright,
@@ -250,7 +250,7 @@ class _ResultsScreenState extends State<ResultsScreen>
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'Enter a classmate’s Student ID and date of birth to compare results side by side.',
           style: TextStyle(
             color: AppColors.textSecondary,
@@ -262,8 +262,8 @@ class _ResultsScreenState extends State<ResultsScreen>
         TextField(
           controller: _cmpId,
           keyboardType: TextInputType.number,
-          style: const TextStyle(color: AppColors.text, fontSize: 14),
-          decoration: const InputDecoration(
+          style: TextStyle(color: AppColors.text, fontSize: 14),
+          decoration: InputDecoration(
             labelText: 'Student ID',
             hintText: 'e.g. 0182320012101068',
             prefixIcon: Icon(
@@ -278,7 +278,7 @@ class _ResultsScreenState extends State<ResultsScreen>
           borderRadius: BorderRadius.circular(11),
           onTap: _pickCmpDob,
           child: InputDecorator(
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Date of birth',
               prefixIcon: Icon(
                 Icons.cake_outlined,
@@ -328,7 +328,7 @@ class _ResultsScreenState extends State<ResultsScreen>
           Text(
             _cmpError!,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.red, fontSize: 12.5),
+            style: TextStyle(color: AppColors.red, fontSize: 12.5),
           ),
         ],
         if (_cmpData != null) ...[
@@ -348,7 +348,7 @@ class _ResultsScreenState extends State<ResultsScreen>
       lastDate: now,
       builder: (ctx, child) => Theme(
         data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
+          colorScheme: ColorScheme.dark(
             primary: AppColors.accent,
             surface: AppColors.card,
           ),
@@ -412,7 +412,7 @@ class _ResultsScreenState extends State<ResultsScreen>
               isMe ? 'You' : r.name.split(' ').first,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textBright,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
@@ -427,7 +427,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                 fontWeight: FontWeight.w800,
               ),
             ),
-            const Text(
+            Text(
               'CGPA',
               style: TextStyle(color: AppColors.muted, fontSize: 10),
             ),
@@ -455,11 +455,11 @@ class _ResultsScreenState extends State<ResultsScreen>
       children: [
         Text(
           label,
-          style: const TextStyle(color: AppColors.muted, fontSize: 11.5),
+          style: TextStyle(color: AppColors.muted, fontSize: 11.5),
         ),
         Text(
           v,
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.text,
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
@@ -476,7 +476,7 @@ class _ResultsScreenState extends State<ResultsScreen>
       child: Text(
         msg,
         textAlign: TextAlign.center,
-        style: const TextStyle(
+        style: TextStyle(
           color: AppColors.muted,
           fontSize: 14,
           height: 1.5,
@@ -491,13 +491,13 @@ class _ResultsScreenState extends State<ResultsScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          Icon(
             Icons.lock_clock_rounded,
             color: AppColors.muted,
             size: 46,
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             "Couldn't fetch your result right now",
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -507,7 +507,7 @@ class _ResultsScreenState extends State<ResultsScreen>
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Leading University now asks for a verification (CAPTCHA) before showing results, so it can’t be loaded automatically. Open your result on the LU page, copy it, then import it here once — it’ll be saved for next time.',
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -536,12 +536,12 @@ class _ResultsScreenState extends State<ResultsScreen>
               Uri.parse('https://lus.ac.bd/result/'),
               mode: LaunchMode.externalApplication,
             ),
-            icon: const Icon(
+            icon: Icon(
               Icons.open_in_new_rounded,
               size: 16,
               color: AppColors.accentBright,
             ),
-            label: const Text(
+            label: Text(
               'Open LU Result Page',
               style: TextStyle(color: AppColors.accentBright),
             ),
@@ -556,7 +556,7 @@ class _ResultsScreenState extends State<ResultsScreen>
           const SizedBox(height: 6),
           TextButton(
             onPressed: _load,
-            child: const Text(
+            child: Text(
               'Try again',
               style: TextStyle(color: AppColors.muted),
             ),
@@ -591,7 +591,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                   children: [
                     Text(
                       d.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textBright,
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
@@ -600,7 +600,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                     const SizedBox(height: 3),
                     Text(
                       '${d.id}${d.department.isNotEmpty ? '  ·  ${d.department}' : ''}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12.5,
                       ),
@@ -632,7 +632,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                       height: 1,
                     ),
                   ),
-                  const Text(
+                  Text(
                     'CGPA',
                     style: TextStyle(
                       color: AppColors.muted,
@@ -676,7 +676,7 @@ class _ResultsScreenState extends State<ResultsScreen>
         const SizedBox(width: 4),
         Text(
           text,
-          style: const TextStyle(color: AppColors.accentBright, fontSize: 10.5),
+          style: TextStyle(color: AppColors.accentBright, fontSize: 10.5),
         ),
       ],
     ),
@@ -698,7 +698,7 @@ class _ResultsScreenState extends State<ResultsScreen>
         children: [
           Row(
             children: [
-              const Text(
+              Text(
                 'Degree Credit Progress',
                 style: TextStyle(
                   color: AppColors.textSecondary,
@@ -709,7 +709,7 @@ class _ResultsScreenState extends State<ResultsScreen>
               const Spacer(),
               Text(
                 '${done.toStringAsFixed(done % 1 == 0 ? 0 : 1)} / 160 cr',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.accentBright,
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
@@ -724,13 +724,13 @@ class _ResultsScreenState extends State<ResultsScreen>
               value: pct,
               minHeight: 10,
               backgroundColor: AppColors.surface,
-              valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+              valueColor: AlwaysStoppedAnimation(AppColors.accent),
             ),
           ),
           const SizedBox(height: 6),
           Text(
             '${(pct * 100).toStringAsFixed(0)}% complete',
-            style: const TextStyle(color: AppColors.muted, fontSize: 11),
+            style: TextStyle(color: AppColors.muted, fontSize: 11),
           ),
         ],
       ),
@@ -743,10 +743,10 @@ class _ResultsScreenState extends State<ResultsScreen>
     Color color;
     if (req == null) {
       msg = 'You have completed the full degree credits.';
-      color = const Color(0xFF34D399);
+      color = AppColors.greenBright;
     } else if (req <= 0) {
       msg = 'Already achieved — keep it up!';
-      color = const Color(0xFF34D399);
+      color = AppColors.greenBright;
     } else if (req > 4.0) {
       msg = 'Not reachable within the remaining credits.';
       color = AppColors.red;
@@ -765,7 +765,7 @@ class _ResultsScreenState extends State<ResultsScreen>
         children: [
           Row(
             children: [
-              const Text(
+              Text(
                 'Target CGPA',
                 style: TextStyle(
                   color: AppColors.textSecondary,
@@ -784,7 +784,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                 child: Text(
                   _target.toStringAsFixed(2),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textBright,
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -839,17 +839,17 @@ class _ResultsScreenState extends State<ResultsScreen>
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF34D399).withValues(alpha: 0.08),
+          color: AppColors.greenBright.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: const Color(0xFF34D399).withValues(alpha: 0.3),
+            color: AppColors.greenBright.withValues(alpha: 0.3),
           ),
         ),
-        child: const Row(
+        child: Row(
           children: [
             Icon(
               Icons.check_circle_rounded,
-              color: Color(0xFF34D399),
+              color: AppColors.greenBright,
               size: 20,
             ),
             SizedBox(width: 10),
@@ -876,23 +876,23 @@ class _ResultsScreenState extends State<ResultsScreen>
             if (ri.fail.isNotEmpty && ri.improve.isNotEmpty)
               const SizedBox(width: 8),
             if (ri.improve.isNotEmpty)
-              _riBadge('${ri.improve.length} Improve', const Color(0xFFFB923C)),
+              _riBadge('${ri.improve.length} Improve', AppColors.orangeBright),
           ],
         ),
         const SizedBox(height: 10),
         ...ri.fail.map((c) => _riRow(c, AppColors.red, 'RETAKE')),
-        ...ri.improve.map((c) => _riRow(c, const Color(0xFFFB923C), 'IMPROVE')),
+        ...ri.improve.map((c) => _riRow(c, AppColors.orangeBright, 'IMPROVE')),
         const SizedBox(height: 6),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: () => context.push('/info/retake'),
-            icon: const Icon(
+            icon: Icon(
               Icons.open_in_new_rounded,
               size: 16,
               color: AppColors.accentBright,
             ),
-            label: const Text(
+            label: Text(
               'Find sections in Retake & Improve',
               style: TextStyle(color: AppColors.accentBright, fontSize: 12.5),
             ),
@@ -944,7 +944,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                 c.title.isEmpty ? c.code : c.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.text,
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
@@ -953,7 +953,7 @@ class _ResultsScreenState extends State<ResultsScreen>
               const SizedBox(height: 2),
               Text(
                 c.code,
-                style: const TextStyle(color: AppColors.muted, fontSize: 10.5),
+                style: TextStyle(color: AppColors.muted, fontSize: 10.5),
               ),
             ],
           ),
@@ -983,7 +983,7 @@ class _ResultsScreenState extends State<ResultsScreen>
       children: [
         Text(
           v,
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.textBright,
             fontSize: 17,
             fontWeight: FontWeight.w800,
@@ -992,7 +992,7 @@ class _ResultsScreenState extends State<ResultsScreen>
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(color: AppColors.muted, fontSize: 11),
+          style: TextStyle(color: AppColors.muted, fontSize: 11),
         ),
       ],
     ),
@@ -1056,7 +1056,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                   child: Text(
                     '${e.value}',
                     textAlign: TextAlign.right,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
                     ),
@@ -1092,7 +1092,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                     _shortSem(s),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 11.5,
                     ),
@@ -1151,7 +1151,7 @@ class _ResultsScreenState extends State<ResultsScreen>
       child: Theme(
         data: ThemeData.dark().copyWith(
           dividerColor: Colors.transparent,
-          colorScheme: const ColorScheme.dark(primary: AppColors.accent),
+          colorScheme: ColorScheme.dark(primary: AppColors.accent),
         ),
         child: Container(
           decoration: BoxDecoration(
@@ -1171,22 +1171,22 @@ class _ResultsScreenState extends State<ResultsScreen>
                   child: Text(
                     s.name,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textBright,
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
                   ),
                 ),
-                if (isBest) _semBadge('🏆 Best', const Color(0xFF34D399)),
-                if (isWorst) _semBadge('↓ Lowest', const Color(0xFFFB923C)),
+                if (isBest) _semBadge('🏆 Best', AppColors.greenBright),
+                if (isWorst) _semBadge('↓ Lowest', AppColors.orangeBright),
               ],
             ),
             subtitle: Padding(
               padding: const EdgeInsets.only(top: 3),
               child: Text(
                 '${s.courses.length} course${s.courses.length == 1 ? '' : 's'} · ${s.credit.toStringAsFixed(s.credit % 1 == 0 ? 0 : 1)} cr',
-                style: const TextStyle(color: AppColors.muted, fontSize: 11.5),
+                style: TextStyle(color: AppColors.muted, fontSize: 11.5),
               ),
             ),
             trailing: Column(
@@ -1201,7 +1201,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                     fontSize: 15,
                   ),
                 ),
-                const Text(
+                Text(
                   'GPA',
                   style: TextStyle(color: AppColors.muted, fontSize: 9.5),
                 ),
@@ -1241,7 +1241,7 @@ class _ResultsScreenState extends State<ResultsScreen>
               children: [
                 Text(
                   c.code.isEmpty ? c.title : c.code,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.text,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
@@ -1254,7 +1254,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                       c.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.muted,
                         fontSize: 11,
                         height: 1.3,
@@ -1270,7 +1270,7 @@ class _ResultsScreenState extends State<ResultsScreen>
               padding: const EdgeInsets.only(right: 8),
               child: Text(
                 '${c.credit.toStringAsFixed(c.credit % 1 == 0 ? 0 : 1)} cr',
-                style: const TextStyle(color: AppColors.muted, fontSize: 11),
+                style: TextStyle(color: AppColors.muted, fontSize: 11),
               ),
             ),
           Container(
@@ -1296,7 +1296,7 @@ class _ResultsScreenState extends State<ResultsScreen>
 
   Widget _sectionLabel(String s) => Text(
     s.toUpperCase(),
-    style: const TextStyle(
+    style: TextStyle(
       color: AppColors.accentBright,
       fontSize: 12,
       fontWeight: FontWeight.w700,
@@ -1312,20 +1312,20 @@ class _ResultsScreenState extends State<ResultsScreen>
   }
 
   static Color _gpaColor(double g) {
-    if (g >= 3.5) return const Color(0xFF34D399);
-    if (g >= 3.0) return const Color(0xFF38BDF8);
-    if (g >= 2.5) return const Color(0xFFFBBF24);
-    if (g > 0) return const Color(0xFFF87171);
+    if (g >= 3.5) return AppColors.greenBright;
+    if (g >= 3.0) return AppColors.blueBright;
+    if (g >= 2.5) return AppColors.amberBright;
+    if (g > 0) return AppColors.redBright;
     return AppColors.muted;
   }
 
   static Color _gradeColor(String grade) {
     final g = grade.toUpperCase();
-    if (g.startsWith('A')) return const Color(0xFF34D399);
-    if (g.startsWith('B')) return const Color(0xFF38BDF8);
-    if (g == 'C+' || g == 'C') return const Color(0xFFFBBF24);
-    if (g == 'D') return const Color(0xFFFB923C);
-    if (g == 'F') return const Color(0xFFF87171);
+    if (g.startsWith('A')) return AppColors.greenBright;
+    if (g.startsWith('B')) return AppColors.blueBright;
+    if (g == 'C+' || g == 'C') return AppColors.amberBright;
+    if (g == 'D') return AppColors.orangeBright;
+    if (g == 'F') return AppColors.redBright;
     return AppColors.muted;
   }
 }
@@ -1415,7 +1415,7 @@ class _ImportSheetState extends State<_ImportSheet> {
                         imageUrl:
                             'https://i.ytimg.com/vi/${video.youtubeId}/hqdefault.jpg',
                         fit: BoxFit.cover,
-                        placeholder: (_, _) => const ColoredBox(
+                        placeholder: (_, _) => ColoredBox(
                           color: AppColors.surface,
                           child: Center(
                             child: CircularProgressIndicator(
@@ -1445,7 +1445,7 @@ class _ImportSheetState extends State<_ImportSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'MOBILE TUTORIAL',
                           style: TextStyle(
                             color: AppColors.accentBright,
@@ -1457,7 +1457,7 @@ class _ImportSheetState extends State<_ImportSheet> {
                         const SizedBox(height: 4),
                         Text(
                           video.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textBright,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -1541,7 +1541,7 @@ class _ImportSheetState extends State<_ImportSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.bg,
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
           border: Border(top: BorderSide(color: AppColors.borderAccent)),
@@ -1566,7 +1566,7 @@ class _ImportSheetState extends State<_ImportSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Import your result',
                 style: TextStyle(
                   color: AppColors.textBright,
@@ -1577,7 +1577,7 @@ class _ImportSheetState extends State<_ImportSheet> {
               const SizedBox(height: 10),
               _tutorialCard(),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 '1. Open the LU result page and view your result.\n2. Tap & hold the text → Select All → Copy.\n3. Paste it below and import.',
                 style: TextStyle(
                   color: AppColors.textSecondary,
@@ -1589,10 +1589,10 @@ class _ImportSheetState extends State<_ImportSheet> {
               TextField(
                 controller: _ctrl,
                 maxLines: 6,
-                style: const TextStyle(color: AppColors.text, fontSize: 13),
+                style: TextStyle(color: AppColors.text, fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Paste your copied result here…',
-                  hintStyle: const TextStyle(
+                  hintStyle: TextStyle(
                     color: AppColors.muted,
                     fontSize: 13,
                   ),
@@ -1600,15 +1600,15 @@ class _ImportSheetState extends State<_ImportSheet> {
                   fillColor: AppColors.card,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: BorderSide(color: AppColors.border),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: BorderSide(color: AppColors.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.accent),
+                    borderSide: BorderSide(color: AppColors.accent),
                   ),
                 ),
               ),
@@ -1616,7 +1616,7 @@ class _ImportSheetState extends State<_ImportSheet> {
                 const SizedBox(height: 10),
                 Text(
                   _error!,
-                  style: const TextStyle(color: AppColors.red, fontSize: 12.5),
+                  style: TextStyle(color: AppColors.red, fontSize: 12.5),
                 ),
               ],
               const SizedBox(height: 14),

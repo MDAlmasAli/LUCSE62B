@@ -33,7 +33,7 @@ class _CourseTeachersScreenState extends State<CourseTeachersScreen> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+            return Center(child: CircularProgressIndicator(color: AppColors.accent));
           }
           final data = snap.data;
           if (data == null || (data.byTeacher.isEmpty && data.byCourse.isEmpty)) {
@@ -69,8 +69,8 @@ class _CourseTeachersScreenState extends State<CourseTeachersScreen> {
           const SizedBox(height: 10),
           TextField(
             onChanged: (v) => setState(() => _query = v.toLowerCase().trim()),
-            style: const TextStyle(color: AppColors.text, fontSize: 14),
-            decoration: const InputDecoration(
+            style: TextStyle(color: AppColors.text, fontSize: 14),
+            decoration: InputDecoration(
               hintText: 'Search teacher, course or code…',
               prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.muted),
               isDense: true,
@@ -154,7 +154,7 @@ class _CourseTeachersScreenState extends State<CourseTeachersScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(t.name,
-                  style: const TextStyle(color: AppColors.textBright, fontSize: 15, fontWeight: FontWeight.w700)),
+                  style: TextStyle(color: AppColors.textBright, fontSize: 15, fontWeight: FontWeight.w700)),
               const SizedBox(height: 4),
               Row(
                 children: [
@@ -165,14 +165,14 @@ class _CourseTeachersScreenState extends State<CourseTeachersScreen> {
                       child: Text(t.desig,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: AppColors.accentBright, fontSize: 12, fontWeight: FontWeight.w600)),
+                          style: TextStyle(color: AppColors.accentBright, fontSize: 12, fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ],
               ),
               if (t.courses.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                const Text('COURSES THIS SEMESTER',
+                Text('COURSES THIS SEMESTER',
                     style: TextStyle(color: AppColors.muted, fontSize: 9.5, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
                 const SizedBox(height: 7),
                 ...t.courses.map((c) => _courseTile(c.code, c.name, c.sections)),
@@ -218,10 +218,10 @@ class _CourseTeachersScreenState extends State<CourseTeachersScreen> {
               ),
               const SizedBox(height: 7),
               Text(c.name.isEmpty ? c.code : c.name,
-                  style: const TextStyle(color: AppColors.textBright, fontSize: 14.5, fontWeight: FontWeight.w700, height: 1.3)),
+                  style: TextStyle(color: AppColors.textBright, fontSize: 14.5, fontWeight: FontWeight.w700, height: 1.3)),
               if (c.teachers.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                const Text('TEACHERS & SECTIONS',
+                Text('TEACHERS & SECTIONS',
                     style: TextStyle(color: AppColors.muted, fontSize: 9.5, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
                 const SizedBox(height: 7),
                 ...c.teachers.map((t) => _teacherTile(t.initials, t.name, t.desig, t.sections)),
@@ -258,7 +258,7 @@ class _CourseTeachersScreenState extends State<CourseTeachersScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(name,
-                      style: const TextStyle(color: AppColors.text, fontSize: 12, fontWeight: FontWeight.w600, height: 1.3)),
+                      style: TextStyle(color: AppColors.text, fontSize: 12, fontWeight: FontWeight.w600, height: 1.3)),
                 ),
               ],
             ],
@@ -288,7 +288,7 @@ class _CourseTeachersScreenState extends State<CourseTeachersScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(name,
-                    style: const TextStyle(color: AppColors.text, fontSize: 13, fontWeight: FontWeight.w600)),
+                    style: TextStyle(color: AppColors.text, fontSize: 13, fontWeight: FontWeight.w600)),
               ),
               if (desig.isNotEmpty)
                 Flexible(
@@ -296,7 +296,7 @@ class _CourseTeachersScreenState extends State<CourseTeachersScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.right,
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
                 ),
             ],
           ),
@@ -339,7 +339,7 @@ class _CourseTeachersScreenState extends State<CourseTeachersScreen> {
     );
   }
 
-  Widget _noMatch() => const Center(
+  Widget _noMatch() => Center(
         child: Text('No matches found.', style: TextStyle(color: AppColors.muted, fontSize: 14)),
       );
 
@@ -347,9 +347,9 @@ class _CourseTeachersScreenState extends State<CourseTeachersScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_rounded, color: AppColors.muted, size: 34),
+            Icon(Icons.cloud_off_rounded, color: AppColors.muted, size: 34),
             const SizedBox(height: 12),
-            const Text('Could not load course teacher info.',
+            Text('Could not load course teacher info.',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
             const SizedBox(height: 14),
             OutlinedButton(

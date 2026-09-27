@@ -89,7 +89,7 @@ class BkashScreen extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(_number,
+                  Text(_number,
                       style: TextStyle(
                           color: AppColors.textBright,
                           fontSize: 20,
@@ -102,7 +102,7 @@ class BkashScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          const Text('Leading University',
+          Text('Leading University',
               style: TextStyle(color: AppColors.accentBright, fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(height: 16),
           Container(
@@ -148,7 +148,7 @@ class BkashScreen extends StatelessWidget {
             const SizedBox(width: 7),
             Expanded(
               child: Text(text,
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.5)),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.5)),
             ),
           ],
         ),
@@ -168,22 +168,22 @@ class BkashScreen extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.border)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Fee Structure',
+                Text('Fee Structure',
                     style: TextStyle(color: AppColors.textBright, fontSize: 14.5, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
-                const Text('Leading University fee codes & payment methods',
+                Text('Leading University fee codes & payment methods',
                     style: TextStyle(color: AppColors.textSecondary, fontSize: 11.5)),
               ],
             ),
           ),
           for (var i = 0; i < fees.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: AppColors.border),
+            if (i > 0) Divider(height: 1, color: AppColors.border),
             _feeRow(context, fees[i]),
           ],
         ],
@@ -202,7 +202,7 @@ class BkashScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(f.head,
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: AppColors.text, fontSize: 13.5, fontWeight: FontWeight.w600, height: 1.35)),
               ),
               if (f.code.isNotEmpty) ...[
@@ -236,7 +236,7 @@ class BkashScreen extends StatelessWidget {
           if (f.method.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(f.method,
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.45)),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.45)),
           ],
         ],
       ),

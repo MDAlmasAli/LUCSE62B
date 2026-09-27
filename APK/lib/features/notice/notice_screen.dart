@@ -33,11 +33,11 @@ class _NoticeScreenState extends State<NoticeScreen> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+            return Center(child: CircularProgressIndicator(color: AppColors.accent));
           }
           final items = snap.data ?? [];
           if (items.isEmpty) {
-            return const Center(
+            return Center(
               child: Text('No notices available right now.',
                   style: TextStyle(color: AppColors.muted, fontSize: 14)),
             );
@@ -92,7 +92,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
                     placeholder: (_, _) => Container(
                       height: 170,
                       color: AppColors.cardElevated,
-                      child: const Center(
+                      child: Center(
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: AppColors.accent)),
                     ),
@@ -104,7 +104,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(title,
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppColors.textBright,
                               fontWeight: FontWeight.w700,
                               fontSize: 14.5,
@@ -112,13 +112,13 @@ class _NoticeScreenState extends State<NoticeScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.schedule, size: 13, color: AppColors.muted),
+                          Icon(Icons.schedule, size: 13, color: AppColors.muted),
                           const SizedBox(width: 5),
                           Text(date,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppColors.muted, fontSize: 11.5)),
                           const Spacer(),
-                          const Icon(Icons.chevron_right_rounded,
+                          Icon(Icons.chevron_right_rounded,
                               size: 18, color: AppColors.accentBright),
                         ],
                       ),
@@ -184,13 +184,13 @@ class _NoticeDetailScreen extends StatelessWidget {
                   placeholder: (_, _) => Container(
                     height: 260,
                     color: AppColors.cardElevated,
-                    child: const Center(
+                    child: Center(
                         child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent)),
                   ),
                   errorWidget: (_, _, _) => Container(
                     height: 160,
                     color: AppColors.cardElevated,
-                    child: const Center(
+                    child: Center(
                         child: Icon(Icons.image_not_supported_outlined, color: AppColors.muted, size: 30)),
                   ),
                 ),
@@ -198,14 +198,14 @@ class _NoticeDetailScreen extends StatelessWidget {
             ),
           if (image.isNotEmpty) const SizedBox(height: 16),
           Text(title,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.textBright, fontWeight: FontWeight.w700, fontSize: 16, height: 1.4)),
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.schedule, size: 14, color: AppColors.muted),
+              Icon(Icons.schedule, size: 14, color: AppColors.muted),
               const SizedBox(width: 6),
-              Text(date, style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
+              Text(date, style: TextStyle(color: AppColors.muted, fontSize: 12.5)),
             ],
           ),
           if (link.isNotEmpty) ...[
@@ -216,7 +216,7 @@ class _NoticeDetailScreen extends StatelessWidget {
               label: const Text('Open on LU website'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.accentBright,
-                side: const BorderSide(color: AppColors.borderAccent),
+                side: BorderSide(color: AppColors.borderAccent),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
             ),

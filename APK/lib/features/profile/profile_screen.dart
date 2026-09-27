@@ -6,6 +6,7 @@ import '../../core/app_colors.dart';
 import '../../core/constants.dart';
 import '../../core/worker_api.dart';
 import '../../data/session.dart';
+import '../../data/theme_controller.dart';
 import '../../data/update_service.dart';
 import '../../shared/avatar_badge.dart';
 import '../../shared/glass_card.dart';
@@ -136,11 +137,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: const Text(
+        title: Text(
           'Logout other devices?',
           style: TextStyle(color: AppColors.text),
         ),
-        content: const Text(
+        content: Text(
           'This phone will stay logged in. Your account will be signed out from other phones and browsers on their next sync.',
           style: TextStyle(color: AppColors.muted),
         ),
@@ -213,7 +214,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Text(
                     s.name,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textBright,
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -233,7 +234,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     child: Text(
                       s.isDemo ? 'Demo session' : 'ID: ${s.id}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.accentBright,
                         fontSize: 12.5,
                         fontFamily: 'monospace',
@@ -259,7 +260,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _badge(
                       Icons.account_balance_rounded,
                       'Leading University',
-                      const Color(0xFF38BDF8),
+                      AppColors.blueBright,
                     ),
                   ],
                 ),
@@ -284,13 +285,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     children: [
                       _row(Icons.badge_outlined, 'Student ID', s.id),
-                      const Divider(height: 18, color: AppColors.border),
+                      Divider(height: 18, color: AppColors.border),
                       _row(
                         Icons.verified_user_outlined,
                         'Status',
                         s.isDemo ? 'Guest demo' : 'Verified student',
                       ),
-                      const Divider(height: 18, color: AppColors.border),
+                      Divider(height: 18, color: AppColors.border),
                       _row(Icons.info_outline, 'App version', _version),
                     ],
                   ),
@@ -300,13 +301,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: () => context.push('/results'),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.bar_chart_rounded,
                         size: 18,
                         color: AppColors.accentBright,
                       ),
                       const SizedBox(width: 12),
-                      const Text(
+                      Text(
                         'My Results',
                         style: TextStyle(
                           color: AppColors.text,
@@ -315,7 +316,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const Spacer(),
-                      const Icon(
+                      Icon(
                         Icons.chevron_right,
                         color: AppColors.muted,
                         size: 20,
@@ -329,13 +330,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onTap: () => context.push('/attendance'),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.how_to_reg_rounded,
                           size: 18,
                           color: AppColors.accentBright,
                         ),
                         const SizedBox(width: 12),
-                        const Text(
+                        Text(
                           'Attendance (Admin)',
                           style: TextStyle(
                             color: AppColors.text,
@@ -344,7 +345,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         const Spacer(),
-                        const Icon(
+                        Icon(
                           Icons.chevron_right,
                           color: AppColors.muted,
                           size: 20,
@@ -354,17 +355,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 10),
                 ],
+                _appearanceCard(),
+                const SizedBox(height: 10),
                 GlassCard(
                   onTap: () => context.push('/notification-preferences'),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.tune_rounded,
                         size: 18,
                         color: AppColors.accentBright,
                       ),
                       const SizedBox(width: 12),
-                      const Text(
+                      Text(
                         'Notification Preferences',
                         style: TextStyle(
                           color: AppColors.text,
@@ -373,7 +376,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const Spacer(),
-                      const Icon(
+                      Icon(
                         Icons.chevron_right,
                         color: AppColors.muted,
                         size: 20,
@@ -386,13 +389,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: () => context.push('/calendar-widget'),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.calendar_month_rounded,
                         size: 18,
                         color: AppColors.accentBright,
                       ),
                       const SizedBox(width: 12),
-                      const Text(
+                      Text(
                         'Calendar & Home Widget',
                         style: TextStyle(
                           color: AppColors.text,
@@ -401,7 +404,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const Spacer(),
-                      const Icon(
+                      Icon(
                         Icons.chevron_right,
                         color: AppColors.muted,
                         size: 20,
@@ -414,13 +417,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: () => context.push('/user-guide'),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.menu_book_rounded,
                         size: 18,
                         color: AppColors.accentBright,
                       ),
                       const SizedBox(width: 12),
-                      const Text(
+                      Text(
                         'User Guide',
                         style: TextStyle(
                           color: AppColors.text,
@@ -429,7 +432,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const Spacer(),
-                      const Icon(
+                      Icon(
                         Icons.chevron_right,
                         color: AppColors.muted,
                         size: 20,
@@ -447,7 +450,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(
+                        : Icon(
                             Icons.shield_outlined,
                             color: AppColors.accentBright,
                           ),
@@ -455,7 +458,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _loggingOutOthers
                           ? 'Logging out other devices...'
                           : 'Logout Other Devices',
-                      style: const TextStyle(color: AppColors.accentBright),
+                      style: TextStyle(color: AppColors.accentBright),
                     ),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -474,8 +477,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     await Session.instance.signOut();
                     if (context.mounted) context.go('/login');
                   },
-                  icon: const Icon(Icons.logout, color: AppColors.red),
-                  label: const Text(
+                  icon: Icon(Icons.logout, color: AppColors.red),
+                  label: Text(
                     'Sign Out',
                     style: TextStyle(color: AppColors.red),
                   ),
@@ -508,7 +511,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(width: 7),
         Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.text,
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
@@ -523,7 +526,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     void add(IconData icon, Color color, String label, String value) {
       if (value.isEmpty) return;
       if (rows.isNotEmpty) {
-        rows.add(const Divider(height: 18, color: AppColors.border));
+        rows.add(Divider(height: 18, color: AppColors.border));
       }
       rows.add(_row(icon, label, value, color: color));
     }
@@ -531,26 +534,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     add(Icons.school_rounded, AppColors.accentBright, 'Programme', a.degree);
     add(
       Icons.bloodtype_rounded,
-      const Color(0xFFF87171),
+      AppColors.redBright,
       'Blood Group',
       a.bloodGroup,
     );
     add(Icons.percent_rounded, AppColors.green, 'Waiver', a.waiver);
     add(
       Icons.man_rounded,
-      const Color(0xFFA78BFA),
+      AppColors.accentBright,
       "Father's Name",
       a.fatherName,
     );
     add(
       Icons.woman_rounded,
-      const Color(0xFFF472B6),
+      AppColors.pinkBright,
       "Mother's Name",
       a.motherName,
     );
     add(
       Icons.location_on_rounded,
-      const Color(0xFF38BDF8),
+      AppColors.blueBright,
       'Address',
       a.address,
     );
@@ -572,7 +575,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       borderRadius: BorderRadius.circular(16),
       border: Border.all(color: AppColors.border),
     ),
-    child: const Row(
+    child: Row(
       children: [
         SizedBox(
           width: 16,
@@ -593,9 +596,99 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ),
   );
 
+  /// Dark / Light / System picker. Mirrors the website's profile
+  /// "Appearance" card; changing it remounts the app with the new palette.
+  Widget _appearanceCard() {
+    final theme = ThemeController.instance;
+    return ListenableBuilder(
+      listenable: theme,
+      builder: (_, _) => GlassCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.palette_outlined,
+                  size: 18,
+                  color: AppColors.accentBright,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Appearance',
+                  style: TextStyle(
+                    color: AppColors.text,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  theme.mode == AppThemeMode.system
+                      ? (theme.isDark ? 'System · Dark' : 'System · Light')
+                      : '${theme.mode.label} mode',
+                  style: TextStyle(color: AppColors.muted, fontSize: 11.5),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                for (final mode in AppThemeMode.values) ...[
+                  Expanded(child: _themeOption(mode, theme)),
+                  if (mode != AppThemeMode.values.last)
+                    const SizedBox(width: 8),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _themeOption(AppThemeMode mode, ThemeController theme) {
+    final active = theme.mode == mode;
+    return GestureDetector(
+      onTap: () => theme.setMode(mode),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: active
+              ? AppColors.accent.withValues(alpha: 0.14)
+              : AppColors.tint.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(
+            color: active ? AppColors.accent : AppColors.border,
+            width: active ? 1.4 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              mode.icon,
+              size: 18,
+              color: active ? AppColors.accentBright : AppColors.muted,
+            ),
+            const SizedBox(height: 5),
+            Text(
+              mode.label,
+              style: TextStyle(
+                color: active ? AppColors.text : AppColors.muted,
+                fontSize: 11.5,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _sectionLabel(String s) => Text(
     s.toUpperCase(),
-    style: const TextStyle(
+    style: TextStyle(
       color: AppColors.accentBright,
       fontSize: 12,
       fontWeight: FontWeight.w700,
@@ -611,14 +704,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(width: 12),
         Text(
           label,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
             value,
             textAlign: TextAlign.right,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.text,
               fontSize: 13,
               fontWeight: FontWeight.w600,

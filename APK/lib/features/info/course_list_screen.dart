@@ -28,8 +28,8 @@ class _CourseListScreenState extends State<CourseListScreen> {
   Set<String> _retake = {};
   Set<String> _improve = {};
 
-  static const _retakeColor = Color(0xFFF43F5E);
-  static const _improveColor = Color(0xFFFB923C);
+  static Color get _retakeColor => AppColors.red;
+  static Color get _improveColor => AppColors.orangeBright;
 
   @override
   void initState() {
@@ -115,13 +115,13 @@ class _CourseListScreenState extends State<CourseListScreen> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(
+            return Center(
               child: CircularProgressIndicator(color: AppColors.accent),
             );
           }
           final batches = snap.data ?? {};
           if (batches.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
                 'No course data found.',
                 style: TextStyle(color: AppColors.muted, fontSize: 14),
@@ -211,7 +211,7 @@ class _CourseListScreenState extends State<CourseListScreen> {
                     children: [
                       Text(
                         '${courses.length} courses · ${totalCr.toStringAsFixed(totalCr % 1 == 0 ? 0 : 1)} credits',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
@@ -292,7 +292,7 @@ class _CourseListScreenState extends State<CourseListScreen> {
             children: [
               Text(
                 '$num',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.muted,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -323,7 +323,7 @@ class _CourseListScreenState extends State<CourseListScreen> {
             const SizedBox(height: 7),
             Text(
               c.title,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textBright,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
@@ -363,7 +363,7 @@ class _CourseListScreenState extends State<CourseListScreen> {
         const SizedBox(width: 4),
         Text(
           text,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
         ),
       ],
     ),

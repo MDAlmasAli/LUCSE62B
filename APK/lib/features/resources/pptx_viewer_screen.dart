@@ -526,7 +526,7 @@ class _PptxViewerScreenState extends State<PptxViewerScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: const Text(
+        title: Text(
           'Go to slide',
           style: TextStyle(color: AppColors.textBright),
         ),
@@ -600,13 +600,13 @@ class _PptxViewerScreenState extends State<PptxViewerScreen> {
 
   Widget _body(AsyncSnapshot<_PptxDeck> snap) {
     if (snap.connectionState == ConnectionState.waiting) {
-      return const Center(
+      return Center(
         child: CircularProgressIndicator(color: AppColors.accent),
       );
     }
     final deck = snap.data;
     if (snap.hasError || deck == null || deck.slides.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(28),
           child: Text(
@@ -735,7 +735,7 @@ class _PptxViewerScreenState extends State<PptxViewerScreen> {
                   child: Text(
                     'Slide ${_current + 1} of $count · tap to jump',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,

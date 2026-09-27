@@ -76,7 +76,7 @@ class _DrawScreenState extends State<DrawScreen> {
   Widget build(BuildContext context) {
     final g = _g;
     if (g == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.bg,
         body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
       );
@@ -133,12 +133,12 @@ class _DrawScreenState extends State<DrawScreen> {
         const SizedBox(height: 8),
         const Center(child: Text('🎨', style: TextStyle(fontSize: 56))),
         const SizedBox(height: 10),
-        const Center(
+        Center(
           child: Text('Draw & Guess',
               style: TextStyle(color: AppColors.textBright, fontSize: 24, fontWeight: FontWeight.w900)),
         ),
         const SizedBox(height: 6),
-        const Center(
+        Center(
           child: Text('One player draws, everyone else guesses. Faster guesses score more!',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.5)),
@@ -156,18 +156,18 @@ class _DrawScreenState extends State<DrawScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('PLAYING AS',
+                    Text('PLAYING AS',
                         style: TextStyle(color: AppColors.muted, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1)),
                     const SizedBox(height: 2),
                     if (!isGuest)
-                      Text(_id?.playerName ?? '', style: const TextStyle(color: AppColors.text, fontSize: 16, fontWeight: FontWeight.w700))
+                      Text(_id?.playerName ?? '', style: TextStyle(color: AppColors.text, fontSize: 16, fontWeight: FontWeight.w700))
                     else
                       TextField(
                         controller: _nameCtrl,
                         maxLength: 20,
                         onChanged: (_) => setState(() {}),
-                        style: const TextStyle(color: AppColors.text, fontSize: 15),
-                        decoration: const InputDecoration(
+                        style: TextStyle(color: AppColors.text, fontSize: 15),
+                        decoration: InputDecoration(
                           isDense: true,
                           counterText: '',
                           hintText: 'Enter your name…',
@@ -189,7 +189,7 @@ class _DrawScreenState extends State<DrawScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('CREATE OR JOIN A ROOM',
+              Text('CREATE OR JOIN A ROOM',
                   style: TextStyle(color: AppColors.accentBright, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1)),
               const SizedBox(height: 14),
               SizedBox(
@@ -210,11 +210,11 @@ class _DrawScreenState extends State<DrawScreen> {
                       controller: _joinCtrl,
                       textCapitalization: TextCapitalization.characters,
                       maxLength: 6,
-                      style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w700, letterSpacing: 3),
+                      style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w700, letterSpacing: 3),
                       decoration: InputDecoration(
                         counterText: '',
                         hintText: 'ROOM CODE',
-                        hintStyle: const TextStyle(color: AppColors.muted, letterSpacing: 1),
+                        hintStyle: TextStyle(color: AppColors.muted, letterSpacing: 1),
                         filled: true,
                         fillColor: AppColors.bg,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -286,9 +286,9 @@ class _DrawScreenState extends State<DrawScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('ROOM CODE', style: TextStyle(color: AppColors.muted, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1)),
+                  Text('ROOM CODE', style: TextStyle(color: AppColors.muted, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1)),
                   Text(g.roomCode ?? '',
-                      style: const TextStyle(color: AppColors.accentBright, fontSize: 30, fontWeight: FontWeight.w900, letterSpacing: 4)),
+                      style: TextStyle(color: AppColors.accentBright, fontSize: 30, fontWeight: FontWeight.w900, letterSpacing: 4)),
                 ],
               ),
               const SizedBox(width: 10),
@@ -297,14 +297,14 @@ class _DrawScreenState extends State<DrawScreen> {
                   Clipboard.setData(ClipboardData(text: g.roomCode ?? ''));
                   AppToast.show(context, 'Code copied');
                 },
-                icon: const Icon(Icons.copy_rounded, color: AppColors.accentBright, size: 20),
+                icon: Icon(Icons.copy_rounded, color: AppColors.accentBright, size: 20),
               ),
               const Spacer(),
               TextButton(
                 onPressed: () async {
                   if (await _confirm('Leave the room?')) await _leaveToHub();
                 },
-                child: const Text('Leave', style: TextStyle(color: AppColors.red)),
+                child: Text('Leave', style: TextStyle(color: AppColors.red)),
               ),
             ],
           ),
@@ -318,7 +318,7 @@ class _DrawScreenState extends State<DrawScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('PLAYERS  ${shown.length} / ${g.room?.maxPlayers ?? 8}',
-                  style: const TextStyle(color: AppColors.accentBright, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1)),
+                  style: TextStyle(color: AppColors.accentBright, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1)),
               const SizedBox(height: 10),
               ...shown.map((p) => _lobbyPlayerRow(g, p)),
             ],
@@ -332,7 +332,7 @@ class _DrawScreenState extends State<DrawScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('SETTINGS', style: TextStyle(color: AppColors.accentBright, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1)),
+              Text('SETTINGS', style: TextStyle(color: AppColors.accentBright, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1)),
               const SizedBox(height: 8),
               if (g.isHost) ..._hostSettings(g) else ..._readonlySettings(g),
             ],
@@ -351,7 +351,7 @@ class _DrawScreenState extends State<DrawScreen> {
             ),
           )
         else
-          const Center(
+          Center(
             child: Text('Waiting for host to start the game…',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
           ),
@@ -372,12 +372,12 @@ class _DrawScreenState extends State<DrawScreen> {
             height: 8,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: on ? const Color(0xFF34D399) : AppColors.muted,
+              color: on ? AppColors.greenBright : AppColors.muted,
             ),
           ),
           const SizedBox(width: 8),
-          Expanded(child: Text(p.playerName, style: const TextStyle(color: AppColors.text, fontSize: 13.5, fontWeight: FontWeight.w600))),
-          if (g.room?.hostId == p.playerId) _tag('HOST', const Color(0xFFFBBF24)),
+          Expanded(child: Text(p.playerName, style: TextStyle(color: AppColors.text, fontSize: 13.5, fontWeight: FontWeight.w600))),
+          if (g.room?.hostId == p.playerId) _tag('HOST', AppColors.amberBright),
           if (p.playerId == g.identity.playerId) ...[const SizedBox(width: 4), _tag('YOU', AppColors.accentBright)],
         ],
       ),
@@ -394,12 +394,12 @@ class _DrawScreenState extends State<DrawScreen> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            const Expanded(child: Text('Guest Access', style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+            Expanded(child: Text('Guest Access', style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
             DropdownButton<bool>(
               value: r.guestsAllowed,
               dropdownColor: AppColors.card,
               underline: const SizedBox.shrink(),
-              style: const TextStyle(color: AppColors.text, fontSize: 13),
+              style: TextStyle(color: AppColors.text, fontSize: 13),
               items: const [
                 DropdownMenuItem(value: true, child: Text('🔓 Anyone')),
                 DropdownMenuItem(value: false, child: Text('🔒 Login Required')),
@@ -418,12 +418,12 @@ class _DrawScreenState extends State<DrawScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+          Expanded(child: Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
           DropdownButton<int>(
             value: value,
             dropdownColor: AppColors.card,
             underline: const SizedBox.shrink(),
-            style: const TextStyle(color: AppColors.text, fontSize: 13),
+            style: TextStyle(color: AppColors.text, fontSize: 13),
             items: items.map((o) => DropdownMenuItem(value: o, child: Text('$o$suffix'))).toList(),
             onChanged: (v) {
               if (v != null) onPick(v);
@@ -446,7 +446,7 @@ class _DrawScreenState extends State<DrawScreen> {
     ];
   }
 
-  static const _roTextStyle = TextStyle(color: AppColors.textSecondary, fontSize: 13.5, height: 1.9);
+  static TextStyle get _roTextStyle => TextStyle(color: AppColors.textSecondary, fontSize: 13.5, height: 1.9);
 
   Future<void> _onStart(DrawGame g) async {
     final err = await g.startGame();
@@ -491,19 +491,19 @@ class _DrawScreenState extends State<DrawScreen> {
           child: Row(
             children: [
               Text('Round ${r.roundCurrent}/${r.roundsTotal}',
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   g.isDrawer ? 'You are drawing!' : '$drawerName is drawing',
-                  style: const TextStyle(color: AppColors.accentBright, fontSize: 13, fontWeight: FontWeight.w700),
+                  style: TextStyle(color: AppColors.accentBright, fontSize: 13, fontWeight: FontWeight.w700),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (r.status == 'drawing')
                 Text(left >= 0 ? '$left' : '—',
                     style: TextStyle(
-                        color: low ? AppColors.red : const Color(0xFFFBBF24),
+                        color: low ? AppColors.red : AppColors.amberBright,
                         fontSize: 22,
                         fontWeight: FontWeight.w900)),
               if (g.isHost) ...[
@@ -512,7 +512,7 @@ class _DrawScreenState extends State<DrawScreen> {
                   onTap: () async {
                     if (await _confirm('End the game and show standings?')) await g.endGame();
                   },
-                  child: const Padding(
+                  child: Padding(
                     padding: EdgeInsets.all(4),
                     child: Icon(Icons.flag_rounded, size: 18, color: AppColors.muted),
                   ),
@@ -528,7 +528,7 @@ class _DrawScreenState extends State<DrawScreen> {
             child: Text(
               g.isDrawer ? (r.currentWord ?? '') : formatHint(r.currentHint ?? ''),
               style: TextStyle(
-                color: g.isDrawer ? const Color(0xFF34D399) : AppColors.text,
+                color: g.isDrawer ? AppColors.greenBright : AppColors.text,
                 fontSize: g.isDrawer ? 16 : 20,
                 fontWeight: FontWeight.w700,
                 letterSpacing: g.isDrawer ? 2 : 5,
@@ -632,8 +632,8 @@ class _DrawScreenState extends State<DrawScreen> {
                         child: FilledButton(
                           onPressed: () => g.pickWord(w),
                           style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF34D399).withValues(alpha: 0.18),
-                              foregroundColor: const Color(0xFF34D399),
+                              backgroundColor: AppColors.greenBright.withValues(alpha: 0.18),
+                              foregroundColor: AppColors.greenBright,
                               padding: const EdgeInsets.symmetric(vertical: 13)),
                           child: Text(w, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                         ),
@@ -646,7 +646,7 @@ class _DrawScreenState extends State<DrawScreen> {
                 const TextSpan(text: 'Waiting for ', style: TextStyle(color: Colors.white70)),
                 TextSpan(
                   text: waitingFor,
-                  style: const TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.w700),
+                  style: TextStyle(color: AppColors.greenBright, fontWeight: FontWeight.w700),
                 ),
                 const TextSpan(text: ' to pick a word…', style: TextStyle(color: Colors.white70)),
               ]),
@@ -711,7 +711,7 @@ class _DrawScreenState extends State<DrawScreen> {
                         child: Container(
                           width: s * 0.8,
                           height: s * 0.8,
-                          decoration: const BoxDecoration(color: AppColors.text, shape: BoxShape.circle),
+                          decoration: BoxDecoration(color: AppColors.text, shape: BoxShape.circle),
                         ),
                       ),
                     ),
@@ -782,7 +782,7 @@ class _DrawScreenState extends State<DrawScreen> {
             decoration: BoxDecoration(
               color: AppColors.card,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: drawing ? const Color(0xFFFBBF24) : AppColors.border),
+              border: Border.all(color: drawing ? AppColors.amberBright : AppColors.border),
             ),
             child: Opacity(
               opacity: left ? 0.45 : (offline ? 0.6 : 1),
@@ -798,18 +798,18 @@ class _DrawScreenState extends State<DrawScreen> {
                         children: [
                           Text(p.playerName.length > 9 ? '${p.playerName.substring(0, 9)}…' : p.playerName,
                               style: TextStyle(
-                                  color: drawing ? const Color(0xFFFBBF24) : AppColors.text,
+                                  color: drawing ? AppColors.amberBright : AppColors.text,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600)),
                           if (p.hasGuessed && !drawing)
-                            const Padding(
+                            Padding(
                               padding: EdgeInsets.only(left: 3),
-                              child: Icon(Icons.check_rounded, size: 13, color: Color(0xFF34D399)),
+                              child: Icon(Icons.check_rounded, size: 13, color: AppColors.greenBright),
                             ),
                         ],
                       ),
                       Text('${p.score} pts',
-                          style: const TextStyle(color: AppColors.accentBright, fontSize: 11, fontWeight: FontWeight.w700)),
+                          style: TextStyle(color: AppColors.accentBright, fontSize: 11, fontWeight: FontWeight.w700)),
                     ],
                   ),
                 ],
@@ -830,7 +830,7 @@ class _DrawScreenState extends State<DrawScreen> {
         children: [
           Expanded(
             child: g.chat.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text('Guesses appear here…', style: TextStyle(color: AppColors.muted, fontSize: 12)))
                 : ListView.builder(
                     reverse: true,
@@ -845,12 +845,12 @@ class _DrawScreenState extends State<DrawScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF34D399).withValues(alpha: 0.15),
+                              color: AppColors.greenBright.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFF34D399).withValues(alpha: 0.4)),
+                              border: Border.all(color: AppColors.greenBright.withValues(alpha: 0.4)),
                             ),
                             child: Text('${m.playerName} guessed it! 🎉',
-                                style: const TextStyle(color: Color(0xFF34D399), fontSize: 12.5, fontWeight: FontWeight.w600)),
+                                style: TextStyle(color: AppColors.greenBright, fontSize: 12.5, fontWeight: FontWeight.w600)),
                           ),
                         );
                       }
@@ -863,7 +863,7 @@ class _DrawScreenState extends State<DrawScreen> {
                           ),
                           TextSpan(
                             text: m.message,
-                            style: TextStyle(color: close ? const Color(0xFFFBBF24) : AppColors.textSecondary, fontSize: 12.5),
+                            style: TextStyle(color: close ? AppColors.amberBright : AppColors.textSecondary, fontSize: 12.5),
                           ),
                         ])),
                       );
@@ -883,7 +883,7 @@ class _DrawScreenState extends State<DrawScreen> {
                     enableSuggestions: false,
                     keyboardType: TextInputType.visiblePassword,
                     textInputAction: TextInputAction.send,
-                    style: const TextStyle(color: AppColors.text, fontSize: 13),
+                    style: TextStyle(color: AppColors.text, fontSize: 13),
                     decoration: InputDecoration(
                       isDense: true,
                       hintText: g.isDrawer
@@ -891,7 +891,7 @@ class _DrawScreenState extends State<DrawScreen> {
                           : g.me?.hasGuessed == true
                               ? 'You already guessed!'
                               : 'Type your guess…',
-                      hintStyle: const TextStyle(color: AppColors.muted),
+                      hintStyle: TextStyle(color: AppColors.muted),
                       filled: true,
                       fillColor: AppColors.bg,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -931,12 +931,12 @@ class _DrawScreenState extends State<DrawScreen> {
           decoration: _panelDeco(),
           child: Column(
             children: [
-              const Text('THE WORD WAS', style: TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1)),
+              Text('THE WORD WAS', style: TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1)),
               const SizedBox(height: 6),
               Text(g.room?.currentWord ?? '?',
-                  style: const TextStyle(color: Color(0xFF34D399), fontSize: 28, fontWeight: FontWeight.w900)),
+                  style: TextStyle(color: AppColors.greenBright, fontSize: 28, fontWeight: FontWeight.w900)),
               const SizedBox(height: 20),
-              const Text('SCORES', style: TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1)),
+              Text('SCORES', style: TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1)),
               const SizedBox(height: 10),
               ...players.asMap().entries.map((e) {
                 final i = e.key;
@@ -951,12 +951,12 @@ class _DrawScreenState extends State<DrawScreen> {
                       SizedBox(width: 22, child: Text('${i + 1}', style: TextStyle(color: _rankColor(i), fontSize: 13, fontWeight: FontWeight.w800))),
                       _avatar(p.playerId, p.playerName, 28),
                       const SizedBox(width: 10),
-                      Expanded(child: Text(p.playerName, style: const TextStyle(color: AppColors.text, fontSize: 13.5, fontWeight: FontWeight.w600))),
-                      Text('${p.score}', style: const TextStyle(color: Color(0xFF34D399), fontSize: 14, fontWeight: FontWeight.w800)),
+                      Expanded(child: Text(p.playerName, style: TextStyle(color: AppColors.text, fontSize: 13.5, fontWeight: FontWeight.w600))),
+                      Text('${p.score}', style: TextStyle(color: AppColors.greenBright, fontSize: 14, fontWeight: FontWeight.w800)),
                       if (gain > 0)
                         Padding(
                           padding: const EdgeInsets.only(left: 5),
-                          child: Text('+$gain', style: const TextStyle(color: AppColors.muted, fontSize: 11)),
+                          child: Text('+$gain', style: TextStyle(color: AppColors.muted, fontSize: 11)),
                         ),
                     ],
                   ),
@@ -971,7 +971,7 @@ class _DrawScreenState extends State<DrawScreen> {
                   label: const Text('Next Turn'),
                 )
               else
-                const Text('Waiting for host…', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                Text('Waiting for host…', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             ],
           ),
         ),
@@ -989,12 +989,12 @@ class _DrawScreenState extends State<DrawScreen> {
       children: [
         const Center(child: Text('🏆', style: TextStyle(fontSize: 60))),
         const SizedBox(height: 6),
-        const Center(child: Text('Game Over!', style: TextStyle(color: AppColors.textBright, fontSize: 26, fontWeight: FontWeight.w900))),
+        Center(child: Text('Game Over!', style: TextStyle(color: AppColors.textBright, fontSize: 26, fontWeight: FontWeight.w900))),
         const SizedBox(height: 6),
         if (winner != null)
           Center(
             child: Text('${winner.playerName} wins with ${winner.score} pts!',
-                style: const TextStyle(color: Color(0xFFFBBF24), fontSize: 15, fontWeight: FontWeight.w700)),
+                style: TextStyle(color: AppColors.amberBright, fontSize: 15, fontWeight: FontWeight.w700)),
           ),
         const SizedBox(height: 20),
         Container(
@@ -1012,8 +1012,8 @@ class _DrawScreenState extends State<DrawScreen> {
                     const SizedBox(width: 6),
                     _avatar(p.playerId, p.playerName, 30),
                     const SizedBox(width: 10),
-                    Expanded(child: Text(p.playerName, style: const TextStyle(color: AppColors.text, fontSize: 14, fontWeight: FontWeight.w600))),
-                    Text('${p.score} pts', style: const TextStyle(color: Color(0xFF34D399), fontSize: 15, fontWeight: FontWeight.w900)),
+                    Expanded(child: Text(p.playerName, style: TextStyle(color: AppColors.text, fontSize: 14, fontWeight: FontWeight.w600))),
+                    Text('${p.score} pts', style: TextStyle(color: AppColors.greenBright, fontSize: 15, fontWeight: FontWeight.w900)),
                   ],
                 ),
               );
@@ -1047,7 +1047,7 @@ class _DrawScreenState extends State<DrawScreen> {
 
   // ════════════════ shared bits ════════════════
   Color _rankColor(int i) => switch (i) {
-        0 => const Color(0xFFFBBF24),
+        0 => AppColors.amberBright,
         1 => const Color(0xFF94A3B8),
         2 => const Color(0xFFB45309),
         _ => AppColors.muted,
@@ -1085,10 +1085,10 @@ class _DrawScreenState extends State<DrawScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.card,
-        content: Text(msg, style: const TextStyle(color: AppColors.text)),
+        content: Text(msg, style: TextStyle(color: AppColors.text)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: AppColors.muted))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes', style: TextStyle(color: AppColors.red))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: AppColors.muted))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Yes', style: TextStyle(color: AppColors.red))),
         ],
       ),
     );

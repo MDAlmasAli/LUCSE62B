@@ -22,48 +22,49 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
   late Future<List<_Item>> _future = _load();
   Timer? _ticker;
 
-  static const _categories =
+  static List<({IconData icon, String label, Color color, String slug})>
+  get _categories =>
       <({IconData icon, String label, Color color, String slug})>[
         (
           icon: Icons.slideshow_rounded,
           label: 'Presentation',
-          color: Color(0xFF818CF8),
+          color: AppColors.indigoBright,
           slug: 'presentation',
         ),
         (
           icon: Icons.school_rounded,
           label: 'Tutorial',
-          color: Color(0xFF38BDF8),
+          color: AppColors.blueBright,
           slug: 'tutorial',
         ),
         (
           icon: Icons.science_rounded,
           label: 'Lab Report',
-          color: Color(0xFF34D399),
+          color: AppColors.greenBright,
           slug: 'lab-report',
         ),
         (
           icon: Icons.biotech_rounded,
           label: 'Lab Test',
-          color: Color(0xFF2DD4BF),
+          color: AppColors.tealBright,
           slug: 'lab-test',
         ),
         (
           icon: Icons.mic_rounded,
           label: 'Viva',
-          color: Color(0xFFFBBF24),
+          color: AppColors.amberBright,
           slug: 'viva',
         ),
         (
           icon: Icons.local_fire_department_rounded,
           label: 'Lab Final',
-          color: Color(0xFFF87171),
+          color: AppColors.redBright,
           slug: 'lab-final',
         ),
         (
           icon: Icons.account_tree_rounded,
           label: 'Project',
-          color: Color(0xFFF472B6),
+          color: AppColors.pinkBright,
           slug: 'project',
         ),
       ];
@@ -163,16 +164,16 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
                             Container(
                               width: 7,
                               height: 7,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFF87171),
+                              decoration: BoxDecoration(
+                                color: AppColors.redBright,
                                 shape: BoxShape.circle,
                               ),
                             ),
                             const SizedBox(width: 6),
                             Text(
                               '$running running',
-                              style: const TextStyle(
-                                color: Color(0xFFF87171),
+                              style: TextStyle(
+                                color: AppColors.redBright,
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -190,7 +191,7 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
               future: _future,
               builder: (context, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
-                  return const Padding(
+                  return Padding(
                     padding: EdgeInsets.only(top: 24),
                     child: Center(
                       child: CircularProgressIndicator(color: AppColors.accent),
@@ -199,7 +200,7 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
                 }
                 final items = snap.data ?? [];
                 if (items.isEmpty) {
-                  return const Padding(
+                  return Padding(
                     padding: EdgeInsets.symmetric(vertical: 24),
                     child: Center(
                       child: Text(
@@ -223,7 +224,7 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
 
   Widget _sectionLabel(String s) => Text(
     s.toUpperCase(),
-    style: const TextStyle(
+    style: TextStyle(
       color: AppColors.accentBright,
       fontSize: 12,
       fontWeight: FontWeight.w700,
@@ -261,7 +262,7 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
                 c.label,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.text,
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
@@ -338,8 +339,8 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
         : diff.inHours < 24
         ? AppColors.red
         : diff.inDays < 3
-        ? const Color(0xFFFBBF24)
-        : const Color(0xFF34D399);
+        ? AppColors.amberBright
+        : AppColors.greenBright;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -408,7 +409,7 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
             Text(
               it.title,
               softWrap: true,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textBright,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
@@ -440,7 +441,7 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
                     IconButton(
                       tooltip: 'Add to calendar',
                       visualDensity: VisualDensity.compact,
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.event_available_rounded,
                         color: AppColors.accentBright,
                         size: 20,
@@ -467,7 +468,7 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
               const SizedBox(height: 3),
               Text(
                 'Due: ${_fmtDue(due)}',
-                style: const TextStyle(color: AppColors.muted, fontSize: 11.5),
+                style: TextStyle(color: AppColors.muted, fontSize: 11.5),
               ),
             ],
           ],
@@ -516,22 +517,22 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
     final t = type.toLowerCase();
     // Order matters: check the multi-word "lab …" types before bare "lab".
     if (t.contains('lab final') || t.contains('lab exam')) {
-      return const Color(0xFFF87171);
+      return AppColors.redBright;
     }
-    if (t.contains('lab test')) return const Color(0xFF2DD4BF);
+    if (t.contains('lab test')) return AppColors.tealBright;
     if (t.contains('lab report') || t.contains('lab')) {
-      return const Color(0xFF34D399);
+      return AppColors.greenBright;
     }
-    if (t.contains('assign')) return const Color(0xFFA78BFA);
+    if (t.contains('assign')) return AppColors.accentBright;
     if (t.contains('quiz') || t.contains('tutorial')) {
-      return const Color(0xFF38BDF8);
+      return AppColors.blueBright;
     }
-    if (t.contains('present')) return const Color(0xFF818CF8);
-    if (t.contains('viva')) return const Color(0xFFFBBF24);
+    if (t.contains('present')) return AppColors.indigoBright;
+    if (t.contains('viva')) return AppColors.amberBright;
     if (t.contains('exam') || t.contains('mid') || t.contains('final')) {
-      return const Color(0xFFF87171);
+      return AppColors.redBright;
     }
-    if (t.contains('project')) return const Color(0xFFF472B6);
+    if (t.contains('project')) return AppColors.pinkBright;
     return AppColors.accentBright;
   }
 }

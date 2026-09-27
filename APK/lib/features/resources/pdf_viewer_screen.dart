@@ -50,7 +50,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: const Text(
+        title: Text(
           'Go to page',
           style: TextStyle(color: AppColors.textBright),
         ),
@@ -116,7 +116,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           Expanded(
             child: PdfViewPinch(
               controller: _controller,
-              backgroundDecoration: const BoxDecoration(color: AppColors.bg),
+              backgroundDecoration: BoxDecoration(color: AppColors.bg),
               onDocumentLoaded: (document) {
                 if (mounted) setState(() => _count = document.pagesCount);
               },
@@ -142,7 +142,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.touch_app_outlined,
                         size: 16,
                         color: AppColors.muted,
@@ -150,7 +150,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                       const SizedBox(width: 7),
                       Text(
                         _count > 0 ? 'Page $_page of $_count' : 'Loading PDF…',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
