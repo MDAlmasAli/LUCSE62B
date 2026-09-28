@@ -9,7 +9,6 @@ import '../../core/name_format.dart';
 import '../../core/sheets_api.dart';
 import '../../data/connectivity_service.dart';
 import '../../data/exam_repository.dart';
-import '../../data/home_widget_service.dart';
 import '../../data/routine_grid_repository.dart';
 import '../../data/theme_controller.dart';
 import '../../data/session.dart';
@@ -411,7 +410,6 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
   bool _refreshing = false;
   DateTime? _lastLoaded;
   Timer? _ticker;
-  String _lastWidgetSignature = '';
   bool? _lastReportedExamStatus;
 
   // Today's regular bus times (minutes-from-midnight), per direction.
@@ -663,59 +661,8 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
         if (mounted) widget.onExamStatusChanged(examStatusActive);
       });
     }
-    final widgetItem = current ?? next;
-    final widgetLabel = currentExam != null
-        ? 'EXAM RUNNING'
-        : nextExam != null
-        ? 'NEXT EXAM'
-        : _todayExams.isNotEmpty
-        ? 'EXAM DAY'
-        : current != null
-        ? 'NOW RUNNING'
-        : next != null
-        ? 'NEXT CLASS'
-        : 'TODAY';
-    final widgetTitle = examItem != null
-        ? examItem.exam.courseName.isEmpty
-              ? examItem.exam.course
-              : '${examItem.exam.course} · ${examItem.exam.courseName}'
-        : _todayExams.isNotEmpty
-        ? 'No more exams'
-        : widgetItem == null
-        ? 'No more classes'
-        : widgetItem.name.isEmpty
-        ? widgetItem.code
-        : '${widgetItem.code} · ${widgetItem.name}';
-    final widgetDetails = examItem != null
-        ? '${examItem.type} · ${examItem.exam.time}'
-        : _todayExams.isNotEmpty
-        ? '${_todayExams.first.type} · Check again tomorrow'
-        : widgetItem == null
-        ? '$dayName · Check again tomorrow'
-        : 'Room ${widgetItem.room.isEmpty ? '—' : widgetItem.room} · ${widgetItem.time}';
     final nextTo = _toLU.where((bus) => bus.t >= nowMin).firstOrNull;
     final nextFrom = _fromLU.where((bus) => bus.t >= nowMin).firstOrNull;
-    final busParts = <String>[
-      if (nextTo != null) 'To LU ${nextTo.time}',
-      if (nextFrom != null) 'From LU ${nextFrom.time}',
-    ];
-    final widgetBus = busParts.isEmpty
-        ? 'No more buses today'
-        : 'Next bus: ${busParts.join(' · ')}';
-    final widgetSignature =
-        '$widgetLabel|$widgetTitle|$widgetDetails|$widgetBus';
-    if (_lastWidgetSignature != widgetSignature) {
-      _lastWidgetSignature = widgetSignature;
-      scheduleMicrotask(
-        () => HomeWidgetService.instance.saveScheduleStatus(
-          label: widgetLabel,
-          title: widgetTitle,
-          details: widgetDetails,
-          busStatus: widgetBus,
-        ),
-      );
-    }
-
     final hasClassStatus =
         currentExam != null ||
         nextExam != null ||
@@ -1458,10 +1405,6 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
         final label = _deadlineTypeLabel(item.type);
         dueCounts.update(label, (count) => count + 1, ifAbsent: () => 1);
       }
-      final widgetDeadline = upcoming.isEmpty
-          ? 'No upcoming deadline'
-          : _widgetDueSummaryNice(upcoming, dueCounts);
-      await HomeWidgetService.instance.saveDeadline(widgetDeadline);
       if (!mounted) return;
       setState(() {
         _items = out;
@@ -1471,9 +1414,6 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
         if (mounted) setState(() {});
       });
     } catch (_) {
-      await HomeWidgetService.instance
-          .saveDeadline('Deadline information unavailable')
-          .catchError((_) {});
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -1508,68 +1448,6 @@ class _DeadlineStripState extends State<_DeadlineStrip> {
         )
         .toList();
     return words.isEmpty ? 'Task' : words.join(' ');
-  }
-
-  static String _widgetDueSummaryNice(
-    List<_Dl> upcoming,
-    Map<String, int> counts,
-  ) {
-    final visibleEntries = counts.entries.take(3).toList();
-    final visible = visibleEntries
-        .map((entry) => '${_shortDeadlineType(entry.key)} ${entry.value}')
-        .join(' · ');
-    final visibleCount = visibleEntries.fold<int>(
-      0,
-      (total, entry) => total + entry.value,
-    );
-    final extra = upcoming.length - visibleCount;
-    final summary = extra > 0 ? 'Due: $visible · +$extra' : 'Due: $visible';
-    final nearest = upcoming.first;
-    return '$summary\nNext: ${_shortDeadlineType(nearest.type)} · ${_formatWidgetDue(nearest.due!)}';
-  }
-
-  // Kept for older cached widget text migration paths; new widget text uses
-  // [_widgetDueSummaryNice].
-  // ignore: unused_element
-  static String _widgetDueSummary(Map<String, int> counts, int total) {
-    final visible = counts.entries
-        .take(3)
-        .map((entry) => '${_shortDeadlineType(entry.key)} ${entry.value}');
-    final hiddenTypes = counts.length - 3;
-    final suffix = hiddenTypes > 0 ? ' · +$hiddenTypes types' : '';
-    return 'Due $total: ${visible.join(' · ')}$suffix';
-  }
-
-  static String _shortDeadlineType(String value) {
-    switch (value.toLowerCase()) {
-      case 'assignment':
-        return 'Assign';
-      case 'tutorial':
-        return 'Tut';
-      case 'presentation':
-        return 'Pres';
-      case 'lab report':
-      case 'labreport':
-        return 'Lab';
-      default:
-        return value.length > 8 ? value.substring(0, 8) : value;
-    }
-  }
-
-  static String _formatWidgetDue(DateTime due) {
-    final now = DateTime.now();
-    final time = _formatWidgetTime(due);
-    if (_sameDay(now, due)) return 'Today $time';
-    final tomorrow = DateTime(now.year, now.month, now.day + 1);
-    if (_sameDay(tomorrow, due)) return 'Tomorrow $time';
-    return '${due.day}/${due.month} $time';
-  }
-
-  static String _formatWidgetTime(DateTime d) {
-    var h = d.hour;
-    final ap = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 == 0 ? 12 : h % 12;
-    return '$h:${d.minute.toString().padLeft(2, '0')} $ap';
   }
 
   static bool _sameDay(DateTime a, DateTime b) =>

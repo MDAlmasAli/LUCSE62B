@@ -5,7 +5,6 @@ import '../data/session.dart';
 import '../features/auth/dob_gate_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/classwork/classwork_screen.dart';
-import '../features/calendar/calendar_widget_screen.dart';
 import '../features/cover_page/cover_page_screen.dart';
 import '../features/gallery/gallery_screen.dart';
 import '../features/home/home_screen.dart';
@@ -110,10 +109,6 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/notification-preferences',
         builder: (_, _) => const NotificationPreferencesScreen(),
-      ),
-      GoRoute(
-        path: '/calendar-widget',
-        builder: (_, _) => const CalendarWidgetScreen(),
       ),
       GoRoute(path: '/results', builder: (_, _) => const ResultsScreen()),
       GoRoute(

@@ -6,6 +6,7 @@ import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import 'routine_grid_repository.dart';
+import 'session.dart';
 
 class ClassReminderService {
   ClassReminderService._();
@@ -51,6 +52,33 @@ class ClassReminderService {
         >()
         ?.createNotificationChannel(_channel);
     _initialized = true;
+  }
+
+  /// Load the student's routine — their own custom and retake/improve courses
+  /// included — and re-arm the reminders from it. Called on launch; the seven
+  /// day horizon below means that is often enough.
+  Future<void> refreshFromRoutine() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final repo = RoutineGridRepository.instance;
+      var data = await repo.load();
+      final student = Session.instance.student;
+      if (student != null && !student.isDemo) {
+        final personal = await Future.wait([
+          repo.loadCustomCourses(student.id).catchError((_) => <CustomCourse>[]),
+          repo
+              .loadEnrollmentCourses(student.id)
+              .catchError((_) => <CustomCourse>[]),
+        ]);
+        final courses = [...personal[0], ...personal[1]];
+        if (courses.isNotEmpty) {
+          data = repo.buildFor('62', 'B', customs: courses);
+        }
+      }
+      await scheduleFromRoutine(data);
+    } catch (_) {
+      // A reminder that cannot be scheduled is not worth surfacing.
+    }
   }
 
   Future<void> scheduleFromRoutine(RoutineGridData? data) async {

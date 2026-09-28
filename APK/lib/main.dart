@@ -8,8 +8,6 @@ import 'core/router.dart';
 import 'core/supa.dart';
 import 'data/connectivity_service.dart';
 import 'data/class_reminder_service.dart';
-import 'data/home_widget_service.dart';
-import 'data/home_widget_refresh_service.dart';
 import 'data/models/app_version.dart';
 import 'data/notification_preferences.dart';
 import 'data/push_service.dart';
@@ -27,16 +25,9 @@ Future<void> main() async {
   await NotificationPreferences.instance.load();
   await ThemeController.instance.load();
   await ClassReminderService.instance.initialize().catchError((_) {});
-  await HomeWidgetService.instance.ensureDefaults().catchError((_) {});
-  await HomeWidgetRefreshService.instance
-      .initializeBackgroundRefresh()
-      .catchError((_) {});
-  unawaited(
-    HomeWidgetRefreshService.instance.refreshNow(
-      clearCache: true,
-      source: 'startup',
-    ),
-  );
+  // Reminders cover the next seven days, so re-arming them on launch is
+  // enough; nothing needs to run in the background for this.
+  unawaited(ClassReminderService.instance.refreshFromRoutine());
 
   // Resolve connectivity before optional startup network work. This makes an
   // offline launch immediate instead of waiting for Supabase/Firebase timeouts.

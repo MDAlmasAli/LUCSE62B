@@ -1365,7 +1365,7 @@ function errResp(cors, status, msg) {
    LU NOTICES  (https://lus.ac.bd/notice/ — read via the WordPress RSS feed)
    The site has no public REST endpoint for notices, but every WordPress
    install exposes /notice/feed/. We parse that RSS to a small JSON array
-   and cache it in KV (~20 min) so the home widget loads instantly and we
+   and cache it in KV (~20 min) so the app and the site load instantly and we
    don't hammer lus.ac.bd. Notices are images, so we pull the first <img>.
    ════════════════════════════════════════════════════════════════════ */
 async function fetchLuNotices(env) {
@@ -2167,7 +2167,7 @@ async function checkExamRoutine(env, type) {
 }
 
 /* ── LU Notices Monitor ──
-   Watches the latest LU notices (same feed the home widget reads). On the
+   Watches the latest LU notices (the same feed the app reads). On the
    first run it just seeds the baseline; afterwards any notice whose link is
    new fires a single public notification + push. We key on link (stable
    per-notice) rather than title so a re-titled notice isn't re-announced. */

@@ -16,6 +16,18 @@ days, then asked for it on 2026-09-27; that batch is now out.)
 
 - Nothing right now.
 
+## Waiting for the next release
+
+- **The home-screen widget is gone.** It could not show the truth: its text was built when
+  the data was fetched, so it kept naming a class that had already ended until the next
+  refresh, and on phones that kill background work it simply went stale with nothing on it
+  to say so. Removed with the `home_widget` and `workmanager` dependencies, the provider,
+  its layouts, the manifest receiver and the Calendar & Home Widget screen. The app no
+  longer wakes every 15 minutes, so it costs less battery.
+- Class reminders (15 minutes before a class) were scheduled from inside that widget
+  refresh and would have died with it. They now load the routine themselves on launch,
+  which covers the seven days they schedule ahead.
+
 ## Shipped in v1.1.42+58
 
 - **Get your result without copy/paste.** LU retired its JSON result endpoint and now

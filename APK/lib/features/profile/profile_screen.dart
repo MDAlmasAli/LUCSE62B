@@ -386,34 +386,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 10),
                 GlassCard(
-                  onTap: () => context.push('/calendar-widget'),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_month_rounded,
-                        size: 18,
-                        color: AppColors.accentBright,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Calendar & Home Widget',
-                        style: TextStyle(
-                          color: AppColors.text,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        Icons.chevron_right,
-                        color: AppColors.muted,
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                GlassCard(
                   onTap: () => context.push('/user-guide'),
                   child: Row(
                     children: [
