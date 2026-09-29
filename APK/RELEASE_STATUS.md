@@ -3,20 +3,37 @@
 **Rule from the owner: app updates go out in batches, and only when they say so.** Work lands in
 the repo and is built locally as often as needed, but no `publish.bat`, no `/release-apk` upload and
 no APK handed to anyone until the owner asks for it. (They held the September batch back for a few
-days, then asked for it on 2026-09-27; that batch is now out.)
+days, then asked for it on 2026-09-27; that batch is now out. The next batch went out on
+2026-09-30, again on the owner's say-so.)
 
 ## What users have right now
 
-- **v1.1.42+58**, published 2026-09-27 — the in-app LU result fetch plus the attendance
-  fixes. Optional, not forced (`min_version_code` 35).
-- Before that: v1.1.41+52 (light mode, Class Routine card) published the same day;
-  v1.1.40+51 handed out manually after the key change; v1.1.38+49 was the last OLD-key release.
+- **v1.1.43+59**, published 2026-09-30 — notifications reach the phone again, deadline
+  reminders, more of the app works offline, the home-screen widget gone, and a round of
+  security work. Optional, not forced (`min_version_code` 35).
+- Before that: v1.1.42+58 (in-app LU result fetch, attendance fixes) on 2026-09-27;
+  v1.1.41+52 (light mode, Class Routine card) the same day; v1.1.40+51 handed out manually
+  after the key change; v1.1.38+49 was the last OLD-key release.
 
 ## Built but NOT shipped
 
 - Nothing right now.
 
 ## Waiting for the next release
+
+- Nothing yet. Start a fresh list here as new work lands.
+
+## Still to do by hand, outside the app
+
+- **Run `supabase/lock_down_anon_grants.sql`** in the Supabase SQL editor. Until it runs,
+  the published anon key can still read and write `attendance_records`, post notifications
+  to the whole class, and read every student's date of birth. The site's birthday greeting
+  also stays silent until the `birthdays_today()` function in that file exists.
+- **Later, once every phone is on v1.1.43 or newer**, revoke the anon grants on
+  `fcm_tokens` and `student_retake_enrollments` — the SQL file's last section has the two
+  statements and explains why it has to wait.
+
+## Shipped in v1.1.43+59
 
 - **The home-screen widget is gone.** It could not show the truth: its text was built when
   the data was fetched, so it kept naming a class that had already ended until the next
@@ -91,7 +108,9 @@ Start a fresh "waiting" list above as new work lands, and bump `version:` in `pu
 before the next publish (the build number must increase or the app sees no update).
 
 (Web-only fixes — cover page "Download PDF" typo, routine merge on the website, and the
-offline work below — are already live on the site and are not part of the app release.)
+offline work below — are live on the site and are not part of the app release. The site and
+the Worker both deploy from a push to `main`; the Worker has to be out before an APK that
+depends on a new endpoint.)
 
 ## Live on the website
 
