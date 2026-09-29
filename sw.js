@@ -1,4 +1,4 @@
-const CACHE     = 'lu62b-v62';
+const CACHE     = 'lu62b-v63';
 const _SW_SUPA  = 'https://ftvtlqxpalwvyserujuh.supabase.co';
 const _SW_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dnRscXhwYWx3dnlzZXJ1anVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDA1MDgsImV4cCI6MjA5MzQ3NjUwOH0.kdmxzcqmOlCpMmjnvZPaOLIdfdLomrbMZBo4Nd5YecM';
 
@@ -18,12 +18,65 @@ self.addEventListener('install', e => {
   );
 });
 
-// Activate — clear old caches
+// The pages and assets worth having before they are ever opened, so the first
+// time someone loses signal they can still reach the routine or their
+// classwork instead of a blank page. Warmed in the background on activate
+// (once per deploy), and every one is optional — a miss must never stop the
+// service worker taking over.
+const CORE = [
+  '/',
+  '/index.html',
+  '/assets/css/style.css',
+  '/assets/js/theme.js',
+  '/assets/js/sheets.js',
+  '/assets/js/script.js',
+  '/assets/js/auth.js',
+  '/assets/js/analytics.js',
+  '/assets/js/event-poster.js',
+  '/assets/js/portal-status.js',
+  '/assets/js/notifications.js',
+  '/assets/js/exam-countdown.js',
+  '/pages/info.html',
+  '/pages/classwork.html',
+  '/pages/attendance.html',
+  '/pages/notice.html',
+  '/pages/resources.html',
+  '/pages/category.html',
+  '/pages/students.html',
+  '/pages/cover-page.html',
+  '/pages/user-guide.html',
+  '/pages/profile.html',
+  '/pages/info/routine.js',
+  '/pages/info/exam.js',
+  '/pages/info/semester.js',
+  '/pages/info/all-course.js',
+  '/pages/info/teachers.js',
+  '/pages/info/course-teachers.js',
+  '/pages/info/bus.js',
+  '/pages/info/bkash.js',
+  '/pages/info/group-links.js',
+  '/pages/info/retake-improve.js',
+  '/pages/info/retake-routine.js',
+  '/pages/info/teacher-routine.js',
+];
+
+function warmCache() {
+  return caches.open(CACHE).then(c =>
+    Promise.all(CORE.map(url =>
+      fetch(url, { cache: 'no-store' })
+        .then(res => (res && res.status === 200) ? c.put(url, res) : null)
+        .catch(() => {})
+    ))
+  );
+}
+
+// Activate — clear old caches, then warm the core pages in the background
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
+     .then(() => warmCache())
   );
 });
 
@@ -74,6 +127,17 @@ self.addEventListener('notificationclick', e => {
   );
 });
 
+/* Exact URL first, then the same path without its query. Warmed copies are
+   stored under the plain path while pages ask for e.g. style.css?v=20260718b,
+   so the loose match is what makes a never-visited page work offline - but it
+   must stay the second choice, or a stale warmed copy would shadow the fresh
+   one the last online visit cached. */
+function matchCached(request) {
+  return caches.match(request).then(
+    hit => hit || caches.match(request, { ignoreSearch: true })
+  );
+}
+
 // Fetch
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
@@ -106,7 +170,7 @@ self.addEventListener('fetch', e => {
         }
         return res;
       }).catch(() =>
-        caches.match(e.request).then(c => c || (
+        matchCached(e.request).then(c => c || (
           e.request.destination === 'document' ? caches.match('/index.html') : null
         ))
       )
@@ -116,7 +180,7 @@ self.addEventListener('fetch', e => {
 
   // Images — cache-first (they don't change often)
   e.respondWith(
-    caches.match(e.request).then(cached => {
+    matchCached(e.request).then(cached => {
       if (cached) return cached;
       return fetch(e.request).then(res => {
         if (!res || res.status !== 200 || res.type === 'opaque') return res;

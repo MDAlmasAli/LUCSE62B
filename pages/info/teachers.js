@@ -2,8 +2,6 @@
 /* Source of truth: Class Routine (62B slots) for teacher→course assignments.
    CPG_Teachers supplies contact info; CPG_Courses supplies course titles only. */
 
-const _TC_SUPA_URL = 'https://ftvtlqxpalwvyserujuh.supabase.co';
-const _TC_SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dnRscXhwYWx3dnlzZXJ1anVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDA1MDgsImV4cCI6MjA5MzQ3NjUwOH0.kdmxzcqmOlCpMmjnvZPaOLIdfdLomrbMZBo4Nd5YecM';
 
 const _tcEmpty = v => !v || String(v).trim() === '' || String(v).trim() === '-' || String(v).trim().toLowerCase() === 'n/a';
 
@@ -200,12 +198,10 @@ async function loadTeachers(body) {
         );
         if (user?.id) {
             try {
-                const r = await fetch(
-                    `${_TC_SUPA_URL}/rest/v1/student_retake_enrollments?student_id=eq.${encodeURIComponent(user.id)}&select=course_code,course_name,teacher,type`,
-                    { headers: { 'apikey': _TC_SUPA_KEY, 'Authorization': `Bearer ${_TC_SUPA_KEY}` } }
-                );
-                if (r.ok) {
-                    const enrollments = await r.json();
+                {
+                    // fetchEnrollments() resolves to [] when it cannot reach
+                    // the Worker, so there is nothing left to guard on.
+                    const enrollments = await window.fetchEnrollments(user.id);
                     enrollments.forEach(enr => {
                         if (!enr.teacher) return;
                         const init   = enr.teacher.toUpperCase();

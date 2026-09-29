@@ -95,8 +95,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
     ]);
     _entries = _parseEntries(results[0]);
     _deadlines = _parseDeadlines(results[1]);
-    if (_deadlines.isNotEmpty) {
-      _ticker?.cancel();
+    // `mounted` matters here: the screen can be closed while this is still
+    // loading, and a timer started after dispose would never be cancelled.
+    _ticker?.cancel();
+    if (mounted && _deadlines.isNotEmpty) {
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() {});
       });

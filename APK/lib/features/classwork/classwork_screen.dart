@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/app_colors.dart';
 import '../../core/sheets_api.dart';
 import '../../data/calendar_service.dart';
+import '../../data/deadline_reminder_service.dart';
+import '../../data/deadline_repository.dart';
 import '../../shared/app_toast.dart';
 import '../../shared/glass_card.dart';
 
@@ -19,7 +21,7 @@ class ClassworkScreen extends StatefulWidget {
 }
 
 class _ClassworkScreenState extends State<ClassworkScreen> {
-  late Future<List<_Item>> _future = _load();
+  late Future<List<Deadline>> _future = _load();
   Timer? _ticker;
 
   static List<({IconData icon, String label, Color color, String slug})>
@@ -75,16 +77,17 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
     super.dispose();
   }
 
-  Future<List<_Item>> _load() async {
-    // Raw rows keep the GVIZ Date(y,m,d,h,mi,s) sentinels so the countdown is
-    // precise to the second (the formatted sheet endpoint drops the time).
-    final rows = await SheetsApi.instance.botSheetRaw('Deadlines');
-    final items = _parse(rows);
-    // Tick every second while there are upcoming deadlines.
+  Future<List<Deadline>> _load() async {
+    final items = await DeadlineRepository.instance.load();
+    // The list is in hand, so re-arm the "due tomorrow" / "due in 2 hours"
+    // reminders from it rather than fetching the sheet a second time.
+    unawaited(DeadlineReminderService.instance.scheduleFrom(items));
+    // Tick every second while there are upcoming deadlines. The screen can be
+    // closed while the sheet is still loading, and a timer started after
+    // dispose would never be cancelled again.
     _ticker?.cancel();
-    if (items.any(
-      (i) => i.deadline != null && i.deadline!.isAfter(DateTime.now()),
-    )) {
+    if (mounted &&
+        items.any((i) => i.due != null && i.due!.isAfter(DateTime.now()))) {
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() {});
       });
@@ -127,14 +130,12 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
               children: _categories.map(_categoryCard).toList(),
             ),
             const SizedBox(height: 20),
-            FutureBuilder<List<_Item>>(
+            FutureBuilder<List<Deadline>>(
               future: _future,
               builder: (context, snap) {
                 final running = (snap.data ?? [])
                     .where(
-                      (i) =>
-                          i.deadline != null &&
-                          i.deadline!.isAfter(DateTime.now()),
+                      (i) => i.due != null && i.due!.isAfter(DateTime.now()),
                     )
                     .length;
                 return Row(
@@ -187,7 +188,7 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
               },
             ),
             const SizedBox(height: 10),
-            FutureBuilder<List<_Item>>(
+            FutureBuilder<List<Deadline>>(
               future: _future,
               builder: (context, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
@@ -276,59 +277,9 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
     );
   }
 
-  List<_Item> _parse(List<List<String>> rows) {
-    final out = <_Item>[];
-    for (final r in rows) {
-      String at(int n) => n < r.length ? r[n].trim() : '';
-      final course = at(0), type = at(1), title = at(2);
-      if (title.isEmpty) continue;
-      if (course.toLowerCase() == 'course' || type.toLowerCase() == 'type') {
-        continue;
-      }
-      out.add(
-        _Item(
-          course: course,
-          type: type,
-          title: title,
-          deadline: _parseGvizDate(at(3)),
-        ),
-      );
-    }
-    final now = DateTime.now();
-    out.sort((a, b) {
-      final am = a.deadline?.difference(now).inSeconds ?? 1 << 30;
-      final bm = b.deadline?.difference(now).inSeconds ?? 1 << 30;
-      if (am >= 0 && bm >= 0) return am - bm; // soonest upcoming first
-      if (am >= 0) return -1; // upcoming before past
-      if (bm >= 0) return 1;
-      return bm - am; // most-recent past first
-    });
-    return out;
-  }
-
-  /// Parse GVIZ `Date(y,m,d[,h,mi,s])` (month is 0-based) or a plain date string.
-  static DateTime? _parseGvizDate(String s) {
-    final t = s.trim();
-    if (t.isEmpty) return null;
-    final m = RegExp(
-      r'^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+)(?:,(\d+))?)?\)$',
-    ).firstMatch(t);
-    if (m != null) {
-      return DateTime(
-        int.parse(m[1]!),
-        int.parse(m[2]!) + 1,
-        int.parse(m[3]!),
-        int.parse(m[4] ?? '0'),
-        int.parse(m[5] ?? '0'),
-        int.parse(m[6] ?? '0'),
-      );
-    }
-    return DateTime.tryParse(t.replaceFirst(' ', 'T'));
-  }
-
-  Widget _deadlineCard(_Item it) {
+  Widget _deadlineCard(Deadline it) {
     final typeColor = _typeColor(it.type);
-    final due = it.deadline;
+    final due = it.due;
     final diff = due?.difference(DateTime.now());
     final isPast = diff != null && diff.isNegative;
     // Countdown urgency colour (green → amber → red), grey once past.
@@ -535,15 +486,4 @@ class _ClassworkScreenState extends State<ClassworkScreen> {
     if (t.contains('project')) return AppColors.pinkBright;
     return AppColors.accentBright;
   }
-}
-
-class _Item {
-  final String course, type, title;
-  final DateTime? deadline;
-  _Item({
-    required this.course,
-    required this.type,
-    required this.title,
-    this.deadline,
-  });
 }

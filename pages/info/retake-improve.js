@@ -72,12 +72,7 @@ async function _riSaveManualToSupa(userId, retakeArr, improveArr) {
 async function _riLoadEnrollments(userId) {
   if (!userId) return {};
   try {
-    const r = await fetch(
-      `${_RI_SUPA}/rest/v1/student_retake_enrollments?student_id=eq.${encodeURIComponent(userId)}&select=course_code,batch,section,teacher,type,schedule`,
-      { headers: { 'apikey': _RI_KEY, 'Authorization': `Bearer ${_RI_KEY}` } }
-    );
-    if (!r.ok) return {};
-    const rows = await r.json();
+    const rows = await window.fetchEnrollments(userId);
     const map = {};
     rows.forEach(row => { map[row.course_code] = row; });
     return map;
@@ -161,12 +156,7 @@ window._riToggleEnroll = async function(courseCode, batch, section, type) {
 
   if (isSame) {
     /* Unenroll */
-    try {
-      await fetch(
-        `${_RI_SUPA}/rest/v1/student_retake_enrollments?student_id=eq.${encodeURIComponent(d.userId)}&course_code=eq.${encodeURIComponent(codeUp)}`,
-        { method: 'DELETE', headers: { 'apikey': _RI_KEY, 'Authorization': `Bearer ${_RI_KEY}`, 'Prefer': 'return=minimal' } }
-      );
-    } catch(e) {}
+    await window.removeEnrollment(d.userId, codeUp);
     if (!d.enrollments) d.enrollments = {};
     delete d.enrollments[codeUp];
   } else {
@@ -174,23 +164,12 @@ window._riToggleEnroll = async function(courseCode, batch, section, type) {
     const allSecs = d.getSectionsForCourse(codeUp);
     const sec     = allSecs.find(s => s.batch === batch && s.section === section);
     const slots   = sec?.slots || [];
-    try {
-      await fetch(`${_RI_SUPA}/rest/v1/student_retake_enrollments`, {
-        method:  'POST',
-        headers: {
-          'apikey': _RI_KEY, 'Authorization': `Bearer ${_RI_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates',
-        },
-        body: JSON.stringify({
-          student_id: d.userId, course_code: codeUp,
-          course_name: d.courseNameMap[codeUp] || '',
-          batch, section, teacher: sec?.initials || '', type,
-          schedule: slots, enrolled_at: new Date().toISOString(),
-          student_name: d.studentName || '',
-        }),
-      });
-    } catch(e) {}
+    await window.saveEnrollment({
+      student_id: d.userId, course_code: codeUp,
+      course_name: d.courseNameMap[codeUp] || '',
+      batch, section, teacher: sec?.initials || '', type,
+      schedule: slots, student_name: d.studentName || '',
+    });
     if (!d.enrollments) d.enrollments = {};
     d.enrollments[codeUp] = { course_code: codeUp, batch, section, teacher: sec?.initials || '', type, schedule: slots };
   }
@@ -631,8 +610,7 @@ async function loadRetakeImprove(body) {
           Object.keys(fresh).forEach(code => {
             if (!_isPassed(code)) return;
             delete fresh[code];
-            fetch(`${_RI_SUPA}/rest/v1/student_retake_enrollments?student_id=eq.${encodeURIComponent(user.id)}&course_code=eq.${encodeURIComponent(code)}`,
-              { method: 'DELETE', headers: { 'apikey': _RI_KEY, 'Authorization': `Bearer ${_RI_KEY}`, 'Prefer': 'return=minimal' } }).catch(() => {});
+            window.removeEnrollment(user.id, code);
           });
         }
         try { localStorage.setItem(`lu62b_enrollments_${user.id}`, JSON.stringify(fresh)); } catch(e) {}
@@ -642,10 +620,7 @@ async function loadRetakeImprove(body) {
 
       /* Fetch ALL students' enrollments — powers both the section enrollee
          map and the Classmates tab (who in 62B is taking what) */
-      fetch(
-        `${_RI_SUPA}/rest/v1/student_retake_enrollments?select=course_code,course_name,batch,section,teacher,type,student_name,student_id`,
-        { headers: { 'apikey': _RI_KEY, 'Authorization': `Bearer ${_RI_KEY}` } }
-      ).then(r => r.ok ? r.json() : []).then(rows => {
+      window.fetchEnrollments().then(rows => {
         if (!window._riData) return;
         const map = {};
         rows.forEach(r => {

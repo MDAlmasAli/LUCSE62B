@@ -3,18 +3,9 @@
    ROUTINE_DAY_NAMES, parseClassCell, timeToMin, courseColor, escH,
    DAY_DISPLAY, sheetRows */
 
-const _RR_SUPA = 'https://ftvtlqxpalwvyserujuh.supabase.co';
-const _RR_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dnRscXhwYWx3dnlzZXJ1anVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDA1MDgsImV4cCI6MjA5MzQ3NjUwOH0.kdmxzcqmOlCpMmjnvZPaOLIdfdLomrbMZBo4Nd5YecM';
 
 async function _rrFetchEnrollments(userId) {
-  try {
-    const r = await fetch(
-      `${_RR_SUPA}/rest/v1/student_retake_enrollments?student_id=eq.${encodeURIComponent(userId)}&select=*`,
-      { headers: { 'apikey': _RR_KEY, 'Authorization': `Bearer ${_RR_KEY}` } }
-    );
-    if (!r.ok) return [];
-    return await r.json();
-  } catch(e) { return []; }
+  return window.fetchEnrollments(userId);
 }
 
 function _rrBuild62BSchedule(dayResults) {

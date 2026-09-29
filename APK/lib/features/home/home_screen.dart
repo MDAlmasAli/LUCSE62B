@@ -9,6 +9,7 @@ import '../../core/name_format.dart';
 import '../../core/sheets_api.dart';
 import '../../data/connectivity_service.dart';
 import '../../data/exam_repository.dart';
+import '../../data/notification_gate.dart';
 import '../../data/routine_grid_repository.dart';
 import '../../data/theme_controller.dart';
 import '../../data/session.dart';
@@ -234,6 +235,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
               ),
             ),
+            SliverToBoxAdapter(
+              child: ListenableBuilder(
+                listenable: NotificationGate.instance,
+                builder: (context, _) => _notificationBlockedCard(context),
+              ),
+            ),
             SliverToBoxAdapter(child: _greeting(student?.name)),
             if (student != null && !Session.instance.isDemo)
               SliverToBoxAdapter(
@@ -292,6 +299,72 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Shown only when Android will not put our notifications on screen. The
+  /// in-app list keeps working in that state, which is exactly why this has to
+  /// be said out loud — otherwise a blocked notification panel is invisible
+  /// from in here.
+  Widget _notificationBlockedCard(BuildContext context) {
+    final gate = NotificationGate.instance;
+    if (!gate.blocked) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.red.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.red.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Icon(
+                  Icons.notifications_off_rounded,
+                  size: 16,
+                  color: AppColors.red,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  gate.message,
+                  style: TextStyle(
+                    color: AppColors.text,
+                    fontSize: 12.5,
+                    height: 1.45,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () async {
+                final fixed = await gate.fix();
+                if (!context.mounted) return;
+                if (fixed) {
+                  AppToast.show(context, 'Notifications are on.');
+                }
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.red,
+                visualDensity: VisualDensity.compact,
+              ),
+              icon: const Icon(Icons.settings_rounded, size: 16),
+              label: const Text('Turn on notifications'),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -860,7 +860,12 @@
         doc.text('Page ' + p + ' of ' + totalPages, pageW - mg, pageH - 8.5, { align: 'right' });
       }
 
-      doc.save('CSE62B-Attendance-' + new Date().toISOString().slice(0, 10) + '.pdf');
+      // Name the file for the local day. toISOString() is UTC, which in
+      // Bangladesh still reads as yesterday until 6am.
+      var fd = new Date();
+      var pad = function (n) { return String(n).padStart(2, '0'); };
+      doc.save('CSE62B-Attendance-' + fd.getFullYear() + '-' +
+        pad(fd.getMonth() + 1) + '-' + pad(fd.getDate()) + '.pdf');
       showToast('PDF downloaded!');
     }
 

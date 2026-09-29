@@ -27,6 +27,38 @@ days, then asked for it on 2026-09-27; that batch is now out.)
 - Class reminders (15 minutes before a class) were scheduled from inside that widget
   refresh and would have died with it. They now load the routine themselves on launch,
   which covers the seven days they schedule ahead.
+- **Deadline reminders.** A classwork deadline now notifies the student a day before and
+  again two hours before. They are scheduled on the phone from the Deadlines sheet, so
+  they fire without internet, and they follow the existing "Classwork & deadlines"
+  notification switch - turning it off cancels the pending ones. Re-armed on launch and
+  whenever the Classwork screen loads.
+- **More of the app survives being offline.** LU notices and the notification list are now
+  kept on disk like the sheet data already was, so they show the last known items instead
+  of an empty screen. (Sheets, Drive listings and the home "showing saved data" banner
+  were already in place.)
+- **Broadcast notifications reach the notification panel again.** The reported fault was
+  that a notification appeared inside the app but never on the phone. The in-app list reads
+  Supabase and the panel needs a push, so the two can disagree, and they did: the app gave
+  up the `all_users` topic *before* subscribing to the per-category ones, all inside one
+  try/catch. A single failed call - a network blip during login was enough - left the device
+  subscribed to nothing at all, with the fallback already surrendered. Class routine,
+  notice, deadline and app-update pushes then reached nobody, while the in-app list carried
+  on as if all was well. Each topic is now subscribed independently, and `all_users` is only
+  given up once a category has actually taken. (Direct-to-device pushes, such as birthdays,
+  were never affected - verified on a real handset.)
+- The manifest had no `default_notification_channel_id`, so a push that arrived on a fresh
+  install before the first launch was dropped: Android discards a notification aimed at a
+  channel that does not exist yet.
+- Notification ids were a raw Dart `hashCode`, which is not bounded to the 32 bits Android
+  allows. An out-of-range id makes the platform call throw, losing the notification with
+  nothing on screen to say why.
+- **The app now says when the phone is refusing to show notifications.** It asks Android
+  whether notifications are permitted, at app level and for our channel, and puts a card on
+  the home screen with a button that asks for the permission or opens the settings page.
+  Blocked and working were previously indistinguishable from inside the app, because the
+  in-app list keeps working either way.
+- Logging out unsubscribes each topic independently, so one failure no longer leaves the
+  rest subscribed.
 
 ## Shipped in v1.1.42+58
 
@@ -58,8 +90,17 @@ days, then asked for it on 2026-09-27; that batch is now out.)
 Start a fresh "waiting" list above as new work lands, and bump `version:` in `pubspec.yaml`
 before the next publish (the build number must increase or the app sees no update).
 
-(Web-only fixes — cover page "Download PDF" typo, routine merge on the website — are already live
-on the site and are not part of the app release.)
+(Web-only fixes — cover page "Download PDF" typo, routine merge on the website, and the
+offline work below — are already live on the site and are not part of the app release.)
+
+## Live on the website
+
+- The site says when it is showing saved data: if a request fails, a banner names how old
+  the data on screen is instead of silently presenting last week's routine as today's.
+  It also offers a reload once the connection is back.
+- The service worker pre-caches the core pages, scripts and styles on each deploy, so a
+  page nobody opened before still works offline. Cached sheet responses are evicted
+  oldest-first when localStorage runs out of room rather than dropping the newest one.
 
 ## The key change is behind us
 

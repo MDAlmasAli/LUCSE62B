@@ -6,6 +6,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../core/supa.dart';
 import '../core/worker_api.dart';
+import 'local_notifications.dart';
+import 'notification_gate.dart';
 import 'notification_preferences.dart';
 import 'session.dart';
 
@@ -25,6 +27,7 @@ Future<void> _bgHandler(RemoteMessage message) async {
   final title = message.data['title']?.toString() ?? '';
   final body = message.data['body']?.toString() ?? '';
   if (title.isEmpty && body.isEmpty) return;
+  // A separate isolate, so this one needs its own plugin instance.
   final local = FlutterLocalNotificationsPlugin();
   const settings = InitializationSettings(
     android: AndroidInitializationSettings('@mipmap/ic_launcher'),
@@ -35,22 +38,12 @@ Future<void> _bgHandler(RemoteMessage message) async {
       .resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin
       >()
-      ?.createNotificationChannel(PushService._channel);
+      ?.createNotificationChannel(PushService.channel);
   await local.show(
-    id: message.messageId?.hashCode ?? message.data.hashCode,
+    id: PushService.notificationId(message.messageId ?? message.data),
     title: title,
     body: body,
-    notificationDetails: const NotificationDetails(
-      android: AndroidNotificationDetails(
-        'lu62b_default',
-        'Notifications',
-        channelDescription: 'CSE 62B Portal notifications',
-        importance: Importance.high,
-        priority: Priority.high,
-        icon: '@mipmap/ic_launcher',
-      ),
-      iOS: DarwinNotificationDetails(),
-    ),
+    notificationDetails: PushService.details,
   );
 }
 
@@ -61,17 +54,38 @@ class PushService {
   PushService._();
   static final instance = PushService._();
 
-  final _local = FlutterLocalNotificationsPlugin();
   String? _token;
   bool _ready = false;
   Future<void>? _initializing;
 
-  static const _channel = AndroidNotificationChannel(
-    'lu62b_default',
-    'Notifications',
-    description: 'CSE 62B Portal notifications',
+  static const channelId = 'lu62b_default';
+  static const channelName = 'Notifications';
+  static const channelDescription = 'CSE 62B Portal notifications';
+
+  static const channel = AndroidNotificationChannel(
+    channelId,
+    channelName,
+    description: channelDescription,
     importance: Importance.high,
   );
+
+  static const details = NotificationDetails(
+    android: AndroidNotificationDetails(
+      channelId,
+      channelName,
+      channelDescription: channelDescription,
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+    ),
+    iOS: DarwinNotificationDetails(),
+  );
+
+  /// Android notification ids are 32-bit. A Dart `hashCode` is not bounded to
+  /// that, and an out-of-range id makes the platform call throw - which loses
+  /// the notification with nothing to show why.
+  static int notificationId(Object? seed) =>
+      (seed?.hashCode ?? 0).abs() % 0x7FFFFFFF;
 
   Future<void> init() => _initializing ??= _init();
 
@@ -80,26 +94,28 @@ class PushService {
       FirebaseMessaging.onBackgroundMessage(_bgHandler);
       await Firebase.initializeApp();
 
-      // Local notifications (used to display foreground messages).
-      const initSettings = InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-        iOS: DarwinInitializationSettings(),
-      );
-      await _local.initialize(settings: initSettings);
-      await _local
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >()
-          ?.createNotificationChannel(_channel);
+      // Local notifications (used to display foreground messages). Shared
+      // with the class and deadline reminders so there is one plugin instance
+      // and one definition of this channel.
+      await LocalNotifications.ensureInitialized();
+      await LocalNotifications.createChannel(channel);
 
       // Permission (iOS + Android 13+).
-      final permission = await FirebaseMessaging.instance.requestPermission(
+      await FirebaseMessaging.instance.requestPermission(
         alert: true,
         badge: true,
         sound: true,
       );
-      if (permission.authorizationStatus == AuthorizationStatus.denied) {
-        debugPrint('Push notification permission denied');
+      // Then find out what the phone will really do with a push. Asking is not
+      // the same as being allowed, and a refusal is silent: the message still
+      // arrives and still reaches the in-app list, so without this check a
+      // blocked notification panel looks exactly like a working one.
+      await NotificationGate.instance.refresh();
+      if (NotificationGate.instance.blocked) {
+        debugPrint(
+          'Push notifications will not be shown: '
+          '${NotificationGate.instance.state.name}',
+        );
       }
       await FirebaseMessaging.instance
           .setForegroundNotificationPresentationOptions(
@@ -128,13 +144,36 @@ class PushService {
     try {
       // Older APKs listen to all_users. This version uses category topics so
       // users can opt out without disabling every notification.
-      await FirebaseMessaging.instance.unsubscribeFromTopic('all_users');
+      // Subscribe first, and give up `all_users` only once at least one
+      // category has replaced it. The old order dropped the fallback before
+      // the replacement existed, so a single failed call — one network blip
+      // during login was enough — left the device subscribed to nothing at
+      // all. Broadcasts then reached it silently, while the in-app list went
+      // on working, which makes the fault very hard to see from inside.
+      var subscribed = 0;
       for (final item in NotificationPreferences.items) {
-        if (NotificationPreferences.instance.enabled(item.id)) {
-          await FirebaseMessaging.instance.subscribeToTopic(item.topic);
-        } else {
-          await FirebaseMessaging.instance.unsubscribeFromTopic(item.topic);
+        // Each topic stands on its own: one failure must not skip the rest.
+        try {
+          if (NotificationPreferences.instance.enabled(item.id)) {
+            await FirebaseMessaging.instance.subscribeToTopic(item.topic);
+            subscribed++;
+          } else {
+            await FirebaseMessaging.instance.unsubscribeFromTopic(item.topic);
+          }
+        } catch (e) {
+          debugPrint('FCM topic ${item.topic} failed: $e');
         }
+      }
+
+      // Older APKs listen to all_users, and the Worker still sends there, so
+      // it is the safety net. Only step off it with a category in hand.
+      final wantsAny = NotificationPreferences.items.any(
+        (item) => NotificationPreferences.instance.enabled(item.id),
+      );
+      if (subscribed > 0 || !wantsAny) {
+        await FirebaseMessaging.instance.unsubscribeFromTopic('all_users');
+      } else {
+        debugPrint('No category topic took; staying on all_users');
       }
     } catch (e) {
       debugPrint('FCM topic subscription failed: $e');
@@ -143,9 +182,16 @@ class PushService {
 
   Future<void> _unsubscribeFromBroadcasts() async {
     try {
-      await FirebaseMessaging.instance.unsubscribeFromTopic('all_users');
-      for (final item in NotificationPreferences.items) {
-        await FirebaseMessaging.instance.unsubscribeFromTopic(item.topic);
+      for (final topic in [
+        'all_users',
+        ...NotificationPreferences.items.map((item) => item.topic),
+      ]) {
+        // One failure must not leave the rest subscribed after a logout.
+        try {
+          await FirebaseMessaging.instance.unsubscribeFromTopic(topic);
+        } catch (e) {
+          debugPrint('FCM topic $topic unsubscribe failed: $e');
+        }
       }
     } catch (e) {
       debugPrint('FCM topic unsubscribe failed: $e');
@@ -156,16 +202,12 @@ class PushService {
   Future<void> _register() async {
     final token = _token;
     if (token == null) return;
-    try {
-      await Supa.client.from('fcm_tokens').upsert({
-        'token': token,
-        'student_id': Session.instance.student?.id,
-        'platform': Platform.isIOS ? 'ios' : 'android',
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      });
-    } catch (e) {
-      debugPrint('fcm_tokens upsert failed: $e');
-    }
+    final ok = await WorkerApi.instance.registerFcmToken(
+      token,
+      studentId: Session.instance.student?.id,
+      platform: Platform.isIOS ? 'ios' : 'android',
+    );
+    if (!ok) debugPrint('fcm token registration failed');
   }
 
   Future<void> _unregister() async {
@@ -200,21 +242,11 @@ class PushService {
     final title = n?.title ?? m.data['title']?.toString() ?? '';
     final body = n?.body ?? m.data['body']?.toString() ?? '';
     if (title.isEmpty && body.isEmpty) return;
-    _local.show(
-      id: m.messageId?.hashCode ?? m.data.hashCode,
+    LocalNotifications.plugin.show(
+      id: notificationId(m.messageId ?? m.data),
       title: title,
       body: body,
-      notificationDetails: const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'lu62b_default',
-          'Notifications',
-          channelDescription: 'CSE 62B Portal notifications',
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-        ),
-        iOS: DarwinNotificationDetails(),
-      ),
+      notificationDetails: details,
     );
   }
 }

@@ -1,7 +1,5 @@
 /* ─── Exam Routine ─── */
 
-const _EX_SUPA = 'https://ftvtlqxpalwvyserujuh.supabase.co';
-const _EX_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dnRscXhwYWx3dnlzZXJ1anVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDA1MDgsImV4cCI6MjA5MzQ3NjUwOH0.kdmxzcqmOlCpMmjnvZPaOLIdfdLomrbMZBo4Nd5YecM';
 
 let _examCache       = null;
 let _examTab         = 'regular';
@@ -174,13 +172,7 @@ function parseExamRoutine(data, targetBatch, targetSection) {
 
 /* ── Fetch retake enrollments ── */
 async function _examFetchEnrollments(userId) {
-  try {
-    const r = await fetch(
-      `${_EX_SUPA}/rest/v1/student_retake_enrollments?student_id=eq.${encodeURIComponent(userId)}&select=*`,
-      { headers: { 'apikey': _EX_KEY, 'Authorization': `Bearer ${_EX_KEY}` } }
-    );
-    return r.ok ? await r.json() : [];
-  } catch(e) { return []; }
+  return window.fetchEnrollments(userId);
 }
 
 /* ── Main loader ── */

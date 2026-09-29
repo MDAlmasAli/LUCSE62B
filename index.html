@@ -1378,28 +1378,8 @@
 <script>
 /* ── Birthday Feature ── */
 (function () {
-  /* Check if today is the student's birthday */
-  function isBirthdayToday(bdayStr) {
-    if (!bdayStr) return false;
-    const now = new Date();
-    const dd = now.getDate();
-    const mm = now.getMonth() + 1;
-    const cleaned = bdayStr.trim();
-    // YYYY-MM-DD (Supabase default: "2004-05-13" or "2026-05-13")
-    const isoMatch = cleaned.match(/^\d{4}-(\d{2})-(\d{2})/);
-    if (isoMatch) return parseInt(isoMatch[2]) === dd && parseInt(isoMatch[1]) === mm;
-    // DD/MM or DD-MM ("13/05", "13-05")
-    const dmMatch = cleaned.match(/^(\d{1,2})[\/\-](\d{1,2})/);
-    if (dmMatch) return parseInt(dmMatch[1]) === dd && parseInt(dmMatch[2]) === mm;
-    // DD Month ("13 May")
-    const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-    const wordMatch = cleaned.match(/^(\d{1,2})\s+([a-zA-Z]+)/);
-    if (wordMatch) {
-      const mi = months.indexOf(wordMatch[2].toLowerCase().slice(0, 3));
-      return parseInt(wordMatch[1]) === dd && mi + 1 === mm;
-    }
-    return false;
-  }
+  /* Matching a date of birth against today now happens in the database, in
+     birthdays_today() - see the RPC below. */
 
   /* Show once per browser session (sessionStorage clears on tab close) */
   function alreadyShownThisVisit(studentId) {
@@ -1515,37 +1495,46 @@
     } catch {}
   };
 
-  /* Fetch birthday from Supabase (h_dob takes priority over dob) */
   const SUPA_URL = 'https://ftvtlqxpalwvyserujuh.supabase.co';
   const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dnRscXhwYWx3dnlzZXJ1anVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDA1MDgsImV4cCI6MjA5MzQ3NjUwOH0.kdmxzcqmOlCpMmjnvZPaOLIdfdLomrbMZBo4Nd5YecM';
 
-  async function fetchBirthday(studentId) {
-    try {
-      const r = await fetch(
-        `${SUPA_URL}/rest/v1/student_passwords?student_id=eq.${encodeURIComponent(studentId)}&select=dob,h_dob`,
-        { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
-      );
-      if (!r.ok) return null;
-      const data = await r.json();
-      if (!data || !data[0]) return null;
-      /* h_dob takes priority — real birthday over certificate birthday */
-      return data[0].h_dob || data[0].dob || null;
-    } catch { return null; }
+  /* Who has a birthday today, answered by the database.
+
+     This used to read dob and h_dob for every student straight off the table.
+     The key below is in this file, so that handed anyone — logged in or not,
+     in the class or not — all 38 dates of birth, and a date of birth is what
+     the portal checks before pulling a result from Leading University. The RPC
+     returns names only; the dates never leave the database. It also decides
+     "today" in Dhaka time rather than in the reader's timezone. */
+  let _birthdaysTodayPromise = null;
+  function birthdaysToday() {
+    if (!_birthdaysTodayPromise) {
+      _birthdaysTodayPromise = fetch(`${SUPA_URL}/rest/v1/rpc/birthdays_today`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPA_KEY,
+          'Authorization': `Bearer ${SUPA_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      })
+        .then(r => (r.ok ? r.json() : []))
+        .then(rows => (Array.isArray(rows) ? rows : []))
+        .catch(() => []);
+    }
+    return _birthdaysTodayPromise;
   }
 
-  /* Fetch all classmates with today's birthday, names resolved from sheet */
+  async function isMyBirthday(studentId) {
+    const rows = await birthdaysToday();
+    return rows.some(r => String(r.student_id) === String(studentId));
+  }
+
+  /* Classmates with today's birthday, names resolved from the sheet */
   async function fetchClassmateBirthdays(currentStudentId) {
     try {
-      const r = await fetch(
-        `${SUPA_URL}/rest/v1/student_passwords?select=student_id,dob,h_dob`,
-        { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
-      );
-      if (!r.ok) return [];
-      const data = await r.json();
-      const birthdayStudents = data.filter(s =>
-        s.student_id !== currentStudentId &&
-        s.student_id !== 'DEMO' &&
-        isBirthdayToday(s.h_dob || s.dob)
+      const birthdayStudents = (await birthdaysToday()).filter(
+        s => String(s.student_id) !== String(currentStudentId)
       );
       if (!birthdayStudents.length) return [];
       /* Only fetch the sheet if someone actually has a birthday today */
@@ -1557,19 +1546,31 @@
         if (cells[1]) nameMap[cells[1]] = cells[2] || cells[1];
       });
       return birthdayStudents.map(function (s) {
-        return { student_id: s.student_id, name: nameMap[s.student_id] || s.student_id };
+        return {
+          student_id: s.student_id,
+          name: nameMap[s.student_id] || s.name || s.student_id,
+        };
       });
     } catch { return []; }
   }
 
+  /* The reader's own day, not UTC. isBirthdayToday() matches on the local
+     date, so keying the "already shown" flag on the UTC date made the two
+     disagree: in Bangladesh the UTC date only turns over at 6am, so anyone
+     who opened the site after midnight was shown the same birthday again
+     later that morning. */
+  function localDayKey() {
+    const d = new Date();
+    const two = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate());
+  }
+
   function classmateNotifShownToday() {
-    const key = 'lu62b_classmate_bday_' + new Date().toISOString().slice(0, 10);
-    return !!sessionStorage.getItem(key);
+    return !!sessionStorage.getItem('lu62b_classmate_bday_' + localDayKey());
   }
 
   function markClassmateNotifShown() {
-    const key = 'lu62b_classmate_bday_' + new Date().toISOString().slice(0, 10);
-    sessionStorage.setItem(key, '1');
+    sessionStorage.setItem('lu62b_classmate_bday_' + localDayKey(), '1');
   }
 
   function showClassmateBdayNotif(classmates) {
@@ -1590,8 +1591,8 @@
       if (!student || student.isDemo || !student.id) return;
 
       /* Own birthday check */
-      fetchBirthday(student.id).then(function (bday) {
-        if (!bday || !isBirthdayToday(bday)) return;
+      isMyBirthday(student.id).then(function (mine) {
+        if (!mine) return;
         const btn = document.getElementById('bdayReplayBtn');
         if (btn) btn.style.display = 'flex';
         if (alreadyShownThisVisit(student.id)) return;

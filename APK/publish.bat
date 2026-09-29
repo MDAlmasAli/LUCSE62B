@@ -45,8 +45,8 @@ curl -sS -X POST https://lucse62b-api.sy164425.workers.dev/release-apk ^
   -H "x-release-key: %RELKEY%" ^
   -H "x-version-name: %VNAME%" ^
   -H "x-version-code: %VCODE%" ^
-  -H "x-release-features: [\"Results now open the LU page inside the app with your ID and date of birth filled in, and save the result for you\"]" ^
-  -H "x-release-fixes: [\"Attendance no longer un-marks a student on its own\", \"Attendance is filed under the Bangladesh date instead of UTC\", \"A freshly imported result shows immediately instead of the previous one\"]" ^
+  -H "x-release-features: [\"Classwork deadlines now remind you a day before and again two hours before\", \"The app now tells you when your phone is blocking its notifications, and can take you straight to the setting\"]" ^
+  -H "x-release-fixes: [\"Notifications reach your phone notification panel again, not only the list inside the app\", \"LU notices and your notification list now work without internet\", \"Birthday wishes can no longer be skipped by a server hiccup\", \"The home-screen widget has been removed, so the app no longer wakes up every 15 minutes\"]" ^
   -H "Content-Type: application/vnd.android.package-archive" ^
   --data-binary @build/app/outputs/flutter-apk/app-release.apk
 echo.

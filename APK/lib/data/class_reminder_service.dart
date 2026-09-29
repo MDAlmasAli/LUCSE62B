@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'local_notifications.dart';
 import 'routine_grid_repository.dart';
 import 'session.dart';
 
@@ -31,27 +31,12 @@ class ClassReminderService {
     DateTime.friday: 'FRIDAY',
   };
 
-  final _local = FlutterLocalNotificationsPlugin();
-  bool _initialized = false;
   bool _scheduling = false;
 
   Future<void> initialize() async {
-    if (!Platform.isAndroid || _initialized) return;
-    try {
-      tz_data.initializeTimeZones();
-      tz.setLocalLocation(tz.getLocation('Asia/Dhaka'));
-    } catch (_) {}
-    const settings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      iOS: DarwinInitializationSettings(),
-    );
-    await _local.initialize(settings: settings);
-    await _local
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(_channel);
-    _initialized = true;
+    if (!Platform.isAndroid) return;
+    await LocalNotifications.ensureInitialized();
+    await LocalNotifications.createChannel(_channel);
   }
 
   /// Load the student's routine — their own custom and retake/improve courses
@@ -65,7 +50,9 @@ class ClassReminderService {
       final student = Session.instance.student;
       if (student != null && !student.isDemo) {
         final personal = await Future.wait([
-          repo.loadCustomCourses(student.id).catchError((_) => <CustomCourse>[]),
+          repo
+              .loadCustomCourses(student.id)
+              .catchError((_) => <CustomCourse>[]),
           repo
               .loadEnrollmentCourses(student.id)
               .catchError((_) => <CustomCourse>[]),
@@ -86,7 +73,7 @@ class ClassReminderService {
     _scheduling = true;
     try {
       await initialize();
-      await _cancelExisting();
+      await LocalNotifications.cancelWithPayloadPrefix(_payloadPrefix);
       final now = DateTime.now();
       var scheduled = 0;
 
@@ -110,15 +97,16 @@ class ClassReminderService {
           final reminderAt = classStart.subtract(_leadTime);
           if (!reminderAt.isAfter(now)) continue;
           final courseName = data.nameFor(slot).trim();
-          final visibleCourse =
-              courseName.isNotEmpty ? courseName : 'Your class';
+          final visibleCourse = courseName.isNotEmpty
+              ? courseName
+              : 'Your class';
           final room = slot.room.trim();
           final bodyParts = <String>[
             visibleCourse,
             if (room.isNotEmpty) 'Room $room',
             _displayTime(slot.time),
           ];
-          await _local.zonedSchedule(
+          await LocalNotifications.plugin.zonedSchedule(
             id: 620000 + offset * 100 + slotIndex,
             scheduledDate: tz.TZDateTime.from(reminderAt, tz.local),
             androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
@@ -147,15 +135,6 @@ class ClassReminderService {
       debugPrint('Class reminder scheduling failed: $e');
     } finally {
       _scheduling = false;
-    }
-  }
-
-  Future<void> _cancelExisting() async {
-    final pending = await _local.pendingNotificationRequests();
-    for (final item in pending) {
-      if ((item.payload ?? '').startsWith(_payloadPrefix)) {
-        await _local.cancel(id: item.id);
-      }
     }
   }
 

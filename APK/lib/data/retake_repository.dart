@@ -314,34 +314,22 @@ class RetakeRepository {
   }
 
   // ── Enrollments (student_retake_enrollments) → My List & Classmates ──
-  static const _enrollCols =
-      'student_id,student_name,course_code,course_name,batch,section,teacher,type';
+  // Read and written through the Worker, not Supabase directly: the anon key
+  // ships inside the app, so with it anyone could list, add or delete another
+  // student's enrolled courses.
 
   Future<List<RetakeEnrollment>> myEnrollments(String studentId) async {
-    try {
-      final rows = await Supa.client
-          .from('student_retake_enrollments')
-          .select(_enrollCols)
-          .eq('student_id', studentId);
-      return _refreshEnrollmentInfo(
-        (rows as List).map((r) => RetakeEnrollment.fromRow(r as Map)).toList(),
-      );
-    } catch (_) {
-      return [];
-    }
+    final rows = await WorkerApi.instance.enrollments(studentId: studentId);
+    return _refreshEnrollmentInfo(
+      rows.map(RetakeEnrollment.fromRow).toList(),
+    );
   }
 
   Future<List<RetakeEnrollment>> allEnrollments() async {
-    try {
-      final rows = await Supa.client
-          .from('student_retake_enrollments')
-          .select(_enrollCols);
-      return _refreshEnrollmentInfo(
-        (rows as List).map((r) => RetakeEnrollment.fromRow(r as Map)).toList(),
-      );
-    } catch (_) {
-      return [];
-    }
+    final rows = await WorkerApi.instance.enrollments();
+    return _refreshEnrollmentInfo(
+      rows.map(RetakeEnrollment.fromRow).toList(),
+    );
   }
 
   Future<List<RetakeEnrollment>> _refreshEnrollmentInfo(
@@ -386,41 +374,22 @@ class RetakeRepository {
     required String teacher,
     required String type,
   }) async {
-    try {
-      await Supa.client
-          .from('student_retake_enrollments')
-          .delete()
-          .eq('student_id', studentId)
-          .eq('course_code', courseCode);
-      await Supa.client.from('student_retake_enrollments').insert({
-        'student_id': studentId,
-        'student_name': studentName,
-        'course_code': courseCode,
-        'course_name': courseName,
-        'batch': batch,
-        'section': section,
-        'teacher': teacher,
-        'type': type,
-        'enrolled_at': DateTime.now().toIso8601String(),
-      });
-      return true;
-    } catch (_) {
-      return false;
-    }
+    // The Worker clears any existing row for this course before inserting, so
+    // one course still means one section.
+    return WorkerApi.instance.enroll({
+      'student_id': studentId,
+      'student_name': studentName,
+      'course_code': courseCode,
+      'course_name': courseName,
+      'batch': batch,
+      'section': section,
+      'teacher': teacher,
+      'type': type,
+    });
   }
 
-  Future<bool> unenroll(String studentId, String courseCode) async {
-    try {
-      await Supa.client
-          .from('student_retake_enrollments')
-          .delete()
-          .eq('student_id', studentId)
-          .eq('course_code', courseCode);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
+  Future<bool> unenroll(String studentId, String courseCode) =>
+      WorkerApi.instance.unenroll(studentId, courseCode);
 
   // ── Results → best-grade buckets ──
   Future<_Graded> _bucketFromResult(String? id, String? dob) async {

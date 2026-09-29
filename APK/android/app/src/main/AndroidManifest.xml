@@ -31,6 +31,18 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Which channel a push lands on when it arrives before the app has
+             ever run, or without a channel_id of its own. Android silently
+             drops a notification aimed at a channel that does not exist yet,
+             so without this a fresh install could miss pushes until the first
+             launch created the channel. Must match PushService._channel. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="lu62b_default" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

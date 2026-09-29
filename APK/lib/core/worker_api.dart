@@ -78,6 +78,91 @@ class WorkerApi {
   });
 
   /// Remove an FCM token after logout/access revocation.
+  // ── Retake / improve enrollments ────────────────────────────────────────
+  // These go through the Worker rather than Supabase directly: the anon key
+  // ships inside the app and the site, and with it anyone could list, add or
+  // delete another student's enrolled courses.
+
+  /// Enrollments for one student, or the whole class when [studentId] is null
+  /// (that is the Classmates view).
+  Future<List<Map<String, dynamic>>> enrollments({String? studentId}) async {
+    try {
+      final q = (studentId == null || studentId.isEmpty)
+          ? '/enrollments'
+          : '/enrollments?student_id=${Uri.encodeComponent(studentId)}';
+      final r = await http
+          .get(_u(q), headers: _origin)
+          .timeout(const Duration(seconds: 12));
+      if (r.statusCode != 200) return [];
+      final data = jsonDecode(r.body) as Map<String, dynamic>;
+      return ((data['enrollments'] as List?) ?? const [])
+          .cast<Map<String, dynamic>>();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Enroll in a course, replacing any existing row for the same course.
+  Future<bool> enroll(Map<String, dynamic> row) async {
+    try {
+      final r = await http
+          .post(
+            _u('/enrollments'),
+            headers: {'Content-Type': 'application/json', ..._origin},
+            body: jsonEncode(row),
+          )
+          .timeout(const Duration(seconds: 12));
+      return r.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> unenroll(String studentId, String courseCode) async {
+    try {
+      final r = await http
+          .delete(
+            _u('/enrollments'),
+            headers: {'Content-Type': 'application/json', ..._origin},
+            body: jsonEncode({
+              'student_id': studentId,
+              'course_code': courseCode,
+            }),
+          )
+          .timeout(const Duration(seconds: 12));
+      return r.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Register this device for push. Goes through the Worker rather than
+  /// writing `fcm_tokens` with the anon key, which is public and would let
+  /// anyone re-point a device token at a different student.
+  Future<bool> registerFcmToken(
+    String token, {
+    String? studentId,
+    String platform = 'android',
+  }) async {
+    try {
+      final r = await http
+          .post(
+            _u('/fcm-token'),
+            headers: {'Content-Type': 'application/json', ..._origin},
+            body: jsonEncode({
+              'token': token,
+              if (studentId != null && studentId.isNotEmpty)
+                'student_id': studentId,
+              'platform': platform,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+      return r.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> unregisterFcmToken(String token) async {
     try {
       await http
@@ -194,17 +279,21 @@ class WorkerApi {
   }
 
   /// GET /notices → list of LU notices { title, link, date, image }.
+  /// Kept on disk like the Drive listings, so an offline Notices screen shows
+  /// the last ones we saw instead of nothing at all.
   Future<List<Map<String, dynamic>>> notices() async {
     try {
       final r = await http
           .get(_u('/notices'), headers: _origin)
           .timeout(const Duration(seconds: 12));
-      if (r.statusCode != 200) return [];
+      if (r.statusCode != 200) return await _diskFolder('notices');
       final data = jsonDecode(r.body) as Map<String, dynamic>;
-      return ((data['notices'] as List?) ?? const [])
+      final list = ((data['notices'] as List?) ?? const [])
           .cast<Map<String, dynamic>>();
+      if (list.isNotEmpty) await _persistFolder('notices', list);
+      return list;
     } catch (_) {
-      return [];
+      return _diskFolder('notices');
     }
   }
 

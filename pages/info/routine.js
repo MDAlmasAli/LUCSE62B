@@ -387,13 +387,7 @@ window._rtDeleteCustomCourse = function(id) {
 
 /* ── Fetch enrolled retake/improve sections ── */
 async function _rtFetchEnrollments(userId) {
-  try {
-    const r = await fetch(
-      `${_RT_SUPA}/rest/v1/student_retake_enrollments?student_id=eq.${encodeURIComponent(userId)}&select=*`,
-      { headers: { 'apikey': _RT_KEY, 'Authorization': `Bearer ${_RT_KEY}` } }
-    );
-    return r.ok ? await r.json() : [];
-  } catch(e) { return []; }
+  return window.fetchEnrollments(userId);
 }
 
 /* Re-read each enrollment's slots from the live routine (the stored snapshot

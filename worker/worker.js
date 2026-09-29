@@ -583,6 +583,129 @@ export default {
       }
 
       // Native app logout/revocation: remove this device token server-side.
+      // ── /enrollments — Profile → My Courses (retake / improve) ────────
+      // These rows used to be read and written straight from the browser and
+      // the app with the anon key, which is published in the site's
+      // JavaScript. That meant anyone could list, add or delete anybody's
+      // enrolled courses. Everything goes through here now, and a write is
+      // only accepted for a student the Main Sheet still lists.
+      if (p === '/enrollments') {
+        if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
+        if (!env.SUPA_KEY) return errResp(cors, 500, 'Not configured');
+        const SUPA_HDR = {
+          'apikey': env.SUPA_KEY,
+          'Authorization': `Bearer ${env.SUPA_KEY}`,
+        };
+        const COLS = 'student_id,student_name,course_code,course_name,batch,' +
+          'section,teacher,type,schedule,enrolled_at';
+
+        // Everyone in the class may see who else took a course — that is the
+        // "Classmates" tab — so a read is not restricted to your own rows.
+        if (request.method === 'GET') {
+          const who = String(url.searchParams.get('student_id') || '').trim();
+          if (who && !/^\d{8,16}$/.test(who)) return errResp(cors, 400, 'Invalid ID');
+          let q = `${SUPA_URL}/rest/v1/student_retake_enrollments?select=${COLS}`;
+          if (who) q += `&student_id=eq.${encodeURIComponent(who)}`;
+          const r = await fetch(q, { headers: SUPA_HDR }).catch(() => null);
+          if (!r || !r.ok) return errResp(cors, 502, 'Database error');
+          return jsonResp(cors, { enrollments: await r.json().catch(() => []) });
+        }
+
+        if (request.method === 'POST' || request.method === 'DELETE') {
+          const body = await request.json().catch(() => ({}));
+          const studentId = String(body.student_id || '').trim();
+          const courseCode = String(body.course_code || '').trim();
+          if (!/^\d{8,16}$/.test(studentId)) return errResp(cors, 400, 'Invalid ID');
+          if (!courseCode || courseCode.length > 40) {
+            return errResp(cors, 400, 'Missing course_code');
+          }
+          const roster = await getActiveStudentRoster(env);
+          if (!roster) return errResp(cors, 503, 'Roster temporarily unavailable');
+          if (!roster.ids.includes(studentId)) return errResp(cors, 403, 'Forbidden');
+
+          // Both paths start by clearing this student's row for the course:
+          // POST replaces it, DELETE just leaves it gone.
+          const target =
+            `${SUPA_URL}/rest/v1/student_retake_enrollments` +
+            `?student_id=eq.${encodeURIComponent(studentId)}` +
+            `&course_code=eq.${encodeURIComponent(courseCode)}`;
+          const cleared = await fetch(target, { method: 'DELETE', headers: SUPA_HDR })
+            .catch(() => null);
+          if (!cleared || !cleared.ok) return errResp(cors, 502, 'Database error');
+          if (request.method === 'DELETE') return jsonResp(cors, { ok: true });
+
+          const type = body.type === 'improve' ? 'improve' : 'retake';
+          const str = (v, max) => String(v || '').trim().slice(0, max);
+          const r = await fetch(`${SUPA_URL}/rest/v1/student_retake_enrollments`, {
+            method: 'POST',
+            headers: { ...SUPA_HDR, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              student_id: studentId,
+              student_name: str(body.student_name, 120),
+              course_code: courseCode,
+              course_name: str(body.course_name, 200),
+              batch: str(body.batch, 20),
+              section: str(body.section, 20),
+              teacher: str(body.teacher, 120),
+              type,
+              // The slots the section had when the student enrolled. Callers
+              // that do not track a timetable simply leave it out.
+              schedule: Array.isArray(body.schedule) ? body.schedule : null,
+              enrolled_at: new Date().toISOString(),
+            }),
+          }).catch(() => null);
+          if (!r || !r.ok) return errResp(cors, 502, 'Database error');
+          return jsonResp(cors, { ok: true });
+        }
+
+        return errResp(cors, 405, 'Method not allowed');
+      }
+
+      // ── POST /fcm-token { token, student_id?, platform? } ─────────────
+      // Device registration used to be written straight to Supabase with the
+      // anon key, which is published in the site's JavaScript. That let anyone
+      // read every device token and re-point one at their own student_id, so
+      // personal pushes (a published result, a birthday) would land on their
+      // phone instead. Registration goes through here now, and the anon grants
+      // on fcm_tokens can be revoked once every install is on this build.
+      if (p === '/fcm-token' && request.method === 'POST') {
+        if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
+        if (!env.SUPA_KEY) return errResp(cors, 500, 'Not configured');
+        const body = await request.json().catch(() => ({}));
+        const token = String(body.token || '').trim();
+        if (!token || token.length > 512) return errResp(cors, 400, 'Missing token');
+        const studentId = String(body.student_id || '').trim();
+        if (studentId && !/^\d{8,16}$/.test(studentId)) {
+          return errResp(cors, 400, 'Invalid ID');
+        }
+        // Only a student the Main Sheet still lists may attach their ID to a
+        // device; anyone removed from the sheet registers as anonymous and so
+        // receives broadcasts only, never a personal push.
+        let owner = null;
+        if (studentId) {
+          const roster = await getActiveStudentRoster(env);
+          if (roster && roster.ids.includes(studentId)) owner = studentId;
+        }
+        const platform = ['android', 'ios', 'web'].includes(body.platform)
+          ? body.platform
+          : 'android';
+        const r = await fetch(`${SUPA_URL}/rest/v1/fcm_tokens`, {
+          method: 'POST',
+          headers: {
+            'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}`,
+            'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates',
+          },
+          body: JSON.stringify({
+            token,
+            student_id: owner,
+            platform,
+            updated_at: new Date().toISOString(),
+          }),
+        }).catch(() => null);
+        if (!r || !r.ok) return errResp(cors, 502, 'Database error');
+        return jsonResp(cors, { ok: true, linked: !!owner });
+      }
+
       if (p === '/fcm-token' && request.method === 'DELETE') {
         if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
         const { token } = await request.json().catch(() => ({}));
@@ -952,7 +1075,18 @@ export default {
       // ── POST /attendance — mark / unmark / clear ──────────────────────
       if (p === '/attendance' && request.method === 'POST') {
         if (!ALLOWED_ORIGINS.includes(origin)) return errResp(cors, 403, 'Forbidden');
-        const ATTENDANCE_ADMIN = '0182320012101068';
+        // Who is allowed to mark, unmark and clear. Kept in a Worker secret so
+        // it is not sitting in the public repo, with the previous hardcoded
+        // value as the fallback until ATTENDANCE_ADMIN_ID is set.
+        //
+        // Be clear about what this does and does not do: the CR's student ID
+        // is not a secret - it is in the Student Info sheet and on every
+        // attendance list - and the Origin header can be set by anything that
+        // is not a browser. So this raises the bar, it does not close the door.
+        // What actually protects the register is revoking the anon role's
+        // grants on attendance_records (supabase/lock_down_anon_grants.sql), so
+        // the Worker is the only way in at all.
+        const ATTENDANCE_ADMIN = String(env.ATTENDANCE_ADMIN_ID || '0182320012101068');
         const body = await request.json().catch(() => null);
         if (!body || !body.action) return errResp(cors, 400, 'Missing action');
         const today = bdToday();
@@ -2819,21 +2953,33 @@ async function checkBirthdays(env) {
 
   const state = await supabaseGetState(env, 'birthday_wishes');
   if (state?.state_hash === today) return;  // already wished today
-  await supabaseUpsertState(env, 'birthday_wishes', today, { at: new Date().toISOString() });
 
   const r = await fetch(
     `${SUPA_URL}/rest/v1/student_passwords?select=student_id,name,dob,h_dob`,
     { headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` } },
   ).catch(() => null);
+  // Leave the day unclaimed on failure. This runs every minute, so the next
+  // run retries; claiming it up front would silently skip a birthday for a
+  // whole year after a single Supabase blip.
   if (!r || !r.ok) return;
   const rows = await r.json().catch(() => []);
 
   const celebrating = (rows || []).filter(row => {
     if (String(row.student_id || '').toUpperCase() === 'DEMO') return false;
-    const m = String(row.h_dob || row.dob || '').trim().match(/^\d{4}-(\d{2}-\d{2})/);
-    return !!m && m[1] === monthDay;
+    // h_dob (the real birthday) wins over dob (the certificate one), but only
+    // when it is actually a date - otherwise a malformed h_dob would hide a
+    // perfectly good dob and the student would never be wished.
+    const dates = [row.h_dob, row.dob]
+      .map(v => String(v || '').trim().match(/^\d{4}-(\d{2}-\d{2})/))
+      .filter(Boolean);
+    return dates.length > 0 && dates[0][1] === monthDay;
   });
-  if (!celebrating.length) return;
+  if (!celebrating.length) {
+    // A clean "nobody today" is an answer, not a failure, so claim the day -
+    // otherwise this would re-read the whole table every minute, all year.
+    await supabaseUpsertState(env, 'birthday_wishes', today, { at: new Date().toISOString() });
+    return;
+  }
 
   const nameOf = row => String(row.name || '').trim() || String(row.student_id);
   const shortNameOf = row => nameOf(row).split(/\s+/).slice(0, 2).join(' ');
@@ -2866,6 +3012,11 @@ async function checkBirthdays(env) {
       { title: personalTitle, body: personalBody, link: '/', type: 'birthday' },
     );
   }
+
+  // Claimed only now that the wishes have gone out. A crash partway through
+  // means the next run repeats it; insertNotification suppresses the duplicate
+  // row, and a repeated push is a far smaller problem than a missed birthday.
+  await supabaseUpsertState(env, 'birthday_wishes', today, { at: new Date().toISOString() });
 }
 
 /* Every registered device. */
@@ -2912,7 +3063,11 @@ async function sendFcmToTokens(env, tokens, message) {
         }),
       },
     ).catch(() => null);
-    if (r && (r.status === 404 || r.status === 400)) dead.push(token);
+    // Only UNREGISTERED (404) means this device is gone. A 400 is FCM refusing
+    // the request itself - the same 400 would come back for every token, so
+    // treating it as "dead" once emptied the entire table and silently ended
+    // push for everyone until each device re-registered.
+    if (r && r.status === 404) dead.push(token);
   }));
   for (const token of dead) {
     await fetch(`${SUPA_URL}/rest/v1/fcm_tokens?token=eq.${encodeURIComponent(token)}`, {

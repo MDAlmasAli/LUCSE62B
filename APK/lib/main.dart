@@ -8,6 +8,8 @@ import 'core/router.dart';
 import 'core/supa.dart';
 import 'data/connectivity_service.dart';
 import 'data/class_reminder_service.dart';
+import 'data/deadline_reminder_service.dart';
+import 'data/notification_gate.dart';
 import 'data/models/app_version.dart';
 import 'data/notification_preferences.dart';
 import 'data/push_service.dart';
@@ -26,8 +28,15 @@ Future<void> main() async {
   await ThemeController.instance.load();
   await ClassReminderService.instance.initialize().catchError((_) {});
   // Reminders cover the next seven days, so re-arming them on launch is
-  // enough; nothing needs to run in the background for this.
+  // enough; nothing needs to run in the background for this. Deadline
+  // reminders are re-armed the same way, and again by the Classwork screen.
   unawaited(ClassReminderService.instance.refreshFromRoutine());
+  unawaited(DeadlineReminderService.instance.refresh());
+  // Turning "Classwork & deadlines" off has to take the pending reminders with
+  // it, so re-run the scheduler whenever the preferences change.
+  NotificationPreferences.instance.addListener(
+    () => unawaited(DeadlineReminderService.instance.refresh()),
+  );
 
   // Resolve connectivity before optional startup network work. This makes an
   // offline launch immediate instead of waiting for Supabase/Firebase timeouts.
@@ -94,6 +103,15 @@ class _LucseAppState extends State<LucseApp> with WidgetsBindingObserver {
   /// The OS flipped dark/light; only matters while we follow the system.
   @override
   void didChangePlatformBrightness() => _theme.onPlatformBrightnessChanged();
+
+  /// Someone may have just come back from the settings page they were sent to,
+  /// so re-check whether notifications are allowed and clear the warning.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(NotificationGate.instance.refresh());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

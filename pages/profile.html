@@ -1775,14 +1775,14 @@
     }
 
     async function getDobFromSupabase(studentId) {
+      // Reads go through the SECURITY DEFINER get_student_dob() RPC, matching
+      // the write side above. The anon key is published in the site's JS, so
+      // direct SELECT on the dob column is being revoked — it handed every
+      // visitor all 38 dates of birth, which is also what the portal checks
+      // before fetching a result from Leading University.
       try {
-        const r = await fetch(
-          `${SUPA_URL}/rest/v1/student_passwords?student_id=eq.${encodeURIComponent(studentId)}&select=dob`,
-          { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
-        );
-        if (!r.ok) return null;
-        const rows = await r.json();
-        return (Array.isArray(rows) && rows.length > 0) ? rows[0].dob : null;
+        const dob = await supaRpc('get_student_dob', { p_student_id: studentId });
+        return dob || null;
       } catch { return null; }
     }
 
@@ -1819,12 +1819,10 @@
       }
 
       try {
-        /* Fetch retake/improve enrollments from Supabase */
-        const r = await fetch(
-          `${SUPA_URL}/rest/v1/student_retake_enrollments?student_id=eq.${encodeURIComponent(currentUser.id)}&select=course_code,course_name,batch,section,teacher,type&order=enrolled_at.asc`,
-          { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+        /* Retake/improve enrollments, via the Worker */
+        const enrolled = (await window.fetchEnrollments(currentUser.id)).sort(
+          (a, b) => String(a.enrolled_at || '').localeCompare(String(b.enrolled_at || ''))
         );
-        const enrolled = r.ok ? await r.json() : [];
 
         /* Regular 62B courses from localStorage (saved by routine.js on load) */
         let all62B = [];
