@@ -4,6 +4,7 @@ import '../core/supa.dart';
 import '../core/worker_api.dart';
 import 'routine_grid_repository.dart';
 import 'routine_repository.dart';
+import 'session.dart';
 
 /// One slot of a course in some section's routine.
 class RetakeSlot {
@@ -42,6 +43,8 @@ class RetakeData {
   final Map<String, double> creditMap; // normCode → credit
   final Map<String, Map<String, List<RetakeSlot>>>
   sectionCourseSlots; // "batch-section" → code → slots
+  /// The student's own section's timetable: day → time → course code. Used to
+  /// spot a retake section that would clash with a class they already have.
   final Map<String, Map<String, String>> busy62B; // day → time → code
   final bool resultLive;
 
@@ -459,7 +462,12 @@ class RetakeRepository {
     final busy62B = <String, Map<String, String>>{};
     final repo = RoutineGridRepository.instance;
     final root = await repo.load();
-    final sections = {...root.available, (batch: '62', section: 'B')};
+    // Always include the student's own section, so a clash against their own
+    // timetable is still detected when the sheet does not list it.
+    final sections = {
+      ...root.available,
+      (batch: Session.instance.batch, section: Session.instance.section),
+    };
     for (final selected in sections) {
       final data = repo.buildFor(selected.batch, selected.section);
       final key = '${selected.batch}-${selected.section}';
@@ -472,7 +480,8 @@ class RetakeRepository {
           if (!list.any((s) => s.day == day.key && s.time == slot.time)) {
             list.add(RetakeSlot(day.key, slot.time, slot.initials, slot.room));
           }
-          if (selected.batch == '62' && selected.section == 'B') {
+          if (selected.batch == Session.instance.batch &&
+              selected.section == Session.instance.section) {
             busy62B.putIfAbsent(day.key, () => {});
             busy62B[day.key]![slot.time] = code;
           }
@@ -548,7 +557,8 @@ class RetakeRepository {
             list.add(RetakeSlot(day, time, parsed.$2, parsed.$3));
           }
 
-          if (batch == '62' && section == 'B') {
+          if (batch == Session.instance.batch &&
+              section == Session.instance.section) {
             busy62B.putIfAbsent(day, () => {});
             busy62B[day]![time] = code;
           }

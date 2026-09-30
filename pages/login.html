@@ -651,6 +651,9 @@
       return {
         id: student.id,
         name: student.name,
+        batch: student.batch || '62',
+        section: student.section || 'B',
+        special: !!student.special,
         loginTime: now,
         isDemo: !!student.isDemo,
         sessionId: makeSessionId(),
@@ -710,7 +713,16 @@
         }
         const data = await r.json();
         if (!data.found) throw new Error('Student not found');
-        return { id: studentId, name: data.name||'Student' };
+        /* batch/section come from the lookup so a guest from another section
+           (the Main Sheet's "Special Access" tab) sees their own routine and
+           exams rather than 62B's. The class itself gets 62/B. */
+        return {
+          id: studentId,
+          name: data.name || 'Student',
+          batch: data.batch || '62',
+          section: data.section || 'B',
+          special: !!data.special,
+        };
       } catch (e) {
         clearTimeout(timer);
         throw e.name === 'AbortError' ? new Error('Network error') : e;

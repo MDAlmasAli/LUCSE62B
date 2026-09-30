@@ -1,5 +1,6 @@
 import '../core/sheets_api.dart';
 import '../core/supa.dart';
+import 'session.dart';
 
 class ExamItem {
   final String course;
@@ -113,9 +114,11 @@ class ExamRepository {
   /// [type] is 'mid' or 'final'.
   Future<List<ExamItem>> load(
     String type, {
-    String batch = '62',
-    String section = 'B',
+    String? batch,
+    String? section,
   }) async {
+    batch ??= Session.instance.batch;
+    section ??= Session.instance.section;
     final loaded = await _loadRowsAndTitles(type);
     final allRows = loaded.rows;
     final titles = loaded.titles;
@@ -126,9 +129,11 @@ class ExamRepository {
   /// Exams scheduled on today's exact date. Gap days intentionally return an
   /// empty list so regular routine and bus data remain active between exams.
   Future<List<TodayExamItem>> loadToday({
-    String batch = '62',
-    String section = 'B',
+    String? batch,
+    String? section,
   }) async {
+    batch ??= Session.instance.batch;
+    section ??= Session.instance.section;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final loaded = await Future.wait([
@@ -167,7 +172,7 @@ class ExamRepository {
   }
 
   /// True only on exact exam dates for the given batch/section.
-  Future<bool> hasExamToday({String batch = '62', String section = 'B'}) async {
+  Future<bool> hasExamToday({String? batch, String? section}) async {
     return (await loadToday(batch: batch, section: section)).isNotEmpty;
   }
 
@@ -191,7 +196,12 @@ class ExamRepository {
       if (seen.add(key)) out.add(e);
     }
 
-    for (final e in _parse(allRows, '62', 'B', titles)) {
+    for (final e in _parse(
+      allRows,
+      Session.instance.batch,
+      Session.instance.section,
+      titles,
+    )) {
       add(e.copyWith(source: '62b'));
     }
 

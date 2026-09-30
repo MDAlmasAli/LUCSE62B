@@ -59,7 +59,11 @@ class ClassReminderService {
         ]);
         final courses = [...personal[0], ...personal[1]];
         if (courses.isNotEmpty) {
-          data = repo.buildFor('62', 'B', customs: courses);
+          data = repo.buildFor(
+            Session.instance.batch,
+            Session.instance.section,
+            customs: courses,
+          );
         }
       }
       await scheduleFromRoutine(data);

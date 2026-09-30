@@ -140,6 +140,25 @@ class PushService {
     }
   }
 
+  /// Whether this device should be on a category's broadcast topic.
+  ///
+  /// A guest from another section stays off two of them. Routine and exam
+  /// changes are watched per section by the Worker and pushed to them
+  /// individually, so listening to the topic as well would mean hearing about
+  /// 62B's routine on top of their own. Classwork is the class's own and is
+  /// hidden from them anyway. Notices, app updates and general news are for
+  /// everyone and stay on topics.
+  static const _classOnlyTopics = {'routine', 'classwork'};
+
+  bool _wantsTopic(NotificationPreference item) {
+    if (!NotificationPreferences.instance.enabled(item.id)) return false;
+    if (Session.instance.isGuestSection &&
+        _classOnlyTopics.contains(item.id)) {
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _subscribeToBroadcasts() async {
     try {
       // Older APKs listen to all_users. This version uses category topics so
@@ -154,7 +173,7 @@ class PushService {
       for (final item in NotificationPreferences.items) {
         // Each topic stands on its own: one failure must not skip the rest.
         try {
-          if (NotificationPreferences.instance.enabled(item.id)) {
+          if (_wantsTopic(item)) {
             await FirebaseMessaging.instance.subscribeToTopic(item.topic);
             subscribed++;
           } else {
@@ -167,9 +186,7 @@ class PushService {
 
       // Older APKs listen to all_users, and the Worker still sends there, so
       // it is the safety net. Only step off it with a category in hand.
-      final wantsAny = NotificationPreferences.items.any(
-        (item) => NotificationPreferences.instance.enabled(item.id),
-      );
+      final wantsAny = NotificationPreferences.items.any(_wantsTopic);
       if (subscribed > 0 || !wantsAny) {
         await FirebaseMessaging.instance.unsubscribeFromTopic('all_users');
       } else {

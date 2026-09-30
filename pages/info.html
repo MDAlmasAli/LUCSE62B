@@ -747,7 +747,11 @@
       { id: 'group-links',     label: 'Group Links',      icon: 'fa-solid fa-link',                 color: '#818cf8', group: 'General' },
       { id: 'teachers',        label: 'Teacher Contacts', icon: 'fa-solid fa-address-book',         color: '#fb923c', group: 'General' },
       { id: 'bkash',           label: 'bKash / Fees',     icon: 'fa-solid fa-mobile-screen-button', color: '#e879f9', group: 'General' },
-    ];
+    ]
+      /* Group Links are CSE 62B's own WhatsApp/Messenger groups, so a guest
+         from another section has no business being sent to them. */
+      .filter(item => !(item.id === 'group-links' &&
+                        window.lu62bIsGuest && window.lu62bIsGuest()));
 
     let activeId = null;
 

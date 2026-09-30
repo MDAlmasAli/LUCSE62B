@@ -2052,7 +2052,10 @@ async function fetchMergedSingleTab(ids) {
 }
 
 /* ── Parse 62B slots from a single day tab ── */
-function parse62BSlots(table, dayName) {
+/* One day's classes for a given batch and section. The routine sheet carries
+   every section side by side (61 A-E, 62 A-I), which is what lets the monitor
+   watch a guest's section from the same fetched tables. */
+function parseSectionSlots(table, dayName, batch = DEFAULT_BATCH, section = DEFAULT_SECTION) {
   if (!table) return [];
   const rows = table.rows || [];
   const cols = table.cols || [];
@@ -2073,7 +2076,10 @@ function parse62BSlots(table, dayName) {
   for (let r = dataStart; r < rows.length; r++) {
     const cells = (rows[r].c || []).map(c => c?.v != null ? String(c.v).trim() : '');
     cells.slice(3).forEach((cell, i) => { if (cell.toUpperCase() === 'BREAK') breakSlotIdx = i; });
-    if (cells[1]?.trim().replace(/\.0+$/,'') === '62' && cells[2]?.trim().toUpperCase() === 'B') targetRows.push(cells);
+    if (cells[1]?.trim().replace(/\.0+$/,'') === String(batch) &&
+        cells[2]?.trim().toUpperCase() === String(section).toUpperCase()) {
+      targetRows.push(cells);
+    }
   }
   if (!targetRows.length) return [];
 
@@ -2149,21 +2155,76 @@ function computeSlotDiff(oldSlots, newSlots) {
 }
 
 /* ── Class Routine Monitor ──
-   Watches 62B's own routine (parse62BSlots). 62B always lives in the first
+   Watches each section in use (parseSectionSlots). 62B always lives in the first
    ("Link 1") sheet, so a second Routine Link carries only other sections and
    never affects this notification — we read just the first link to stay well
    under the per-run subrequest limit. (Extra links are merged where it matters:
    the enrolled-courses monitor below.) */
+/* Which sections this run has to watch: 62B itself, plus one entry per section
+   that somebody on the Special Access tab actually belongs to. Sections nobody
+   is in are never monitored. `students` is null for 62B, which is what marks it
+   as the public, whole-class case. */
+async function monitoredSections(env) {
+  const sections = [
+    { batch: DEFAULT_BATCH, section: DEFAULT_SECTION, students: null },
+  ];
+  const guests = (await specialAccessRows(env).catch(() => null)) || [];
+  const bySection = new Map();
+  for (const row of guests) {
+    const batch = String(row[3] || '').replace(/\.0+$/, '').trim() || DEFAULT_BATCH;
+    const section = String(row[4] || '').trim().toUpperCase() || DEFAULT_SECTION;
+    if (batch === DEFAULT_BATCH && section === DEFAULT_SECTION) continue;
+    const key = `${batch}-${section}`;
+    if (!bySection.has(key)) bySection.set(key, { batch, section, students: [] });
+    bySection.get(key).students.push(String(row[1]));
+  }
+  return sections.concat([...bySection.values()]);
+}
+
+/* Tell just these students. A topic cannot leave anybody out, so this is the
+   direct-to-device path — the same one the birthday wishes use. */
+async function notifyStudents(env, studentIds, type, title, body, link) {
+  if (!studentIds?.length) return;
+  for (const id of studentIds) {
+    await insertPersonalNotification(env, id, type, title, body, link);
+  }
+  const wanted = new Set(studentIds.map(String));
+  const tokens = await fcmTokens(env);
+  await sendFcmToTokens(
+    env,
+    tokens.filter(t => wanted.has(String(t.student_id))),
+    { title, body, link, type },
+  );
+}
+
 async function checkClassRoutine(env) {
   const sheetId = await getRoutineSheetIdByKeyword(env, 'class routine');
   if (!sheetId) return;
+  // Fetched once and parsed per section, so watching another section costs no
+  // extra requests against the per-run subrequest limit.
   const dayTabs = await Promise.all(MONITOR_DAYS.map(d => fetchSheetGviz(sheetId, d).catch(() => null)));
-  const allSlots = MONITOR_DAYS.flatMap((day, i) => parse62BSlots(dayTabs[i], day));
+  for (const target of await monitoredSections(env)) {
+    await checkClassRoutineFor(env, sheetId, dayTabs, target).catch(() => {});
+  }
+}
+
+async function checkClassRoutineFor(env, sheetId, dayTabs, target) {
+  const { batch, section, students } = target;
+  const allSlots = MONITOR_DAYS.flatMap(
+    (day, i) => parseSectionSlots(dayTabs[i], day, batch, section),
+  );
   if (!allSlots.length) return;
+
+  /* 62B keeps the original key so its baseline and history survive this
+     change; every other section gets its own. */
+  const isHome = batch === DEFAULT_BATCH && section === DEFAULT_SECTION;
+  const key = isHome ? 'class_routine' : `class_routine:${batch}-${section}`;
+  const lowKey = `${key}_low_tabs`;
+  const pendingKey = `${key}_pending`;
 
   const sorted = [...allSlots].sort((a, b) => `${a.day}${a.time}${a.code}`.localeCompare(`${b.day}${b.time}${b.code}`));
   const hash   = await sha256(JSON.stringify(sorted));
-  const stored = await supabaseGetState(env, 'class_routine');
+  const stored = await supabaseGetState(env, key);
   const tabsRead = dayTabs.filter(Boolean).length;
   const sourceData = { source_sheet_id: sheetId, slots: sorted, tabs_read: tabsRead };
 
@@ -2178,7 +2239,7 @@ async function checkClassRoutine(env) {
     /* Tolerate the outage, but a tab that was genuinely deleted from the sheet
        would otherwise silence this monitor for good, so accept a smaller read
        as the new normal once it has held for ten consecutive runs. */
-    const low = await supabaseGetState(env, 'class_routine_low_tabs');
+    const low = await supabaseGetState(env, lowKey);
     const lastAt = Date.parse(low?.state_data?.at || '');
     const consecutive =
       low?.state_hash === String(tabsRead) &&
@@ -2187,21 +2248,21 @@ async function checkClassRoutine(env) {
         ? Number(low.state_data?.count || 0) + 1
         : 1;
     if (consecutive < 10) {
-      await supabaseUpsertState(env, 'class_routine_low_tabs', String(tabsRead), {
+      await supabaseUpsertState(env, lowKey, String(tabsRead), {
         count: consecutive,
         at: new Date().toISOString(),
       });
       return;
     }
-    await clearSupabaseState(env, 'class_routine_low_tabs');
-    await supabaseUpsertState(env, 'class_routine', hash, sourceData);
-    await clearSupabaseState(env, 'class_routine_pending');
+    await clearSupabaseState(env, lowKey);
+    await supabaseUpsertState(env, key, hash, sourceData);
+    await clearSupabaseState(env, pendingKey);
     return;
   }
 
   if (!stored) {
-    await supabaseUpsertState(env, 'class_routine', hash, sourceData);
-    await clearSupabaseState(env, 'class_routine_pending');
+    await supabaseUpsertState(env, key, hash, sourceData);
+    await clearSupabaseState(env, pendingKey);
     return;
   }
 
@@ -2210,8 +2271,8 @@ async function checkClassRoutine(env) {
      That caused fake remove/add notifications. If the stored baseline is not
      tied to this exact source sheet, re-baseline once without notifying. */
   if (stored.state_data?.source_sheet_id !== sheetId) {
-    await supabaseUpsertState(env, 'class_routine', hash, sourceData);
-    await clearSupabaseState(env, 'class_routine_pending');
+    await supabaseUpsertState(env, key, hash, sourceData);
+    await clearSupabaseState(env, pendingKey);
     return;
   }
 
@@ -2219,17 +2280,17 @@ async function checkClassRoutine(env) {
 
   const changes = computeSlotDiff(stored.state_data?.slots || [], sorted);
   if (!changes.length) {
-    await supabaseUpsertState(env, 'class_routine', hash, sourceData);
-    await clearSupabaseState(env, 'class_routine_pending');
+    await supabaseUpsertState(env, key, hash, sourceData);
+    await clearSupabaseState(env, pendingKey);
     return;
   }
 
   /* A genuine routine edit should still be present on the next cron run.
      Requiring one stable confirmation filters out transient Google GVIZ/parser
      snapshots and stops the noisy remove -> add loop in app notifications. */
-  const pending = await supabaseGetState(env, 'class_routine_pending');
+  const pending = await supabaseGetState(env, pendingKey);
   if (!pending || pending.state_hash !== hash || pending.state_data?.source_sheet_id !== sheetId) {
-    await supabaseUpsertState(env, 'class_routine_pending', hash, {
+    await supabaseUpsertState(env, pendingKey, hash, {
       ...sourceData,
       changes,
       first_seen: new Date().toISOString(),
@@ -2238,10 +2299,25 @@ async function checkClassRoutine(env) {
   }
 
   const body = changes.slice(0, 8).join('\n') + (changes.length > 8 ? `\n…and ${changes.length - 8} more` : '');
-  await insertNotification(env, 'class_routine', '📅 Class Routine Updated', body, '/pages/info.html');
-  await supabaseUpsertState(env, 'class_routine', hash, sourceData);
-  await clearSupabaseState(env, 'class_routine_pending');
-  await sendPushToAll(env);
+  if (isHome) {
+    // The whole class: one public row, and the topic push everyone hears.
+    await insertNotification(env, 'class_routine', '📅 Class Routine Updated', body, '/pages/info.html');
+  } else {
+    /* A guest's section. The row has to be personal and the push addressed
+       device by device, because an FCM topic cannot single out the handful
+       of people this concerns. */
+    await notifyStudents(
+      env,
+      students,
+      'class_routine',
+      '📅 Class Routine Updated' + ` (${batch}${section})`,
+      body,
+      '/pages/info.html',
+    );
+  }
+  await supabaseUpsertState(env, key, hash, sourceData);
+  await clearSupabaseState(env, pendingKey);
+  if (isHome) await sendPushToAll(env);
 }
 
 /* Normalize an exam date cell (GVIZ may give "Date(2026,2,27)" or a serial)
@@ -2362,13 +2438,29 @@ function parseExamSlots(table, targetBatch, targetSection) {
 async function checkExamRoutine(env, type) {
   const keyword = type === 'mid' ? 'mid term' : 'final term';
   const label   = type === 'mid' ? 'Mid Term' : 'Final Term';
-  const stateKey = `${type}_routine`;
 
   const ids = await getRoutineSheetIdsByKeyword(env, keyword);
   if (!ids.length) return;
 
-  const table    = await fetchMergedSingleTab(ids);
-  const allSlots = parseExamSlots(table, '62', 'B');
+  // One matrix tab carries every batch/section, so it is fetched once and
+  // parsed per section.
+  const table = await fetchMergedSingleTab(ids);
+  for (const target of await monitoredSections(env)) {
+    await checkExamRoutineFor(env, type, label, table, target).catch(() => {});
+  }
+}
+
+async function checkExamRoutineFor(env, type, label, table, target) {
+  const { batch, section, students } = target;
+  const isHome = batch === DEFAULT_BATCH && section === DEFAULT_SECTION;
+  /* 62B keeps the original key so its baseline survives; the notification type
+     stays `${type}_routine` either way, because the app matches push
+     preferences on it. */
+  const stateKey = isHome
+    ? `${type}_routine`
+    : `${type}_routine:${batch}-${section}`;
+  const notifType = `${type}_routine`;
+  const allSlots = parseExamSlots(table, batch, section);
 
   if (!allSlots.length) {
     const stored = await supabaseGetState(env, stateKey);
@@ -2376,7 +2468,7 @@ async function checkExamRoutine(env, type) {
     return;
   }
 
-  await checkExamReminder(env, type, label, allSlots);
+  await checkExamReminder(env, type, label, allSlots, target);
 
   const sorted = [...allSlots].sort((a, b) => `${a.day}${a.time}${a.code}`.localeCompare(`${b.day}${b.time}${b.code}`));
   const hash   = await sha256(JSON.stringify(sorted));
@@ -2384,9 +2476,14 @@ async function checkExamRoutine(env, type) {
 
   if (!stored || !stored.state_data?.slots?.length) {
     const preview = sorted.slice(0, 5).map(s => `• ${s.code}: ${s.day} at ${s.time}`).join('\n');
-    await insertNotification(env, stateKey, `📋 ${label} Routine Published`, preview, '/pages/info.html');
+    if (isHome) {
+      await insertNotification(env, notifType, `📋 ${label} Routine Published`, preview, '/pages/info.html');
+    } else {
+      await notifyStudents(env, students, notifType,
+        `📋 ${label} Routine Published` + ` (${batch}${section})`, preview, '/pages/info.html');
+    }
     await supabaseUpsertState(env, stateKey, hash, { slots: sorted });
-    await sendPushToAll(env);
+    if (isHome) await sendPushToAll(env);
     return;
   }
   if (stored.state_hash === hash) return;
@@ -2395,9 +2492,14 @@ async function checkExamRoutine(env, type) {
   if (!changes.length) { await supabaseUpsertState(env, stateKey, hash, { slots: sorted }); return; }
 
   const body = changes.slice(0, 8).join('\n') + (changes.length > 8 ? `\n…and ${changes.length - 8} more` : '');
-  await insertNotification(env, stateKey, `📋 ${label} Routine Updated`, body, '/pages/info.html');
+  if (isHome) {
+    await insertNotification(env, notifType, `📋 ${label} Routine Updated`, body, '/pages/info.html');
+  } else {
+    await notifyStudents(env, students, notifType,
+      `📋 ${label} Routine Updated` + ` (${batch}${section})`, body, '/pages/info.html');
+  }
   await supabaseUpsertState(env, stateKey, hash, { slots: sorted });
-  await sendPushToAll(env);
+  if (isHome) await sendPushToAll(env);
 }
 
 /* ── LU Notices Monitor ──
@@ -2424,8 +2526,10 @@ function examSlotDateKey(value) {
 /* During the 18:00 Asia/Dhaka hour, notify 62B about each Mid/Final exam
    scheduled for tomorrow. The daily state lets the minute cron pick up a late
    routine edit without sending any already-announced exam twice. */
-async function checkExamReminder(env, type, label, slots) {
+async function checkExamReminder(env, type, label, slots, target) {
   if (!env.SUPA_KEY) return;
+  const { batch, section, students } = target;
+  const isHome = batch === DEFAULT_BATCH && section === DEFAULT_SECTION;
   const clock = dhakaClockParts();
   if (Number(clock.hour) !== 18) return;
   const today = `${clock.year}-${clock.month}-${clock.day}`;
@@ -2438,7 +2542,10 @@ async function checkExamReminder(env, type, label, slots) {
     if (!byKey.has(key)) byKey.set(key, { ...slot, key });
   }
   const due = [...byKey.values()];
-  const stateKey = `${type}_exam_reminder`;
+  // 62B keeps the original key so tonight's state is not re-baselined.
+  const stateKey = isHome
+    ? `${type}_exam_reminder`
+    : `${type}_exam_reminder:${batch}-${section}`;
   const state = await supabaseGetState(env, stateKey);
   const known = state?.state_data?.date === today
     ? new Set(state.state_data?.keys || []) : new Set();
@@ -2456,14 +2563,25 @@ async function checkExamReminder(env, type, label, slots) {
   const body = fresh.slice(0, 6).map(item =>
     `• ${item.code}${item.time ? ` · ${item.time}` : ''}`
   ).join('\n') + (fresh.length > 6 ? `\n…and ${fresh.length - 6} more` : '');
-  await insertNotification(
-    env,
-    `${type}_exam_reminder`,
-    title,
-    body,
-    '/pages/info.html',
-  );
-  await sendPushToAll(env);
+  if (isHome) {
+    await insertNotification(
+      env,
+      `${type}_exam_reminder`,
+      title,
+      body,
+      '/pages/info.html',
+    );
+    await sendPushToAll(env);
+  } else {
+    await notifyStudents(
+      env,
+      students,
+      `${type}_exam_reminder`,
+      `${title} (${batch}${section})`,
+      body,
+      '/pages/info.html',
+    );
+  }
 }
 
 async function checkNotices(env) {
@@ -3042,8 +3160,8 @@ async function insertPersonalNotification(env, studentId, type, title, body, lin
    BIRTHDAYS
    At the first cron tick of a Bangladeshi day, tell the class whose birthday
    it is and wish the birthday student personally. Runs once per day: the day is
-   claimed in monitor_state before anything is sent, so a failure halfway
-   through costs one day's wishes rather than sending them twice.
+   claimed in monitor_state only once the wishes are out, so a failure halfway
+   through repeats rather than silently skipping a birthday for a year.
    ════════════════════════════════════════════════════════════════════ */
 
 async function checkBirthdays(env) {
@@ -3095,10 +3213,18 @@ async function checkBirthdays(env) {
   await insertNotification(env, 'birthday', title, body, '/');
 
   const celebratingIds = new Set(celebrating.map(row => String(row.student_id)));
+  /* Guests from other sections are not part of this class, so being told at
+     midnight to go and wish someone they have never met is only a nuisance. */
+  const guestIds = new Set(
+    ((await specialAccessRows(env).catch(() => null)) || []).map(row => String(row[1])),
+  );
   const tokens = await fcmTokens(env);
   await sendFcmToTokens(
     env,
-    tokens.filter(t => !celebratingIds.has(String(t.student_id))),
+    tokens.filter(t => {
+      const id = String(t.student_id);
+      return !celebratingIds.has(id) && !guestIds.has(id);
+    }),
     { title, body, link: '/', type: 'birthday' },
   );
 
@@ -3743,7 +3869,7 @@ async function sendPushToAll(env, opts = {}) {
     await remember();
     return { web: { status: 'not_configured' }, fcm };
   }
-  const r = await fetch(`${SUPA_URL}/rest/v1/push_subscriptions?select=endpoint`, {
+  const r = await fetch(`${SUPA_URL}/rest/v1/push_subscriptions?select=endpoint,student_id`, {
     headers: { 'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}` },
   }).catch(() => null);
   if (!r || !r.ok) {
@@ -3752,10 +3878,20 @@ async function sendPushToAll(env, opts = {}) {
     return { web: { status: 'subscription_fetch_failed' }, fcm };
   }
   const subs = await r.json();
+  /* Browsers belonging to a guest from another section are left out: this is
+     62B's news, and their own section's changes reach them as personal
+     notifications instead. */
+  const guestIds = new Set(
+    ((await specialAccessRows(env).catch(() => null)) || []).map(row => String(row[1])),
+  );
   const expired = [];
   let delivered = 0;
   let skipped = 0;
   await Promise.allSettled(subs.map(async sub => {
+    if (sub.student_id && guestIds.has(String(sub.student_id))) {
+      skipped++;
+      return;
+    }
     if (env.SMS_RATE) {
       try {
         const hash = await sha256(String(sub.endpoint));

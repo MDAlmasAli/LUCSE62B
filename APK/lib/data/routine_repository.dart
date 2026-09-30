@@ -1,5 +1,6 @@
 import '../core/routine_cells.dart';
 import '../core/sheets_api.dart';
+import 'session.dart';
 
 /// One slot in a day's routine: either a class or a break.
 class RoutineSlot {
@@ -107,7 +108,9 @@ class RoutineRepository {
     return SheetTable(cols: base.cols, rows: mergeSectionRows(valid));
   }
 
-  List<RoutineSlot> _parseDay(SheetTable t, {String batch = '62', String section = 'B'}) {
+  List<RoutineSlot> _parseDay(SheetTable t, {String? batch, String? section}) {
+    batch ??= Session.instance.batch;
+    section ??= Session.instance.section;
     // Time labels live in the column headers after the first 3 (title/batch/section).
     var timeSlots = t.cols.length > 3 ? t.cols.sublist(3) : <String>[];
     var dataStart = 0;

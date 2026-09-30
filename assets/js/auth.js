@@ -57,6 +57,42 @@
     (session.isDemo || String(session.id || '').toUpperCase() === 'DEMO')
   );
 
+  /* ── Which section is this? ─────────────────────────────────────────────
+     The portal is CSE 62B's, but the Main Sheet's "Special Access" tab lets
+     someone from another section in, and then everything the portal calls
+     "your routine" or "your exams" has to follow THEIR batch and section.
+     Sessions created before this existed simply have no batch/section, so the
+     class's own 62 / B is the default and nothing changes for them.
+
+     Pages read these rather than the literal '62' / 'B'. */
+  var DEFAULT_BATCH = '62';
+  var DEFAULT_SECTION = 'B';
+
+  window.lu62bSession = function () { return session; };
+  window.lu62bBatch = function () {
+    return (session && session.batch) ? String(session.batch) : DEFAULT_BATCH;
+  };
+  window.lu62bSection = function () {
+    return (session && session.section)
+      ? String(session.section).toUpperCase()
+      : DEFAULT_SECTION;
+  };
+
+  /* A guest is anyone who is not in 62B itself. Checked by batch/section rather
+     than by the `special` flag alone, so an older session that predates the
+     flag still resolves correctly. Demo stays 62B. */
+  window.lu62bIsGuest = function () {
+    if (!session || isDemoSession) return false;
+    return window.lu62bBatch() !== DEFAULT_BATCH ||
+           window.lu62bSection() !== DEFAULT_SECTION;
+  };
+
+  /* Lets stylesheets and markup hide the 62B-only things without every page
+     re-deriving this. Mirrors the existing lu62b-demo-session hook. */
+  if (window.lu62bIsGuest()) {
+    document.documentElement.classList.add('lu62b-guest-session');
+  }
+
   // ── Force logout helper ──────────────────────────────────────────────
   var logoutStarted = false;
 
@@ -534,10 +570,52 @@
     document.body.appendChild(nav);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { initHamburger(); injectBottomNav(); });
-  } else {
+  /* ── What belongs to CSE 62B alone ──────────────────────────────────────
+     A guest from another section gets the routine, the exams, their own
+     result and everything university-wide. What they do not get is the parts
+     that are this class's own, and two of those hold classmates' personal
+     data: the attendance register, and the student directory with its phone
+     numbers. Cover Page, Gallery and bKash stay open to them.
+
+     Done here rather than in each page because auth.js is the one script on
+     every page, so a page added later is covered without being remembered. */
+  var GUEST_BLOCKED_PAGES = ['attendance.html', 'classwork.html', 'students.html'];
+
+  /* Hiding the links is not enough on its own -- the address is guessable and
+     these pages would otherwise load 62B's register and directory. All three
+     live under /pages/, so home is one level up from them. */
+  function guestPageGuard() {
+    if (!window.lu62bIsGuest()) return false;
+    if (GUEST_BLOCKED_PAGES.indexOf(_curPage) === -1) return false;
+    // replace(), not assign(), so Back does not bounce them straight into it.
+    window.location.replace((isInPages ? '../' : '') + 'index.html');
+    return true;
+  }
+
+  var guestRedirecting = guestPageGuard();
+
+  function hideClassOnlyLinks() {
+    if (!window.lu62bIsGuest()) return;
+    var selector = GUEST_BLOCKED_PAGES.map(function (page) {
+      return 'a[href*="' + page + '"]';
+    }).join(',');
+    Array.prototype.forEach.call(document.querySelectorAll(selector), function (a) {
+      // Hide the whole menu row where there is one, not just its text.
+      var row = a.closest('li') || a;
+      row.style.display = 'none';
+    });
+  }
+
+  function onReady() {
+    if (guestRedirecting) return;   // the page is on its way out
     initHamburger();
     injectBottomNav();
+    hideClassOnlyLinks();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', onReady);
+  } else {
+    onReady();
   }
 })();

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/app_colors.dart';
 import '../../shared/app_toast.dart';
+import '../../core/router.dart';
 
 class _Section {
   final IconData icon;
@@ -105,6 +106,12 @@ class InfoHubScreen extends StatelessWidget {
     ),
   ];
 
+  /// Without the sections this session is not allowed to open — Group Links
+  /// are CSE 62B's own groups, so a guest from another section does not see
+  /// them.
+  static List<_Section> get _visibleSections =>
+      _sections.where((s) => !isRouteHidden(s.route)).toList();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,9 +125,9 @@ class InfoHubScreen extends StatelessWidget {
       ),
       body: ListView.builder(
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
-        itemCount: _sections.length,
+        itemCount: _visibleSections.length,
         itemBuilder: (context, i) {
-          final s = _sections[i];
+          final s = _visibleSections[i];
           return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Material(

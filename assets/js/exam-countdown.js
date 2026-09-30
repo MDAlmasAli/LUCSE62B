@@ -320,7 +320,7 @@
         const tables = await Promise.all(ids.map(id => window.fetchSheetById(id, '', true).catch(() => null)));
         const data = cdMergeTables(tables);
         if (!data) continue;
-        const exams = cdParseExams(data, '62', 'B');
+        const exams = cdParseExams(data, cdHomeBatch(), cdHomeSection());
         const upcoming = exams.filter(e => { const d = cdDateObj(e.date); return d && d >= today; });
         if (!upcoming.length) continue;
         const next = upcoming[0];
@@ -370,8 +370,16 @@
     } catch (_) {}
   }
 
+  /* The viewer's own batch and section: 62 / B for the class, and their own for
+     anyone let in through the Main Sheet's "Special Access" tab. auth.js has
+     always run by the time any of this is called. */
+  function cdHomeBatch() { return window.lu62bBatch ? window.lu62bBatch() : '62'; }
+  function cdHomeSection() { return window.lu62bSection ? window.lu62bSection() : 'B'; }
+
   /* ── Expose to exam.js ── */
-  async function cdGetExamsToday(batch = '62', section = 'B') {
+  async function cdGetExamsToday(batch, section) {
+    batch = batch || cdHomeBatch();
+    section = section || cdHomeSection();
     const todayExams = [];
     try {
       const [midIds, finalIds] = await Promise.all([
@@ -398,7 +406,7 @@
     return todayExams.sort((a, b) => cdParseTimeMins(a.time) - cdParseTimeMins(b.time));
   }
 
-  async function cdHasExamToday(batch = '62', section = 'B') {
+  async function cdHasExamToday(batch, section) {
     return (await cdGetExamsToday(batch, section)).length > 0;
   }
 

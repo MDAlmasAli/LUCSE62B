@@ -59,7 +59,7 @@ async function loadBus(body) {
     const hasReg  = keys.includes('Regular');
     const hasExam = examKeys.length > 0;
     const examDay = hasExam
-      ? await (window._examCd?.hasExamToday?.('62', 'B') || Promise.resolve(false)).catch(() => false)
+      ? await (window._examCd?.hasExamToday?.() || Promise.resolve(false)).catch(() => false)
       : false;
 
     if (!hasReg && !hasExam) {

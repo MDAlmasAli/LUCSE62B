@@ -1,6 +1,7 @@
 import '../core/routine_cells.dart';
 import '../core/sheets_api.dart';
 import '../core/supa.dart';
+import 'session.dart';
 
 /// Course metadata from CPG_Courses (name + default teacher).
 class CourseInfo {
@@ -224,14 +225,17 @@ class RoutineGridRepository {
     return const [_fallbackId];
   }
 
-  /// Full load: maps, all day tables, available sections, and the 62/B grid.
+  /// Full load: maps, all day tables, available sections, and the grid for the
+  /// logged-in student's own section.
   /// Cached for the session — a second visit (or batch/section switch) rebuilds
   /// instantly from the cached day tables instead of re-fetching the sheets.
   Future<RoutineGridData> load({
-    String batch = '62',
-    String section = 'B',
+    String? batch,
+    String? section,
     List<CustomCourse> customs = const [],
   }) async {
+    batch ??= Session.instance.batch;
+    section ??= Session.instance.section;
     final cacheFresh =
         _loadedAt != null && DateTime.now().difference(_loadedAt!) < _cacheTtl;
     if (_loaded && cacheFresh && _allDayTables != null) {
@@ -291,7 +295,11 @@ class RoutineGridRepository {
     List<CustomCourse> customs = const [],
   }) {
     final built = _scheduleFor(batch, section);
-    if (customs.isNotEmpty && batch == '62' && section == 'B') {
+    // Custom courses a student added belong to their own section's grid, not
+    // to whichever section they are browsing.
+    if (customs.isNotEmpty &&
+        batch == Session.instance.batch &&
+        section == Session.instance.section) {
       for (final c in customs) {
         if (!c.appliesTo(_semester)) continue;
         if (!_days.contains(c.day) || c.time.trim().isEmpty) continue;
@@ -646,8 +654,8 @@ class RoutineGridRepository {
   /// the teacher acronym in its cell → a per-teacher weekly routine. Reuses the
   /// session-cached day tables, so it's instant after the first routine load.
   Future<TeacherRoutineData> loadTeacherRoutine({
-    String batch = '62',
-    String section = 'B',
+    String? batch,
+    String? section,
   }) async {
     await load(batch: batch, section: section); // ensures caches are populated
     final tables = _allDayTables ?? const <SheetTable>[];

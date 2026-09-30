@@ -38,7 +38,19 @@ class AuthRepository {
         return const IdCheckResult(LoginStage.rateLimited);
       }
       if (data['found'] != true) return const IdCheckResult(LoginStage.notFound);
-      student = Student.create(sid, (data['name'] ?? 'Student').toString());
+      // The lookup reports which batch and section to show. It is 62 / B for
+      // the class itself, and their own for anyone let in through the Main
+      // Sheet's "Special Access" tab.
+      student = Student.create(
+        sid,
+        (data['name'] ?? 'Student').toString(),
+        batch: (data['batch']?.toString().trim().isNotEmpty ?? false)
+            ? data['batch'].toString().trim()
+            : Student.homeBatch,
+        section: (data['section']?.toString().trim().isNotEmpty ?? false)
+            ? data['section'].toString().trim().toUpperCase()
+            : Student.homeSection,
+      );
     }
 
     try {

@@ -7,7 +7,7 @@ const _RT_SUPA = 'https://ftvtlqxpalwvyserujuh.supabase.co';
 const _RT_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dnRscXhwYWx3dnlzZXJ1anVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDA1MDgsImV4cCI6MjA5MzQ3NjUwOH0.kdmxzcqmOlCpMmjnvZPaOLIdfdLomrbMZBo4Nd5YecM';
 
 let _routineCache      = null;  /* currently displayed cache */
-let _62bCache          = null;  /* always the 62B cache, preserved for restore */
+let _homeCache         = null;  /* the viewer's own section, kept for restore */
 let _improvedCache     = null;
 let _routineTab        = 'regular';
 let _rtLastEnrollments = [];
@@ -22,6 +22,20 @@ let _semLabel               = 'Current Semester';
 let _availableBatchSections = [];
 let _selectedBatch          = '62';
 let _selectedSection        = 'B';
+
+/* "Home" is the viewer's own batch and section. For CSE 62B that is 62 / B;
+   for someone let in through the Main Sheet's "Special Access" tab it is
+   theirs, so the routine opens on their section instead of ours. Read through
+   auth.js at call time, since these modules load after it. */
+function _rtHomeBatch() {
+  return window.lu62bBatch ? window.lu62bBatch() : '62';
+}
+function _rtHomeSection() {
+  return window.lu62bSection ? window.lu62bSection() : 'B';
+}
+function _rtIsHome(batch, section) {
+  return batch === _rtHomeBatch() && section === _rtHomeSection();
+}
 
 /* ── Excluded courses: localStorage + Supabase ── */
 function _rtLocalExcluded(userId) {
@@ -129,8 +143,8 @@ function _rtApplyCustom(baseCache, customCourses) {
 }
 
 function _rtRebuildCaches() {
-  if (_selectedBatch !== '62' || _selectedSection !== 'B') return;
-  _routineCache = _rtApplyCustom(_62bCache, _customCourses);
+  if (!_rtIsHome(_selectedBatch, _selectedSection)) return;
+  _routineCache = _rtApplyCustom(_homeCache, _customCourses);
   if (_rtLastEnrollments.length) {
     _improvedCache = _rtApplyCustom(_buildImprovedCache(_rtLastEnrollments), _customCourses);
   }
@@ -265,7 +279,7 @@ window._rtCcInputTime = function(val) {
   if (!sugg) return;
   const allTimeMap = new Map();
   ROUTINE_DAY_NAMES.forEach(day =>
-    (_62bCache?.dayTimeframes?.[day] || []).forEach(t => {
+    (_homeCache?.dayTimeframes?.[day] || []).forEach(t => {
       const k = timeToMin(t); if (!allTimeMap.has(k)) allTimeMap.set(k, t);
     })
   );
@@ -403,13 +417,13 @@ function _rtLiveEnrollments(enrollments) {
 
 /* ── Build improved cache (62B selected courses + enrolled) ── */
 function _buildImprovedCache(enrollments) {
-  if (!_62bCache || !enrollments.length) return null;
+  if (!_homeCache || !enrollments.length) return null;
 
   const excl = window._rtExcluded;
   const schedule = {};
   ROUTINE_DAY_NAMES.forEach(day => {
-    if (_62bCache.schedule[day]) {
-      schedule[day] = _62bCache.schedule[day]
+    if (_homeCache.schedule[day]) {
+      schedule[day] = _homeCache.schedule[day]
         .filter(s => s.isBreak || !excl.has(s.code))
         .map(s => ({ ...s, source: '62b' }));
     }
@@ -429,12 +443,12 @@ function _buildImprovedCache(enrollments) {
     });
   });
 
-  const groups = buildTimeframeGroups(schedule, _62bCache.dayTimeframes);
+  const groups = buildTimeframeGroups(schedule, _homeCache.dayTimeframes);
   if (!groups.length) return null;
 
   const days = ROUTINE_DAY_NAMES.filter(d => schedule[d]?.some(s => !s.isBreak));
-  return { days, schedule, courseInfo: _62bCache.courseInfo, groups,
-           dayTimeframes: _62bCache.dayTimeframes, semester: _62bCache.semester };
+  return { days, schedule, courseInfo: _homeCache.courseInfo, groups,
+           dayTimeframes: _homeCache.dayTimeframes, semester: _homeCache.semester };
 }
 
 /* ── Scan all day results to find unique batch/section combos ── */
@@ -603,7 +617,7 @@ function buildGrid(todayName) {
   if (!groups || !groups.length) return '<div class="rt-grid-empty-msg">No schedule data found.</div>';
 
   const excl  = window._rtExcluded;
-  const is62b = _selectedBatch === '62' && _selectedSection === 'B';
+  const isHome = _rtIsHome(_selectedBatch, _selectedSection);
   const batchLabel   = `Batch ${_selectedBatch}, Section ${_selectedSection}`;
   const captureTitle = isImproved
     ? `Class Routine — ${batchLabel} + Retake/Improve · ${cache.semester || ''}`
@@ -612,7 +626,7 @@ function buildGrid(todayName) {
   /* One table per timeframe group (Sat–Thu, then a separate Friday if its
      time columns differ), rendered back-to-back inside one wrap. */
   const renderCourses = courses => courses
-    .filter(s => (!isImproved && is62b ? (s.source === 'custom' || !excl.has(s.code)) : true))
+    .filter(s => (!isImproved && isHome ? (s.source === 'custom' || !excl.has(s.code)) : true))
     .map(s => _rtRenderSlot(s, courseInfo))
     .join('');
 
@@ -671,12 +685,12 @@ window._rtApplyBatchSection = function() {
 
   _selectedBatch   = batch;
   _selectedSection = section;
-  const is62b      = batch === '62' && section === 'B';
+  const isHome      = _rtIsHome(batch, section);
   const todayName  = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'][new Date().getDay()];
 
-  if (is62b) {
+  if (isHome) {
     /* Restore the 62B cache, merging in any custom courses */
-    _routineCache  = _rtApplyCustom(_62bCache, _customCourses);
+    _routineCache  = _rtApplyCustom(_homeCache, _customCourses);
     _routineTab    = 'regular';
     _improvedCache = null;
 
@@ -704,7 +718,7 @@ window._rtApplyBatchSection = function() {
   const myCoursesBtn    = document.getElementById('rt-my-courses-btn');
   const customCoursesBtn = document.getElementById('rt-custom-courses-btn');
 
-  if (is62b) {
+  if (isHome) {
     if (myCoursesBtn)     myCoursesBtn.style.display = '';
     if (customCoursesBtn) customCoursesBtn.style.display = '';
     if (tabBar && _improvedCache && _rtLastEnrollments.length) {
@@ -734,11 +748,11 @@ window._rtApplyBatchSection = function() {
 function _renderSelectorBar() {
   const batches  = [...new Set(_availableBatchSections.map(c => c.batch))];
   const sections = _availableBatchSections
-    .filter(c => c.batch === '62')
+    .filter(c => c.batch === _selectedBatch)
     .map(c => c.section);
 
-  const batchOpts   = batches.map(b => `<option value="${b}"${b === '62' ? ' selected' : ''}>${b}</option>`).join('');
-  const sectionOpts = sections.map(s => `<option value="${s}"${s === 'B' ? ' selected' : ''}>${s}</option>`).join('');
+  const batchOpts   = batches.map(b => `<option value="${b}"${b === _selectedBatch ? ' selected' : ''}>${b}</option>`).join('');
+  const sectionOpts = sections.map(s => `<option value="${s}"${s === _selectedSection ? ' selected' : ''}>${s}</option>`).join('');
 
   return `
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;
@@ -768,13 +782,13 @@ function _renderSelectorBar() {
 window._rtOpenMyCourses = function() {
   const existing = document.getElementById('rt-my-courses-panel');
   if (existing) { existing.remove(); return; }
-  if (!_62bCache) return;
+  if (!_homeCache) return;
 
   const allCodes = new Map();
-  Object.values(_62bCache.schedule).forEach(slots => {
+  Object.values(_homeCache.schedule).forEach(slots => {
     slots.forEach(s => {
       if (!s.isBreak && s.code) {
-        allCodes.set(s.code, _62bCache.courseInfo[s.code]?.name || '');
+        allCodes.set(s.code, _homeCache.courseInfo[s.code]?.name || '');
       }
     });
   });
@@ -886,26 +900,29 @@ async function loadRoutine(body) {
     _availableBatchSections = _scanBatchSections(dayResults);
 
     /* Build 62B schedule */
-    const { schedule, sheetTimes, dayTimeframes } = _buildScheduleFor('62', 'B');
+    const homeBatch = _rtHomeBatch();
+    const homeSection = _rtHomeSection();
+    const homeLabel = `Batch ${homeBatch}, Section ${homeSection}`;
+    const { schedule, sheetTimes, dayTimeframes } = _buildScheduleFor(homeBatch, homeSection);
     const days = ROUTINE_DAY_NAMES.filter(d => schedule[d]);
-    if (!days.length) throw new Error('No classes found for Batch 62, Section B');
+    if (!days.length) throw new Error(`No classes found for ${homeLabel}`);
 
-    const cache62b = _scheduleToCacheWith(schedule, courseInfo, sem, sheetTimes, dayTimeframes);
-    if (!cache62b) throw new Error('No classes found for Batch 62, Section B');
+    const cacheHome = _scheduleToCacheWith(schedule, courseInfo, sem, sheetTimes, dayTimeframes);
+    if (!cacheHome) throw new Error(`No classes found for ${homeLabel}`);
 
-    _62bCache      = cache62b;
-    _routineCache  = cache62b;
+    _homeCache      = cacheHome;
+    _routineCache  = cacheHome;
     _improvedCache = null;
     _rtLastEnrollments = [];
     _routineTab    = 'regular';
-    _selectedBatch = '62';
-    _selectedSection = 'B';
+    _selectedBatch = homeBatch;
+    _selectedSection = homeSection;
 
     /* Load excluded + custom courses from localStorage immediately */
     const user = JSON.parse(localStorage.getItem('lu62b_student') || 'null');
     if (user?.id) {
       _customCourses = _rtLoadCustomCourses(user.id);
-      if (_customCourses.length) _routineCache = _rtApplyCustom(cache62b, _customCourses);
+      if (_customCourses.length) _routineCache = _rtApplyCustom(cacheHome, _customCourses);
 
       /* Sync custom courses with Supabase in background.
          Supabase is authoritative; if localStorage has data not yet pushed, push it. */
@@ -917,7 +934,7 @@ async function loadRoutine(body) {
         if (JSON.stringify(supaCourses) !== JSON.stringify(_customCourses)) {
           _customCourses = supaCourses;
           _rtSaveCustomCourses(user.id, supaCourses);
-          _routineCache = _rtApplyCustom(_62bCache, _customCourses);
+          _routineCache = _rtApplyCustom(_homeCache, _customCourses);
           if (_rtLastEnrollments.length)
             _improvedCache = _rtApplyCustom(_buildImprovedCache(_rtLastEnrollments), _customCourses);
           const el = document.getElementById('rt-main-content');
@@ -981,7 +998,7 @@ async function loadRoutine(body) {
         if (!_improvedCache) return;
 
         /* Only show Improved tab if still on 62B */
-        if (_selectedBatch !== '62' || _selectedSection !== 'B') return;
+        if (!_rtIsHome(_selectedBatch, _selectedSection)) return;
 
         const tabBar = document.getElementById('rt-tab-bar');
         if (!tabBar) return;

@@ -198,7 +198,7 @@ async function loadExamRoutine(body, type) {
       <div style="display:flex;gap:8px;">
         <button class="ri-tab${_examTab === 'regular' ? ' ri-tab-active' : ''}"
           onclick="examSwitchTab('regular')" id="exam-tab-regular">
-          <i class="fa-solid fa-calendar-week"></i> 62B Exams
+          <i class="fa-solid fa-calendar-week"></i> ${_exHomeBatch()}${_exHomeSection()} Exams
         </button>
         <button class="ri-tab${_examTab === 'retake' ? ' ri-tab-active' : ''}"
           onclick="examSwitchTab('retake')" id="exam-tab-retake">
@@ -232,8 +232,8 @@ function _examShowRegularUI(type) {
   content.innerHTML = `
     <div class="rt-tf-wrap">
       <div class="rt-tf-row">
-        <input type="text" id="examBatchInput" class="rt-tf-input" value="62" placeholder="Batch" style="max-width:120px;" />
-        <input type="text" id="examSectionInput" class="rt-tf-input" value="B" placeholder="Section" style="max-width:120px;" />
+        <input type="text" id="examBatchInput" class="rt-tf-input" value="${_exHomeBatch()}" placeholder="Batch" style="max-width:120px;" />
+        <input type="text" id="examSectionInput" class="rt-tf-input" value="${_exHomeSection()}" placeholder="Section" style="max-width:120px;" />
         <button class="rt-tf-btn" id="examSearchBtn" onclick="doExamSearch('${type}')">
           <i class="fa-solid fa-magnifying-glass"></i> Search
         </button>
@@ -276,8 +276,8 @@ async function _examShowRetakeUI(type) {
         .forEach(r => { courseInfo[r[1].trim().toUpperCase()] = { name: r[0].trim() }; });
     }
 
-    /* ── Regular 62B exams ── */
-    const reg62B = parseExamRoutine(examData, '62', 'B') || [];
+    /* ── The viewer's own section's exams ── */
+    const reg62B = parseExamRoutine(examData, _exHomeBatch(), _exHomeSection()) || [];
 
     /* Read excluded courses from localStorage so unchecked courses are hidden */
     let excluded = new Set();
@@ -324,7 +324,7 @@ async function _examShowRetakeUI(type) {
 
     _examCache = {
       type, label, exams: allExams, courseInfo,
-      targetBatch: '62', targetSection: 'B',
+      targetBatch: _exHomeBatch(), targetSection: _exHomeSection(),
       semester: sem, isRetake: true,
     };
 
@@ -446,15 +446,18 @@ function _examAddCalendar(encoded) {
   window.open(url, '_blank', 'noopener');
 }
 
-/* ── Regular search (62B Exams tab) ── */
+function _exHomeBatch()   { return window.lu62bBatch   ? window.lu62bBatch()   : '62'; }
+function _exHomeSection() { return window.lu62bSection ? window.lu62bSection() : 'B'; }
+
+/* ── Regular search (own-section Exams tab) ── */
 async function doExamSearch(type) {
   const label   = type === 'mid' ? 'Mid Term' : 'Final Term';
   const keyword = type === 'mid' ? 'mid term' : 'final term';
   const resultDiv = document.getElementById('examRoutineResult');
   const btn = document.getElementById('examSearchBtn');
 
-  const targetBatch   = document.getElementById('examBatchInput')?.value.trim() || '62';
-  const targetSection = (document.getElementById('examSectionInput')?.value.trim() || 'B').toUpperCase();
+  const targetBatch   = document.getElementById('examBatchInput')?.value.trim() || _exHomeBatch();
+  const targetSection = (document.getElementById('examSectionInput')?.value.trim() || _exHomeSection()).toUpperCase();
 
   if (!targetBatch || !targetSection) {
     if (resultDiv) resultDiv.innerHTML = `<div class="info-placeholder"><p>Please enter both Batch and Section.</p></div>`;

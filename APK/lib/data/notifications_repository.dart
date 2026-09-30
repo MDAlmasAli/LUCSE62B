@@ -37,6 +37,13 @@ class NotificationsRepository {
     return rows
         .map(AppNotification.fromJson)
         .where((item) => NotificationPreferences.instance.allowsType(item.type))
+        // Birthday rows are public, but they are about CSE 62B's own students,
+        // so they are not for a guest from another section.
+        .where(
+          (item) =>
+              !(Session.instance.isGuestSection &&
+                  item.type.toLowerCase().contains('birthday')),
+        )
         .toList();
   }
 

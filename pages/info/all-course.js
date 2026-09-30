@@ -134,7 +134,9 @@ async function loadAllCourse(body) {
       return;
     }
 
-    const defaultBatch = batchOrder.includes('62') ? '62' : batchOrder[0];
+    // Open on the viewer's own batch, which is 62 for the class itself.
+    const homeBatch = window.lu62bBatch ? window.lu62bBatch() : '62';
+    const defaultBatch = batchOrder.includes(homeBatch) ? homeBatch : batchOrder[0];
     let activeBatch = defaultBatch;
     let activeCodes = myCodes;
 

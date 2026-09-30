@@ -1589,6 +1589,10 @@
       if (!raw) return;
       const student = JSON.parse(raw);
       if (!student || student.isDemo || !student.id) return;
+      /* Birthdays are CSE 62B's own. birthdays_today() answers for the whole
+         table, so a guest from another section would otherwise be shown -- and
+         asked to wish -- people they do not know. */
+      if (window.lu62bIsGuest && window.lu62bIsGuest()) return;
 
       /* Own birthday check */
       isMyBirthday(student.id).then(function (mine) {

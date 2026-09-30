@@ -16,6 +16,16 @@ class Session extends ChangeNotifier {
   bool get isLoggedIn => _student != null;
   bool get isDemo => _student?.isDemo ?? false;
 
+  /// Whose routine, exams and course list to show. 62 / B unless the student
+  /// came in through the Main Sheet's "Special Access" tab, in which case it
+  /// is their own section. Screens read these rather than the literals.
+  String get batch => _student?.batch ?? Student.homeBatch;
+  String get section => _student?.section ?? Student.homeSection;
+
+  /// A guest from another section: they get the routine, the exams and their
+  /// own result, but not the parts that belong to CSE 62B alone.
+  bool get isGuestSection => _student?.isGuestSection ?? false;
+
   /// Cached DOB-gate status for the current student (synchronous for routing).
   /// True for demo accounts and any student already LU-verified on this device.
   bool dobOk = false;

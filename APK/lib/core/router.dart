@@ -35,6 +35,24 @@ import '../features/games/imposter/imposter_screen.dart';
 import '../features/games/draw/draw_screen.dart';
 import '../features/update/update_gate.dart';
 
+/// What belongs to CSE 62B alone, and so is closed to a guest from another
+/// section. Attendance and the student directory hold classmates' personal
+/// data; Classwork and Group Links are simply this class's own. Cover Page,
+/// Gallery and bKash stay open to everyone.
+const classOnlyRoutes = <String>{
+  '/attendance',
+  '/classwork',
+  '/students',
+  '/info/links',
+};
+
+/// True when this destination should not even be offered to whoever is logged
+/// in. The router refuses it anyway; this keeps dead cards off the screen.
+bool isRouteHidden(String? route) =>
+    route != null &&
+    Session.instance.isGuestSection &&
+    classOnlyRoutes.contains(route);
+
 /// Optional (non-forced) update surfaced after startup; the `/update` route
 /// reads this. Forced updates bypass the router entirely (see main.dart).
 UpdateStatus? pendingOptionalUpdate;
@@ -51,6 +69,11 @@ GoRouter buildRouter() {
       if (!s.isLoggedIn) return loc == '/login' ? null : '/login';
       if (!s.dobOk) return loc == '/dob' ? null : '/dob';
       if (loc == '/login' || loc == '/dob') return '/';
+      // A guest from another section gets the routine, the exams and their own
+      // result, but not what belongs to CSE 62B alone — and two of these hold
+      // classmates' personal data. Guarded here rather than only hiding the
+      // cards, because a deep link or a notification could still land on them.
+      if (s.isGuestSection && classOnlyRoutes.contains(loc)) return '/';
       return null;
     },
     routes: [

@@ -17,7 +17,7 @@ class WorkerApi {
   /// the website). The native app is the same portal, so we identify as it.
   static const _origin = {'Origin': K.portalOrigin};
 
-  /// GET /lookup?id= → { found, name }
+  /// GET /lookup?id= → { found, id, name, batch, section, special }
   Future<Map<String, dynamic>?> lookup(String studentId) async {
     try {
       final r = await http

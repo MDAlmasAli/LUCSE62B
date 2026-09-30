@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/app_colors.dart';
+import '../../core/router.dart';
 
 /// A searchable destination in the app (every feature the global search can
 /// jump to). [keywords] broaden matching so "cgpa", "marks" etc. all find
@@ -40,8 +41,12 @@ class SearchDest {
   }
 }
 
-/// The full catalog of destinations the global search covers.
-List<SearchDest> get appDestinations => [
+/// The full catalog of destinations the global search covers, minus anything
+/// this session is not allowed to open.
+List<SearchDest> get appDestinations =>
+    _allDestinations.where((d) => !isRouteHidden(d.route)).toList();
+
+List<SearchDest> get _allDestinations => [
   // ── Core ──
   SearchDest(
     label: 'Cover Page',

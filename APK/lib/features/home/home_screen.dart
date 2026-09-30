@@ -18,6 +18,7 @@ import '../../shared/avatar_badge.dart';
 import '../../shared/folder_card.dart';
 import '../notifications/notification_bell.dart';
 import '../search/app_search.dart';
+import '../../core/router.dart';
 
 class _NavItem {
   final IconData icon;
@@ -44,7 +45,11 @@ class HomeScreen extends StatefulWidget {
   // the slide-out drawer instead. Classwork is a content hub here that also
   // holds the Presentation / Tutorial / Lab Report / Viva / Lab Final / Project
   // categories.
-  static List<_NavItem> get _items => <_NavItem>[
+  /// Without the entries this session is not allowed to open.
+  static List<_NavItem> get _items =>
+      _allItems.where((i) => !isRouteHidden(i.route)).toList();
+
+  static List<_NavItem> get _allItems => <_NavItem>[
     _NavItem(
       Icons.calendar_month_rounded,
       'Class Routine',
@@ -110,7 +115,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final student = Session.instance.student;
     return Scaffold(
       backgroundColor: AppColors.bg,
-      drawer: _HomeDrawer(pages: HomeScreen._menuPages, student: student),
+      drawer: _HomeDrawer(
+        pages: HomeScreen._menuPages
+            .where((p) => !isRouteHidden(p.route))
+            .toList(),
+        student: student,
+      ),
       bottomNavigationBar: _searchBar(context),
       body: SafeArea(
         child: CustomScrollView(
@@ -547,7 +557,11 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
         ]);
         final courses = [...personal[0], ...personal[1]];
         if (courses.isNotEmpty) {
-          data = repo.buildFor('62', 'B', customs: courses);
+          data = repo.buildFor(
+            Session.instance.batch,
+            Session.instance.section,
+            customs: courses,
+          );
         }
       }
       return data;
@@ -556,7 +570,7 @@ class _ClassStatusCardState extends State<_ClassStatusCard> {
       routine.then<Object?>((d) => d).catchError((_) => null),
       SheetsApi.instance.sheet('Bus').catchError((_) => <List<String>>[]),
       ExamRepository.instance
-          .loadToday(batch: '62', section: 'B')
+          .loadToday(batch: Session.instance.batch, section: Session.instance.section)
           .catchError((_) => <TodayExamItem>[]),
     ]);
     if (!mounted) {
@@ -1160,10 +1174,10 @@ class _UpcomingExamStripState extends State<_UpcomingExamStrip> {
   Future<void> _load() async {
     try {
       final mid = await ExamRepository.instance
-          .load('mid', batch: '62', section: 'B')
+          .load('mid', batch: Session.instance.batch, section: Session.instance.section)
           .catchError((_) => <ExamItem>[]);
       final fin = await ExamRepository.instance
-          .load('final', batch: '62', section: 'B')
+          .load('final', batch: Session.instance.batch, section: Session.instance.section)
           .catchError((_) => <ExamItem>[]);
       final today = _dateOnly(DateTime.now());
       final all =

@@ -21,7 +21,31 @@ days, then asked for it on 2026-09-27; that batch is now out. The next batch wen
 
 ## Waiting for the next release
 
-- Nothing yet. Start a fresh list here as new work lands.
+- **Guest access for another section.** The Main Sheet now ends with a
+  "Special Access" tab (`Name | ID | Mobile | Batch | Section`). Anyone listed
+  there can sign in, and everything the app words as "your routine" or "your
+  exams" follows the batch and section on their row instead of 62/B — the
+  routine sheet already carries 61 A–E and 62 A–I, so the data was there.
+  Adding somebody later is one row in that tab: no code, no deploy, no release.
+- What a guest does NOT get: Attendance, Classwork, the Students directory and
+  Group Links. The first two of those hold classmates' names, phone numbers and
+  dates of birth, so this is not only about what is useful to them. Cover Page,
+  Gallery and bKash stay open, by the owner's choice. Birthday wishes stay with
+  the class: a guest gets neither the push nor the row.
+- The routes are refused by the router, not merely hidden from the menus, so a
+  deep link or a notification cannot land on one either.
+- **Change notifications follow the section too.** The routine and exam
+  monitors now run once per section that somebody is actually in, rather than
+  for 62B alone. The sheets are still fetched once and parsed per section, so
+  watching another section costs no extra requests. 62B keeps its original
+  `monitor_state` keys, so its baseline and history are untouched; each other
+  section gets its own.
+- A guest's alert cannot go out on a topic, because a topic reaches everyone
+  who subscribes, so their row is personal and the push is addressed device by
+  device — the same path the birthday wishes use. Guests are therefore kept off
+  the `routine` and `classwork` topics (they would otherwise hear 62B's routine
+  news on top of their own), and off 62B's browser push. Notices, app updates
+  and general news stay on topics for everybody.
 
 ## Still to do by hand, outside the app
 
@@ -114,6 +138,11 @@ depends on a new endpoint.)
 
 ## Live on the website
 
+- **Guest access**, the same as the app: the routine, exams and course list open
+  on the viewer's own batch and section, while Attendance, Classwork, the
+  Students directory and Group Links are hidden and their pages redirect home.
+  All of it is decided in `assets/js/auth.js`, the one script every page loads,
+  so a page added later is covered without anyone having to remember.
 - The site says when it is showing saved data: if a request fails, a banner names how old
   the data on screen is instead of silently presenting last week's routine as today's.
   It also offers a reload once the connection is back.
