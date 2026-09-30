@@ -8,7 +8,10 @@ days, then asked for it on 2026-09-27; that batch is now out. The next batch wen
 
 ## What users have right now
 
-- **v1.1.43+59**, published 2026-09-30 — notifications reach the phone again, deadline
+- **v1.1.44+60**, published 2026-09-30 — each student's own section (see below).
+  Nothing on screen changes for CSE 62B, so the release notes say exactly that.
+  Optional, not forced (`min_version_code` 35).
+- Before that: **v1.1.43+59**, published 2026-09-30 — notifications reach the phone again, deadline
   reminders, more of the app works offline, the home-screen widget gone, and a round of
   security work. Optional, not forced (`min_version_code` 35).
 - Before that: v1.1.42+58 (in-app LU result fetch, attendance fixes) on 2026-09-27;
@@ -20,6 +23,15 @@ days, then asked for it on 2026-09-27; that batch is now out. The next batch wen
 - Nothing right now.
 
 ## Waiting for the next release
+
+- Nothing yet. Start a fresh list here as new work lands.
+
+## Shipped in v1.1.44+60
+
+**Not announced to the class.** The owner asked that this not be told to users,
+so the release notes mention none of it. Note that the repository is public, so
+the mechanism is readable in the code either way — only a private repository
+would change that.
 
 - **Guest access for another section.** The Main Sheet now ends with a
   "Special Access" tab (`Name | ID | Mobile | Batch | Section`). Anyone listed
@@ -46,6 +58,12 @@ days, then asked for it on 2026-09-27; that batch is now out. The next batch wen
   the `routine` and `classwork` topics (they would otherwise hear 62B's routine
   news on top of their own), and off 62B's browser push. Notices, app updates
   and general news stay on topics for everybody.
+- A session saved before any of this existed carries no batch or section, and an
+  absent section reads as 62 / B — right for the class, and exactly wrong for
+  the person it was built for. Both clients now fill the two fields in from
+  `/lookup` once, keeping the login itself intact. This was reported within
+  minutes of the first deploy; it is why the session carries a `sectionKnown`
+  flag at all.
 
 ## Still to do by hand, outside the app
 
