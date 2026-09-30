@@ -15,6 +15,11 @@ class Student {
   final String batch;
   final String section;
 
+  /// False when the stored session predates guest access and carried no
+  /// section at all. Such a session reads as 62 / B, which is right for the
+  /// class and wrong for everyone else, so it has to be filled in once.
+  final bool sectionKnown;
+
   final int loginTime;
   final bool isDemo;
   final String sessionId;
@@ -26,6 +31,7 @@ class Student {
     required this.loginTime,
     this.batch = homeBatch,
     this.section = homeSection,
+    this.sectionKnown = true,
     this.isDemo = false,
     String? sessionId,
     int? sessionIssuedAt,
@@ -46,11 +52,25 @@ class Student {
   static String _newSessionId() =>
       'app-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
 
+  /// The same student with their real batch and section filled in.
+  Student withSection(String newBatch, String newSection) => Student(
+    id: id,
+    name: name,
+    batch: newBatch,
+    section: newSection.toUpperCase(),
+    sectionKnown: true,
+    loginTime: loginTime,
+    isDemo: isDemo,
+    sessionId: sessionId,
+    sessionIssuedAt: sessionIssuedAt,
+  );
+
   Student withFreshSession() => Student(
     id: id,
     name: name,
     batch: batch,
     section: section,
+    sectionKnown: sectionKnown,
     loginTime: loginTime,
     isDemo: isDemo,
     sessionId: _newSessionId(),
@@ -78,6 +98,7 @@ class Student {
     section: (j['section']?.toString().trim().isNotEmpty ?? false)
         ? j['section'].toString().trim().toUpperCase()
         : homeSection,
+    sectionKnown: j['section']?.toString().trim().isNotEmpty ?? false,
     loginTime: (j['loginTime'] is int)
         ? j['loginTime'] as int
         : int.tryParse('${j['loginTime']}') ??

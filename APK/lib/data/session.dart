@@ -54,6 +54,26 @@ class Session extends ChangeNotifier {
     }
   }
 
+  /// Fill in the batch and section of a session that was saved before guest
+  /// access existed. Does nothing once they are known, and never touches a
+  /// demo session.
+  Future<void> applySection(String newBatch, String newSection) async {
+    final current = _student;
+    if (current == null || current.isDemo) return;
+    if (current.sectionKnown &&
+        current.batch == newBatch &&
+        current.section == newSection.toUpperCase()) {
+      return;
+    }
+    final next = current.withSection(newBatch, newSection);
+    _student = next;
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getString(K.ssStudent) != null) {
+      await prefs.setString(K.ssStudent, jsonEncode(next.toJson()));
+    }
+    notifyListeners();
+  }
+
   Future<void> signIn(Student s, {required bool keep}) async {
     final next = s.withFreshSession();
     _student = next;

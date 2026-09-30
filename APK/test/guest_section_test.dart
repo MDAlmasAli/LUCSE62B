@@ -49,6 +49,38 @@ void main() {
       expect(s.batch, '62');
       expect(s.section, 'B');
       expect(s.isGuestSection, isFalse);
+      // …but it is flagged as a guess, so it gets resolved once.
+      expect(s.sectionKnown, isFalse);
+    });
+
+    test('a session that carried a section is not re-resolved', () {
+      final s = Student.fromJson({
+        'id': '1',
+        'name': 'Guest',
+        'section': 'C',
+        'loginTime': 1,
+      });
+      expect(s.sectionKnown, isTrue);
+    });
+
+    test('withSection fills in a guessed session without losing the login', () {
+      final stale = Student.fromJson({
+        'id': '0182320012101108',
+        'name': 'Kolsuma',
+        'loginTime': 42,
+        'sessionId': 'keep-me',
+        'sessionIssuedAt': 7,
+      });
+      expect(stale.isGuestSection, isFalse); // the wrong answer, for now
+
+      final fixed = stale.withSection('62', 'c');
+      expect(fixed.section, 'C');
+      expect(fixed.sectionKnown, isTrue);
+      expect(fixed.isGuestSection, isTrue);
+      // The session itself must survive, or this would count as a new login.
+      expect(fixed.sessionId, 'keep-me');
+      expect(fixed.sessionIssuedAt, 7);
+      expect(fixed.loginTime, 42);
     });
 
     test('a guest round-trips through JSON', () {

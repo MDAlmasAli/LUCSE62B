@@ -93,6 +93,30 @@
     document.documentElement.classList.add('lu62b-guest-session');
   }
 
+  /* Anyone already signed in when this arrived has a stored session with no
+     batch or section in it at all, which reads as the class's own 62 / B — so
+     a guest would go on being shown 62B's routine until they happened to sign
+     out and back in. Fill the two fields in from the lookup instead, once, and
+     reload only if it turns out to change what belongs on the page. */
+  function backfillSection() {
+    if (!session || !session.id || isDemoSession) return;
+    if (session.batch && session.section) return;
+    fetch(WORKER_URL + '/lookup?id=' + encodeURIComponent(session.id), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || data.found !== true) return;
+        session.batch = String(data.batch || DEFAULT_BATCH);
+        session.section = String(data.section || DEFAULT_SECTION).toUpperCase();
+        session.special = !!data.special;
+        persistSessionMeta(session);
+        if (window.lu62bIsGuest()) window.location.reload();
+      })
+      .catch(function () {
+        // Offline or rate-limited: try again on the next page load.
+      });
+  }
+  backfillSection();
+
   // ── Force logout helper ──────────────────────────────────────────────
   var logoutStarted = false;
 
