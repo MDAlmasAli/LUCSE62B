@@ -71,9 +71,25 @@ export default {
         let parsed;
         try { parsed = JSON.parse(m[1]); } catch { return errResp(cors, 502, 'Bad upstream'); }
         const rows   = parsed.table?.rows || [];
-        if (!rows.length) return jsonResp(cors, { found: false });
-        const cells  = (rows[0].c || []).map(c => (c && c.v !== null && c.v !== undefined) ? String(c.f || c.v).trim() : '');
-        return jsonResp(cors, { found: true, id: cells[1] || sid, name: cells[2] || 'Student' });
+        if (rows.length) {
+          const cells = (rows[0].c || []).map(c => (c && c.v !== null && c.v !== undefined) ? String(c.f || c.v).trim() : '');
+          return jsonResp(cors, {
+            found: true,
+            id: cells[1] || sid,
+            name: cells[2] || 'Student',
+            batch: DEFAULT_BATCH,
+            section: DEFAULT_SECTION,
+            special: false,
+          });
+        }
+        // Not one of 62B's own — they may still be a guest from another section.
+        const guest = specialAccessStudent(await specialAccessRows(env), sid);
+        if (!guest) return jsonResp(cors, { found: false });
+        // Deliberately without the mobile number: /my-phone asks for the date
+        // of birth before giving that out, and an ID lookup must not be a way
+        // around it.
+        const { mobile, ...safe } = guest;
+        return jsonResp(cors, safe);
       }
 
       // Main Sheet is the authoritative access list. The minute cron detects
@@ -224,9 +240,18 @@ export default {
         if (!m2) return errResp(cors, 502, 'Bad upstream');
         const parsed2 = JSON.parse(m2[1]);
         const rows2   = parsed2.table?.rows || [];
-        if (!rows2.length) return errResp(cors, 404, 'Student not found');
-        const cells2 = (rows2[0].c || []).map(c => (c && c.v !== null && c.v !== undefined) ? String(c.f || c.v).trim() : '');
-        let phone2 = (cells2[3] || '').replace(/\s+/g, '');
+        // Same as /my-phone: a guest from another section keeps their number in
+        // the Special Access tab, not in Student Info.
+        let rawPhone2 = '';
+        if (rows2.length) {
+          const cells2 = (rows2[0].c || []).map(c => (c && c.v !== null && c.v !== undefined) ? String(c.f || c.v).trim() : '');
+          rawPhone2 = cells2[3] || '';
+        } else {
+          const guest2 = specialAccessStudent(await specialAccessRows(env), sid2);
+          if (!guest2) return errResp(cors, 404, 'Student not found');
+          rawPhone2 = guest2.mobile || '';
+        }
+        let phone2 = rawPhone2.replace(/\s+/g, '');
         if (phone2.length === 10 && phone2.startsWith('1')) phone2 = '0' + phone2;
         if (phone2.startsWith('+88')) phone2 = phone2.substring(3);
         else if (phone2.startsWith('88') && phone2.length === 13) phone2 = phone2.substring(2);
@@ -321,9 +346,19 @@ export default {
         if (!m3) return errResp(cors, 502, 'Bad upstream');
         const d3 = JSON.parse(m3[1]);
         const rows3 = d3.table?.rows || [];
-        if (!rows3.length) return errResp(cors, 404, 'Student not found');
-        const cells3 = (rows3[0].c || []).map(c => (c && c.v !== null && c.v !== undefined) ? String(c.f || c.v).trim() : '');
-        let phone3 = (cells3[3] || '').replace(/\s+/g, '');
+        // Student Info holds the number in column D; a guest from another
+        // section has theirs in the Special Access tab instead. Without this
+        // they could never set a password, because the OTP had nowhere to go.
+        let rawPhone3 = '';
+        if (rows3.length) {
+          const cells3 = (rows3[0].c || []).map(c => (c && c.v !== null && c.v !== undefined) ? String(c.f || c.v).trim() : '');
+          rawPhone3 = cells3[3] || '';
+        } else {
+          const guest3 = specialAccessStudent(await specialAccessRows(env), sid3);
+          if (!guest3) return errResp(cors, 404, 'Student not found');
+          rawPhone3 = guest3.mobile || '';
+        }
+        let phone3 = rawPhone3.replace(/\s+/g, '');
         if (phone3.length === 10 && phone3.startsWith('1')) phone3 = '0' + phone3;
         if (phone3.startsWith('+88')) phone3 = phone3.substring(3);
         else if (phone3.startsWith('88') && phone3.length === 13) phone3 = phone3.substring(2);
@@ -1587,6 +1622,63 @@ const MONITOR_DAYS = ['SATURDAY','SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSD
 
 const ACTIVE_ROSTER_KEY = 'active_student_roster_v1';
 
+/* ── Special Access ────────────────────────────────────────────────────────
+   The portal belongs to CSE 62B, but a few people from other sections are let
+   in through the "Special Access" tab at the end of the Main Sheet:
+
+     Name | ID | Mobile | Batch | Section
+
+   Everything the portal words as "your routine", "your exams" has to follow the
+   batch and section on their row, so every identity lookup answers with a batch
+   and a section - 62 / B for the class itself. Adding somebody later is one row
+   in that tab and no code change. */
+const DEFAULT_BATCH = '62';
+const DEFAULT_SECTION = 'B';
+const SPECIAL_ACCESS_TAB = 'Special Access';
+
+/* The whole tab, which is a handful of rows. Matching in JavaScript rather than
+   with a GVIZ `where` keeps working whether the ID column is stored as text or
+   as a number, and keeps the id out of the query string entirely. */
+async function specialAccessRows(env) {
+  const sheetId = env.MAIN_SHEET_ID;
+  if (!sheetId) return null;
+  const u = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq` +
+    `?tqx=out:json&headers=0&sheet=${encodeURIComponent(SPECIAL_ACCESS_TAB)}&_t=${Date.now()}`;
+  const r = await fetch(u).catch(() => null);
+  if (!r || !r.ok) return null;
+  const text = await r.text();
+  const m = text.match(/setResponse\(([\s\S]+)\)\s*;?\s*$/);
+  if (!m) return null;
+  let parsed;
+  try { parsed = JSON.parse(m[1]); } catch { return null; }
+  const rows = (parsed.table?.rows || []).map(row =>
+    (row.c || []).map(c =>
+      (c && c.v !== null && c.v !== undefined) ? String(c.f ?? c.v).trim() : ''));
+  if (!rows.length) return [];
+  /* A sheet name GVIZ cannot find does not error - it quietly returns the FIRST
+     tab instead. Without this check, renaming or deleting the tab would have us
+     reading Student Info and handing out access from the wrong columns. */
+  const header = rows[0].map(v => v.toLowerCase());
+  if (header[1] !== 'id' || header[3] !== 'batch' || header[4] !== 'section') {
+    return [];
+  }
+  return rows.slice(1).filter(row => /^\d{8,16}$/.test(row[1] || ''));
+}
+
+function specialAccessStudent(rows, studentId) {
+  const row = (rows || []).find(r => r[1] === String(studentId));
+  if (!row) return null;
+  return {
+    found: true,
+    id: row[1],
+    name: row[0] || 'Student',
+    mobile: row[2] || '',
+    batch: String(row[3] || '').replace(/\.0+$/, '').trim() || DEFAULT_BATCH,
+    section: String(row[4] || '').trim().toUpperCase() || DEFAULT_SECTION,
+    special: true,
+  };
+}
+
 async function fetchActiveStudentIds(env) {
   if (!env.MAIN_SHEET_ID) throw new Error('MAIN_SHEET_ID is not configured');
   let ids = [];
@@ -1627,6 +1719,14 @@ async function fetchActiveStudentIds(env) {
   // Never publish an empty roster on an upstream parsing/outage error, because
   // that would incorrectly log out the whole class.
   if (!ids.length) throw new Error('Active roster is empty');
+
+  /* Guests from other sections are on the roster too, or they could not log in
+     and would be signed out within the minute. Checked after the class itself,
+     so a problem reading their tab can never empty the roster. */
+  const guests = await specialAccessRows(env).catch(() => null);
+  for (const row of guests || []) {
+    if (!ids.includes(row[1])) ids.push(row[1]);
+  }
   return ids;
 }
 
