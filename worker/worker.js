@@ -83,7 +83,7 @@ export default {
           });
         }
         // Not one of 62B's own — they may still be a guest from another section.
-        const guest = specialAccessStudent(await specialAccessRows(env), sid);
+        const guest = specialAccessStudent(await specialAccessRows(env, { fresh: true }), sid);
         if (!guest) return jsonResp(cors, { found: false });
         // Deliberately without the mobile number: /my-phone asks for the date
         // of birth before giving that out, and an ID lookup must not be a way
@@ -247,7 +247,7 @@ export default {
           const cells2 = (rows2[0].c || []).map(c => (c && c.v !== null && c.v !== undefined) ? String(c.f || c.v).trim() : '');
           rawPhone2 = cells2[3] || '';
         } else {
-          const guest2 = specialAccessStudent(await specialAccessRows(env), sid2);
+          const guest2 = specialAccessStudent(await specialAccessRows(env, { fresh: true }), sid2);
           if (!guest2) return errResp(cors, 404, 'Student not found');
           rawPhone2 = guest2.mobile || '';
         }
@@ -354,7 +354,7 @@ export default {
           const cells3 = (rows3[0].c || []).map(c => (c && c.v !== null && c.v !== undefined) ? String(c.f || c.v).trim() : '');
           rawPhone3 = cells3[3] || '';
         } else {
-          const guest3 = specialAccessStudent(await specialAccessRows(env), sid3);
+          const guest3 = specialAccessStudent(await specialAccessRows(env, { fresh: true }), sid3);
           if (!guest3) return errResp(cors, 404, 'Student not found');
           rawPhone3 = guest3.mobile || '';
         }
@@ -1638,8 +1638,30 @@ const SPECIAL_ACCESS_TAB = 'Special Access';
 
 /* The whole tab, which is a handful of rows. Matching in JavaScript rather than
    with a GVIZ `where` keeps working whether the ID column is stored as text or
-   as a number, and keeps the id out of the query string entirely. */
-async function specialAccessRows(env) {
+   as a number, and keeps the id out of the query string entirely.
+
+   Cached briefly, because the minute cron asks for this several times over —
+   the roster, the birthdays, the class routine and both exam routines — and
+   without it that is five Google fetches a minute for a handful of rows, on
+   top of everything else the run already has to fetch. Sign-in passes
+   `fresh: true`, so somebody added to the tab can log in straight away;
+   only the monitors tolerate being up to five minutes behind. A failed read is
+   never cached, so an outage does not stick. */
+const SPECIAL_ACCESS_TTL_MS = 5 * 60 * 1000;
+let _specialAccessCache = null;
+
+async function specialAccessRows(env, { fresh = false } = {}) {
+  if (!fresh &&
+      _specialAccessCache &&
+      Date.now() - _specialAccessCache.at < SPECIAL_ACCESS_TTL_MS) {
+    return _specialAccessCache.rows;
+  }
+  const rows = await specialAccessRowsUncached(env);
+  if (Array.isArray(rows)) _specialAccessCache = { at: Date.now(), rows };
+  return rows;
+}
+
+async function specialAccessRowsUncached(env) {
   const sheetId = env.MAIN_SHEET_ID;
   if (!sheetId) return null;
   const u = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq` +
