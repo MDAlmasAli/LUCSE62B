@@ -10,18 +10,26 @@
 -- RLS and keeps its own grants, so the Worker is unaffected by all of this.
 
 -- ── attendance_records ────────────────────────────────────────────────────
--- anon held SELECT, INSERT, UPDATE, DELETE and TRUNCATE, and the table had RLS
--- switched off. Anyone could read the whole register, mark people present, or
--- wipe it outright. No client-side code touches this table; the site and the
--- app both go through the Worker's /attendance endpoint.
+-- This is the real hole, and the only one of these tables with RLS switched
+-- off. Every other table default-denies anything without a matching policy;
+-- this one has no such net, and anon holds SELECT, INSERT, UPDATE, DELETE and
+-- TRUNCATE. Verified with nothing but the key that ships in the site's
+-- JavaScript: all 393 rows read back, and an empty INSERT got past permission
+-- to fail on a NOT NULL constraint (23502) rather than being refused (42501).
+-- So anyone can read the whole register, mark people present, or wipe it.
+-- No client-side code touches this table; the site and the app both go through
+-- the Worker's /attendance endpoint, which uses the service_role key and is
+-- unaffected by any of this.
 alter table public.attendance_records enable row level security;
 revoke all on public.attendance_records from anon, authenticated;
 
 -- ── notifications ─────────────────────────────────────────────────────────
--- The site, the app and the service worker READ this table with the anon key,
--- so SELECT has to stay. Nothing client-side writes it - rows come from the
--- Worker - so INSERT/UPDATE/DELETE/TRUNCATE were pure risk: anyone could post
--- a notice to the whole class, or edit and delete the real ones.
+-- Tidying up, not a hole. anon holds INSERT/UPDATE/DELETE/TRUNCATE here too,
+-- but this table has RLS enabled with a read-only policy, so the writes are
+-- already refused -- an anon INSERT comes back 42501, verified. The grants are
+-- simply unused, and leaving them means a permissive policy added later would
+-- silently open writing to everyone. The site, the app and the service worker
+-- READ this table with the anon key, so SELECT has to stay.
 revoke all on public.notifications from anon, authenticated;
 grant select on public.notifications to anon, authenticated;
 
