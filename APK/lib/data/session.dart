@@ -48,9 +48,29 @@ class Session extends ChangeNotifier {
       if (!raw.contains('"sessionId"') || !raw.contains('"sessionIssuedAt"')) {
         await prefs.setString(K.ssStudent, jsonEncode(s.toJson()));
       }
+      // Opening the app counts as using it, so the expiry moves with them.
+      await touch();
       dobOk = s.isDemo || prefs.getString('${K.ssDobOkPrefix}${s.id}') == '1';
     } catch (_) {
       await prefs.remove(K.ssStudent);
+    }
+  }
+
+  /// Mark the session as used, so the seven-day expiry counts from the last
+  /// visit rather than from signing in. Without this everybody was signed out
+  /// every seventh day however often they opened the app. Throttled to an hour
+  /// so it is not a disk write on every check.
+  Future<void> touch() async {
+    final current = _student;
+    if (current == null || current.isDemo) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - current.loginTime < 3600000) return;
+    final next = current.withLoginTime(now);
+    _student = next;
+    final prefs = await SharedPreferences.getInstance();
+    // Only a kept session is on disk; a temporary one stays in memory.
+    if (prefs.getString(K.ssStudent) != null) {
+      await prefs.setString(K.ssStudent, jsonEncode(next.toJson()));
     }
   }
 

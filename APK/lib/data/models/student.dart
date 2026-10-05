@@ -52,6 +52,21 @@ class Student {
   static String _newSessionId() =>
       'app-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
 
+  /// The same session, stamped as used just now. [loginTime] is what the
+  /// seven-day expiry counts from, so refreshing it on use keeps an active
+  /// student signed in and still expires one who has genuinely stopped coming.
+  Student withLoginTime(int at) => Student(
+    id: id,
+    name: name,
+    batch: batch,
+    section: section,
+    sectionKnown: sectionKnown,
+    loginTime: at,
+    isDemo: isDemo,
+    sessionId: sessionId,
+    sessionIssuedAt: sessionIssuedAt,
+  );
+
   /// The same student with their real batch and section filled in.
   Student withSection(String newBatch, String newSection) => Student(
     id: id,

@@ -115,6 +115,49 @@ void main() {
     });
   });
 
+  group('the seven-day expiry slides with use', () {
+    const week = 7 * 24 * 60 * 60 * 1000;
+    int now() => DateTime.now().millisecondsSinceEpoch;
+
+    test('withLoginTime moves only the expiry clock', () {
+      final before = Student.create(
+        '1',
+        'Someone',
+        batch: '62',
+        section: 'C',
+      );
+      final after = before.withLoginTime(before.loginTime + 1000);
+
+      expect(after.loginTime, before.loginTime + 1000);
+      // Everything that identifies the session has to survive, or the student
+      // would be treated as newly signed in — or as the wrong section.
+      expect(after.sessionId, before.sessionId);
+      expect(after.sessionIssuedAt, before.sessionIssuedAt);
+      expect(after.id, before.id);
+      expect(after.section, 'C');
+      expect(after.sectionKnown, isTrue);
+      expect(after.isGuestSection, isTrue);
+    });
+
+    test('a session used within the week is not expired', () {
+      final s = Student.fromJson({
+        'id': '1',
+        'name': 'Someone',
+        'loginTime': now() - (week - 60000),
+      });
+      expect(now() - s.loginTime > week, isFalse);
+    });
+
+    test('a session untouched for over a week still expires', () {
+      final s = Student.fromJson({
+        'id': '1',
+        'name': 'Someone',
+        'loginTime': now() - (week + 60000),
+      });
+      expect(now() - s.loginTime > week, isTrue);
+    });
+  });
+
   test('the closed routes are exactly the class-only ones', () {
     // Cover Page, Gallery and bKash are deliberately NOT here.
     expect(classOnlyRoutes, {

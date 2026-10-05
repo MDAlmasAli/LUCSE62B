@@ -52,6 +52,7 @@ class SessionValidator with WidgetsBindingObserver {
         await Session.instance.signOut();
         return;
       }
+      await Session.instance.touch();
       await _resolveSection(student);
     } finally {
       _checking = false;

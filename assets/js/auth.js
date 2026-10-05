@@ -220,10 +220,20 @@
   // ── Session checks (A + B) ───────────────────────────────────────────
   if (isLoggedIn) {
     if (session && session.id) {
-      // A — 7-day expiry
+      // A — 7-day expiry, counted from the last time the portal was used.
+      //
+      // It used to count from the moment of signing in and never move, so
+      // everybody was signed out every seventh day however often they came
+      // back. Touching it on use means only a session that really has gone a
+      // week untouched expires. Throttled to once an hour so this is not a
+      // storage write on every page load.
       if (session.loginTime && Date.now() - session.loginTime > SEVEN_DAYS) {
         forceLogout('expired');
         return;
+      }
+      if (!session.loginTime || Date.now() - session.loginTime > 3600000) {
+        session.loginTime = Date.now();
+        persistSessionMeta(session);
       }
 
       // B — authoritative Main Sheet validation (every minute + tab focus)
