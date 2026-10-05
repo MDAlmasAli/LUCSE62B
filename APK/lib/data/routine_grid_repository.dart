@@ -405,13 +405,24 @@ class RoutineGridRepository {
         out.add(const SheetTable(cols: [], rows: []));
         continue;
       }
+      /* Which sheet's header row this day keeps. Counting time slots, not raw
+         columns: GVIZ trims trailing empty columns, so a quiet day in the first
+         sheet can come back narrower than the same day in a later one even
+         though it lists MORE periods. Picking by width then handed the headers
+         to a sheet with a hidden time column, which dropped that period from
+         that one day and made it look like its timings differed. Ties keep the
+         earlier sheet, which is the authoritative routine. */
+      int timeColumns(SheetTable t) =>
+          t.cols.where((c) => _timeLabel.hasMatch(c)).length;
       final base = valid.reduce(
-        (a, b) => b.cols.length > a.cols.length ? b : a,
+        (a, b) => timeColumns(b) > timeColumns(a) ? b : a,
       );
       out.add(SheetTable(cols: base.cols, rows: mergeSectionRows(valid)));
     }
     return out;
   }
+
+  static final _timeLabel = RegExp(r'\d+:\d+');
 
   List<({String batch, String section})> _scanSections() {
     final seen = <String>{};
