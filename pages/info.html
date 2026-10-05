@@ -1058,11 +1058,15 @@
 
     /* ── Shared: merge several GVIZ tables (same format) into one ──
        Keeps the richest column layout and concatenates every sheet's rows. */
-    function mergeSheetTables(tables) {
+    /* `scoreCols` decides which sheet's header row the merged table keeps.
+       It defaults to the widest, which is right when the columns are plain
+       data. A routine day passes its own: see mergeRoutineDayTables. Ties
+       keep the earlier table, so Link 1 wins. */
+    function mergeSheetTables(tables, scoreCols) {
       const valid = tables.filter(t => t?.table);
       if (!valid.length) return null;
-      const base = valid.reduce((a, b) =>
-        (b.table.cols?.length || 0) > (a.table.cols?.length || 0) ? b : a, valid[0]);
+      const score = scoreCols || (t => t.table.cols?.length || 0);
+      const base = valid.reduce((a, b) => (score(b) > score(a) ? b : a), valid[0]);
       const rows = [];
       valid.forEach(t => (t.table.rows || []).forEach(r => rows.push(r)));
       return { table: { cols: base.table.cols || [], rows } };
@@ -1141,7 +1145,22 @@
         own.forEach(k => claimed.add(k));
         return { table: { ...t.table, rows } };
       });
-      return mergeSheetTables(deduped);
+      return mergeSheetTables(deduped, timeColumnCount);
+    }
+
+    /* How many of a table's columns are actually time slots.
+    
+       The merged day table takes its headers from one sheet, and picking that
+       sheet by total width gets it wrong. GVIZ trims trailing empty columns, so
+       a quiet day in Link 1 can come back narrower than the same day in Link 2
+       (Sunday: 16 columns against 27) even though Link 1 lists MORE time slots.
+       Link 2 then supplied the headers, and because the sheet owner hid the
+       evening "OL Class" column there, that slot vanished from Sunday alone.
+       Sunday ended up with 8 time columns where every other day had 9, so it no
+       longer matched them and was drawn as a separate table — looking like its
+       periods differed, when only the column count did. */
+    function timeColumnCount(t) {
+      return (t.table.cols || []).filter(c => /\d+:\d+/.test(c.label || '')).length;
     }
 
     /* ── Fetch a single-tab sheet (e.g. an exam routine) from EVERY linked ID
