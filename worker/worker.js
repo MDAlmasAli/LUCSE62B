@@ -1545,6 +1545,7 @@ async function fetchLuNotices(env) {
   let notices = [];
   try {
     const r = await fetch('https://lus.ac.bd/notice/feed/', {
+      signal: upstreamSignal(),
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; LUCSE62B/1.0; +https://lucse62b.xyz)',
         'Accept': 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
@@ -1666,9 +1667,9 @@ async function specialAccessRowsUncached(env) {
   if (!sheetId) return null;
   const u = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq` +
     `?tqx=out:json&headers=0&sheet=${encodeURIComponent(SPECIAL_ACCESS_TAB)}&_t=${Date.now()}`;
-  const r = await fetch(u).catch(() => null);
+  const r = await fetch(u, { signal: upstreamSignal() }).catch(() => null);
   if (!r || !r.ok) return null;
-  const text = await r.text();
+  const text = await r.text().catch(() => '');
   const m = text.match(/setResponse\(([\s\S]+)\)\s*;?\s*$/);
   if (!m) return null;
   let parsed;
@@ -1711,7 +1712,10 @@ async function fetchActiveStudentIds(env) {
       const range = encodeURIComponent("'Student Info'!B:B");
       const u = `https://sheets.googleapis.com/v4/spreadsheets/${env.MAIN_SHEET_ID}` +
         `/values/${range}?majorDimension=ROWS&key=${env.DRIVE_API_KEY}`;
-      const r = await fetch(u, { headers: { 'Referer': 'https://lucse62b.xyz/' } });
+      const r = await fetch(u, {
+        signal: upstreamSignal(),
+        headers: { 'Referer': 'https://lucse62b.xyz/' },
+      });
       if (r.ok) {
         const data = await r.json();
         ids = (data.values || [])
@@ -1726,7 +1730,7 @@ async function fetchActiveStudentIds(env) {
     const tq = encodeURIComponent('select B where B is not null');
     const u = `https://docs.google.com/spreadsheets/d/${env.MAIN_SHEET_ID}` +
       `/gviz/tq?tqx=out:json&sheet=${encodeURIComponent('Student Info')}&tq=${tq}&_t=${Date.now()}`;
-    const r = await fetch(u);
+    const r = await fetch(u, { signal: upstreamSignal() });
     if (!r.ok) throw new Error(`Roster GVIZ ${r.status}`);
     const text = await r.text();
     const match = text.match(/setResponse\(([\s\S]+)\)\s*;?\s*$/);
@@ -2021,13 +2025,20 @@ async function isDuplicateNotification(env, type, body) {
   return Number.isFinite(age) && age >= 0 && age < DUPLICATE_WINDOW_MS;
 }
 
+/* Reads from Google and lus.ac.bd made by the cron runs are bounded. One that
+   hangs would otherwise hold its run open: on 2026-10-10 the minute monitor
+   was finishing only every 7–10 minutes, and the runs piled up behind it
+   finished together and sent the same notification three times. A timed-out
+   read fails like any other failed read. */
+function upstreamSignal() {
+  return AbortSignal.timeout(20000);
+}
+
 /* ── Sheet fetch helper (no CORS needed for scheduled) ── */
 async function fetchSheetGviz(sheetId, tab) {
   let url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&_t=${Date.now()}`;
   if (tab) url += `&sheet=${encodeURIComponent(tab)}`;
-  /* Bounded, so a Google read that hangs fails as an unread tab instead of
-     holding the minute run open until the next ones pile up behind it. */
-  const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
+  const r = await fetch(url, { signal: upstreamSignal() });
   const text = await r.text();
   const m = text.match(/setResponse\(([\s\S]+)\)\s*;?\s*$/);
   return m ? JSON.parse(m[1]).table : null;
@@ -2900,7 +2911,7 @@ function formatDeadlineChanges(changes) {
 async function checkDeadlines(env) {
   if (!env.SUPA_KEY || !env.MAIN_SHEET_ID) return;
   const u = `https://docs.google.com/spreadsheets/d/${env.MAIN_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Deadlines&_t=${Date.now()}`;
-  const r = await fetch(u).catch(() => null);
+  const r = await fetch(u, { signal: upstreamSignal() }).catch(() => null);
   if (!r || !r.ok) return;
   const t = await r.text();
   const m = t.match(/setResponse\(([\s\S]+)\)\s*;?\s*$/);
@@ -3036,7 +3047,7 @@ async function checkDeadlineReminders(env) {
   const tomorrow = addDateKeyDays(today, 1);
 
   const u = `https://docs.google.com/spreadsheets/d/${env.MAIN_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Deadlines&_t=${Date.now()}`;
-  const r = await fetch(u).catch(() => null);
+  const r = await fetch(u, { signal: upstreamSignal() }).catch(() => null);
   if (!r || !r.ok) return;
   const text = await r.text();
   const match = text.match(/setResponse\(([\s\S]+)\)\s*;?\s*$/);
