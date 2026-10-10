@@ -1934,6 +1934,50 @@ async function supabaseUpsertState(env, key, hash, data) {
   }).catch(() => {});
 }
 
+/* Compare-and-set on one monitor_state row: true for the single caller that
+   moves `key` to `token`, false for every caller that finds it already there,
+   null when Supabase could not be asked. The minute cron runs can overlap — a
+   slow Google read holds several of them up and they then finish together —
+   and a plain read-then-write let each of them believe it was first: on
+   2026-10-10 one routine change went out three times within 50 ms. The PATCH
+   is a single UPDATE … WHERE state_hash <> token, and Postgres re-checks that
+   condition after waiting on the row lock, so exactly one caller gets a row. */
+async function claimOnce(env, key, token) {
+  const headers = {
+    'apikey': env.SUPA_KEY, 'Authorization': `Bearer ${env.SUPA_KEY}`,
+    'Content-Type': 'application/json',
+  };
+  // Make sure the row exists, leaving it alone if it already does.
+  const made = await fetch(`${SUPA_URL}/rest/v1/monitor_state`, {
+    method: 'POST',
+    headers: { ...headers, 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
+    body: JSON.stringify({ key, state_hash: '' }),
+  }).catch(() => null);
+  if (!made || !made.ok) return null;
+  const now = new Date().toISOString();
+  const r = await fetch(
+    `${SUPA_URL}/rest/v1/monitor_state?key=eq.${encodeURIComponent(key)}` +
+    `&state_hash=neq.${encodeURIComponent(token)}`,
+    {
+      method: 'PATCH',
+      headers: { ...headers, 'Prefer': 'return=representation' },
+      body: JSON.stringify({ state_hash: token, last_checked: now, last_changed: now }),
+    },
+  ).catch(() => null);
+  if (!r || !r.ok) return null;
+  const rows = await r.json().catch(() => null);
+  return Array.isArray(rows) ? rows.length > 0 : null;
+}
+
+/* Whether this run is the one that announces the move from the `stored`
+   baseline to `hash`. Every run that read the same baseline row builds the same
+   token (its last_changed is part of it), so only one of them wins; a later
+   identical change starts from a newer baseline row and is announced again. */
+async function claimChange(env, key, stored, hash) {
+  const token = await sha256(`${stored?.state_hash || ''}|${stored?.last_changed || ''}|${hash}`);
+  return claimOnce(env, `${key}_sent`, token);
+}
+
 async function clearSupabaseState(env, key) {
   await fetch(`${SUPA_URL}/rest/v1/monitor_state?key=eq.${encodeURIComponent(key)}`, {
     method: 'DELETE',
@@ -1981,7 +2025,9 @@ async function isDuplicateNotification(env, type, body) {
 async function fetchSheetGviz(sheetId, tab) {
   let url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&_t=${Date.now()}`;
   if (tab) url += `&sheet=${encodeURIComponent(tab)}`;
-  const r = await fetch(url);
+  /* Bounded, so a Google read that hangs fails as an unread tab instead of
+     holding the minute run open until the next ones pile up behind it. */
+  const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
   const text = await r.text();
   const m = text.match(/setResponse\(([\s\S]+)\)\s*;?\s*$/);
   return m ? JSON.parse(m[1]).table : null;
@@ -2119,6 +2165,25 @@ function parseSectionSlots(table, dayName, batch = DEFAULT_BATCH, section = DEFA
   return slots;
 }
 
+/* Whether a fetched day tab can be trusted for this section. GVIZ serves the
+   FIRST tab when the named one is not found, and a degraded read can come back
+   with rows missing. Every day tab lists every section, even one with no
+   classes that day, so a tab without this section's row, or one whose title
+   names a different day, is a bad read and counts with the tabs that failed. */
+const WEEKDAY_RE = /\b(SATURDAY|SUNDAY|MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY)\b/i;
+
+function dayTabUsable(table, dayName, batch, section) {
+  if (!table) return false;
+  const titled = String(table.cols?.[0]?.label || '').match(WEEKDAY_RE);
+  if (titled && titled[1].toUpperCase() !== dayName) return false;
+  return (table.rows || []).some(r => {
+    const c = r.c || [];
+    const b = c[1]?.v != null ? String(c[1].v).trim().replace(/\.0+$/, '') : '';
+    const s = c[2]?.v != null ? String(c[2].v).trim().toUpperCase() : '';
+    return b === String(batch) && s === String(section).toUpperCase();
+  });
+}
+
 /* ── Compute slot diff ── */
 function computeSlotDiff(oldSlots, newSlots) {
   const byKey  = arr => Object.fromEntries(arr.map(s => [`${s.day}|${s.time}|${s.code}`, s]));
@@ -2230,10 +2295,19 @@ async function checkClassRoutine(env) {
   }
 }
 
+/* How long a routine change must hold before it is announced, and the longest
+   gap between two sightings that still counts as holding. */
+const ROUTINE_CHANGE_HOLD_MS = 3 * 60 * 1000;
+const ROUTINE_DAY_EMPTIED_HOLD_MS = 15 * 60 * 1000;
+const ROUTINE_PENDING_GAP_MS = 3 * 60 * 1000;
+
 async function checkClassRoutineFor(env, sheetId, dayTabs, target) {
   const { batch, section, students } = target;
+  const usableTabs = dayTabs.map(
+    (t, i) => (dayTabUsable(t, MONITOR_DAYS[i], batch, section) ? t : null),
+  );
   const allSlots = MONITOR_DAYS.flatMap(
-    (day, i) => parseSectionSlots(dayTabs[i], day, batch, section),
+    (day, i) => parseSectionSlots(usableTabs[i], day, batch, section),
   );
   if (!allSlots.length) return;
 
@@ -2244,10 +2318,17 @@ async function checkClassRoutineFor(env, sheetId, dayTabs, target) {
   const lowKey = `${key}_low_tabs`;
   const pendingKey = `${key}_pending`;
 
-  const sorted = [...allSlots].sort((a, b) => `${a.day}${a.time}${a.code}`.localeCompare(`${b.day}${b.time}${b.code}`));
-  const hash   = await sha256(JSON.stringify(sorted));
   const stored = await supabaseGetState(env, key);
-  const tabsRead = dayTabs.filter(Boolean).length;
+  /* A day tab that could not be read keeps the classes the baseline has for
+     it. Otherwise a day missing from the read becomes "every class removed"
+     once the low-tab guard below stops waiting, and its return "every class
+     added". Only from the same sheet: a new semester's routine starts clean. */
+  const carried = stored?.state_data?.source_sheet_id === sheetId
+    ? (stored.state_data.slots || []).filter(s => !usableTabs[MONITOR_DAYS.indexOf(s.day)])
+    : [];
+  const sorted = [...allSlots, ...carried].sort((a, b) => `${a.day}${a.time}${a.code}`.localeCompare(`${b.day}${b.time}${b.code}`));
+  const hash   = await sha256(JSON.stringify(sorted));
+  const tabsRead = usableTabs.filter(Boolean).length;
   const sourceData = { source_sheet_id: sheetId, slots: sorted, tabs_read: tabsRead };
 
   /* Each weekday is a separate request, and a single failed one parses as "that
@@ -2307,24 +2388,43 @@ async function checkClassRoutineFor(env, sheetId, dayTabs, target) {
     return;
   }
 
-  /* A genuine routine edit should still be present on the next cron run.
-     Requiring one stable confirmation filters out transient Google GVIZ/parser
-     snapshots and stops the noisy remove -> add loop in app notifications. */
+  /* A genuine routine edit stays put; a bad Google read does not. The new
+     version has to be seen run after run (no gap over ROUTINE_PENDING_GAP_MS)
+     for a while before anyone hears of it. Asking for just one more run was
+     not enough: overlapping runs finish seconds apart and confirmed each other.
+     A day whose classes all vanish at once — what the bad read on 2026-10-10
+     looked like — has to hold for longer still. */
+  const now = Date.now();
   const pending = await supabaseGetState(env, pendingKey);
-  if (!pending || pending.state_hash !== hash || pending.state_data?.source_sheet_id !== sheetId) {
+  const firstSeen = Date.parse(pending?.state_data?.first_seen || '');
+  const lastSeen = Date.parse(pending?.state_data?.last_seen || pending?.state_data?.first_seen || '');
+  const continuing =
+    pending?.state_hash === hash &&
+    pending.state_data?.source_sheet_id === sheetId &&
+    Number.isFinite(firstSeen) && Number.isFinite(lastSeen) &&
+    now - lastSeen <= ROUTINE_PENDING_GAP_MS;
+  const daysNow = new Set(sorted.map(s => s.day));
+  const dayEmptied = (stored.state_data?.slots || []).some(s => !daysNow.has(s.day));
+  const holdMs = dayEmptied ? ROUTINE_DAY_EMPTIED_HOLD_MS : ROUTINE_CHANGE_HOLD_MS;
+  if (!continuing || now - firstSeen < holdMs) {
     await supabaseUpsertState(env, pendingKey, hash, {
       ...sourceData,
       changes,
-      first_seen: new Date().toISOString(),
+      first_seen: continuing ? pending.state_data.first_seen : new Date(now).toISOString(),
+      last_seen: new Date(now).toISOString(),
     });
     return;
   }
 
+  // Overlapping runs all get this far; only one of them may announce it.
+  const first = await claimChange(env, key, stored, hash);
+  if (first === null) return;  // unknown whether it went out — retry next run
+
   const body = changes.slice(0, 8).join('\n') + (changes.length > 8 ? `\n…and ${changes.length - 8} more` : '');
-  if (isHome) {
+  if (first && isHome) {
     // The whole class: one public row, and the topic push everyone hears.
     await insertNotification(env, 'class_routine', '📅 Class Routine Updated', body, '/pages/info.html');
-  } else {
+  } else if (first) {
     /* A guest's section. The row has to be personal and the push addressed
        device by device, because an FCM topic cannot single out the handful
        of people this concerns. */
@@ -2339,7 +2439,7 @@ async function checkClassRoutineFor(env, sheetId, dayTabs, target) {
   }
   await supabaseUpsertState(env, key, hash, sourceData);
   await clearSupabaseState(env, pendingKey);
-  if (isHome) await sendPushToAll(env);
+  if (first && isHome) await sendPushToAll(env);
 }
 
 /* Normalize an exam date cell (GVIZ may give "Date(2026,2,27)" or a serial)
@@ -2497,15 +2597,18 @@ async function checkExamRoutineFor(env, type, label, table, target) {
   const stored = await supabaseGetState(env, stateKey);
 
   if (!stored || !stored.state_data?.slots?.length) {
+    // Overlapping runs all get this far; only one of them may announce it.
+    const first = await claimChange(env, stateKey, stored, hash);
+    if (first === null) return;
     const preview = sorted.slice(0, 5).map(s => `• ${s.code}: ${s.day} at ${s.time}`).join('\n');
-    if (isHome) {
+    if (first && isHome) {
       await insertNotification(env, notifType, `📋 ${label} Routine Published`, preview, '/pages/info.html');
-    } else {
+    } else if (first) {
       await notifyStudents(env, students, notifType,
         `📋 ${label} Routine Published` + ` (${batch}${section})`, preview, '/pages/info.html');
     }
     await supabaseUpsertState(env, stateKey, hash, { slots: sorted });
-    if (isHome) await sendPushToAll(env);
+    if (first && isHome) await sendPushToAll(env);
     return;
   }
   if (stored.state_hash === hash) return;
@@ -2513,15 +2616,17 @@ async function checkExamRoutineFor(env, type, label, table, target) {
   const changes = computeSlotDiff(stored.state_data?.slots || [], sorted);
   if (!changes.length) { await supabaseUpsertState(env, stateKey, hash, { slots: sorted }); return; }
 
+  const first = await claimChange(env, stateKey, stored, hash);
+  if (first === null) return;
   const body = changes.slice(0, 8).join('\n') + (changes.length > 8 ? `\n…and ${changes.length - 8} more` : '');
-  if (isHome) {
+  if (first && isHome) {
     await insertNotification(env, notifType, `📋 ${label} Routine Updated`, body, '/pages/info.html');
-  } else {
+  } else if (first) {
     await notifyStudents(env, students, notifType,
       `📋 ${label} Routine Updated` + ` (${batch}${section})`, body, '/pages/info.html');
   }
   await supabaseUpsertState(env, stateKey, hash, { slots: sorted });
-  if (isHome) await sendPushToAll(env);
+  if (first && isHome) await sendPushToAll(env);
 }
 
 /* ── LU Notices Monitor ──
@@ -3875,8 +3980,10 @@ async function sendPushToAll(env, opts = {}) {
     notification?.type || '', notification?.title || '', notification?.body || '',
   ]));
   if (!opts.force) {
-    const lastSent = await supabaseGetState(env, 'push_last_sent');
-    if (lastSent?.state_hash === fingerprint) {
+    /* Claimed before sending rather than only remembered after: overlapping
+       runs each read the old fingerprint and buzzed every phone again. If
+       Supabase can't be asked (null), send anyway, as before. */
+    if (await claimOnce(env, 'push_last_sent', fingerprint) === false) {
       return { skipped: 'duplicate', type: notification?.type || null };
     }
   }
