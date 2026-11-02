@@ -301,7 +301,10 @@ class ExamRepository {
     final targetSection = section.trim().toUpperCase();
     final dayRe = RegExp(r'^\s*day[\s-]*\d+\s*$', caseSensitive: false);
     final dateRe = RegExp(r'\d{1,2}[-/]\d{1,2}[-/]\d{2,4}');
-    final timeRe = RegExp(r'\d{1,2}:\d{2}|am|pm', caseSensitive: false);
+    final timeHeaderRe = RegExp(
+      r'\d{1,2}:\d{2}|\d\s*(am|pm)\b',
+      caseSensitive: false,
+    );
     final weekdayRe = RegExp(
       r'^(sun|mon|tue|wed|thu|fri|sat)',
       caseSensitive: false,
@@ -340,38 +343,68 @@ class ExamRepository {
       ];
       if (dayCols.isEmpty) continue;
 
-      var dateRowIdx = dayHeaderIdx + 1;
-      var timeRowIdx = dayHeaderIdx + 2;
-      var weekdayRowIdx = dayHeaderIdx + 3;
-      final sampleCol = dayCols.first;
-      for (var offset = 1; offset <= 5; offset++) {
-        final rIdx = dayHeaderIdx + offset;
-        if (rIdx >= rows.length || rIdx >= nextBlockRow) break;
-        final cell = sampleCol < rows[rIdx].length
-            ? rows[rIdx][sampleCol].trim()
-            : '';
-        if (dateRe.hasMatch(cell)) {
-          dateRowIdx = rIdx;
-        } else if (timeRe.hasMatch(cell)) {
-          timeRowIdx = rIdx;
-        } else if (weekdayRe.hasMatch(cell)) {
-          weekdayRowIdx = rIdx;
+      // LU sheets put the Date / Weekday / Time rows either just ABOVE the
+      // "Day 1 … Day N" header (current format) or just BELOW it (older
+      // format), so look both ways. A row with a Section value is a data row
+      // and is never taken as a header — fixed offsets used to swallow the
+      // first sections' rows and read their courses as dates.
+      String kindOf(List<String> row) {
+        final sec = sectionCol < row.length ? row[sectionCol].trim() : '';
+        if (sec.isNotEmpty &&
+            !RegExp(
+              r'^(date|time|day|weekday)s?$',
+              caseSensitive: false,
+            ).hasMatch(sec)) {
+          return 'stop';
         }
+        final tally = {'date': 0, 'weekday': 0, 'time': 0};
+        var any = false;
+        for (final c in dayCols) {
+          final cell = c < row.length ? row[c].trim() : '';
+          if (cell.isEmpty) continue;
+          any = true;
+          if (cell.contains('Date(') || dateRe.hasMatch(cell)) {
+            tally['date'] = tally['date']! + 1;
+          } else if (weekdayRe.hasMatch(cell) &&
+              RegExp(r'^[a-z]+\.?$', caseSensitive: false).hasMatch(cell)) {
+            tally['weekday'] = tally['weekday']! + 1;
+          } else if (timeHeaderRe.hasMatch(cell)) {
+            tally['time'] = tally['time']! + 1;
+          } else {
+            return 'stop';
+          }
+        }
+        if (!any) return 'empty';
+        return tally.entries.reduce((a, b) => b.value > a.value ? b : a).key;
       }
 
-      final dateRow = dateRowIdx < rows.length ? rows[dateRowIdx] : const [];
-      final timeRow = timeRowIdx < rows.length ? rows[timeRowIdx] : const [];
-      final weekdayRow = weekdayRowIdx < rows.length
-          ? rows[weekdayRowIdx]
+      final found = <String, int>{};
+      bool take(int r) {
+        final k = kindOf(rows[r]);
+        if (k == 'stop') return false;
+        if (k != 'empty') found.putIfAbsent(k, () => r);
+        return true;
+      }
+
+      final prevHeaderIdx = bi > 0 ? blockStarts[bi - 1] : -1;
+      for (var r = dayHeaderIdx - 1;
+          r > prevHeaderIdx && r >= dayHeaderIdx - 6;
+          r--) {
+        if (!take(r)) break;
+      }
+      var dataStart = dayHeaderIdx + 1;
+      for (var r = dayHeaderIdx + 1;
+          r < nextBlockRow && r <= dayHeaderIdx + 5;
+          r++) {
+        if (!take(r)) break;
+        dataStart = r + 1;
+      }
+
+      final dateRow = found['date'] != null ? rows[found['date']!] : const [];
+      final timeRow = found['time'] != null ? rows[found['time']!] : const [];
+      final weekdayRow = found['weekday'] != null
+          ? rows[found['weekday']!]
           : const [];
-      final dataStart =
-          [
-            dayHeaderIdx,
-            dateRowIdx,
-            timeRowIdx,
-            weekdayRowIdx,
-          ].reduce((a, b) => a > b ? a : b) +
-          1;
 
       final rowBatches = <int, String>{};
       var lastBatch = '';

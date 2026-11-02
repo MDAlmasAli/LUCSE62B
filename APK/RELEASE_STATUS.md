@@ -24,7 +24,12 @@ days, then asked for it on 2026-09-27; that batch is now out. The next batch wen
 
 ## Waiting for the next release
 
-- Nothing yet. Start a fresh list here as new work lands.
+- **Mid/Final Term exam routine reads the new sheet layout** (2026-11-02,
+  `lib/data/exam_repository.dart`). The Fall-26 mid term sheet puts the Date / Weekday / Time
+  rows above the "Day 1 … Day 9" header, and has a second morning/afternoon block. The old
+  parser looked only below the header, so 62B saw one exam with no date or time and missed the
+  two afternoon exams. Now it looks both above and below and never treats a section row as a
+  header. The same fix was made for the website and worker in the same commit.
 
 ## Shipped in v1.1.44+60
 

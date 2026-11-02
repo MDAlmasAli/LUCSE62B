@@ -40,6 +40,54 @@ function examDateObj(s) {
   const d = new Date(+m[3], +m[2]-1, +m[1]); d.setHours(0,0,0,0); return d;
 }
 
+/* ── Find the Date / Weekday / Time rows of one Day-N block ──
+   LU sheets put these rows either just ABOVE the "Day 1 … Day N" header
+   (current format) or just BELOW it (older format), so look both ways.
+   A row that has a Section value is a data row and is never taken as a
+   header — guessing fixed offsets used to swallow the first sections'
+   rows and read their courses as dates. Missing rows come back as -1. */
+function locateExamHeaderRows(allRows, dayHeaderIdx, prevHeaderIdx, nextBlockRow, dayCols, sectionCol) {
+  const kindOf = row => {
+    if (!row) return 'stop';
+    const sec = String(row[sectionCol] || '').trim();
+    if (sec && !/^(date|time|day|weekday)s?$/i.test(sec)) return 'stop';
+    const tally = { date: 0, weekday: 0, time: 0 };
+    let any = false;
+    for (const c of dayCols) {
+      const cell = String(row[c] || '').trim();
+      if (!cell) continue;
+      any = true;
+      if (/Date\(/i.test(cell) || /^\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}$/.test(cell)) tally.date++;
+      else if (/^(sun|mon|tue|wed|thu|fri|sat)[a-z]*\.?$/i.test(cell))               tally.weekday++;
+      else if (/\d{1,2}:\d{2}/.test(cell) || /\d\s*(am|pm)\b/i.test(cell))            tally.time++;
+      else return 'stop';
+    }
+    if (!any) return 'empty';
+    return Object.keys(tally).reduce((a, b) => tally[b] > tally[a] ? b : a);
+  };
+  const found = {};
+  const take = r => {
+    const k = kindOf(allRows[r]);
+    if (k === 'stop') return false;
+    if (k !== 'empty' && found[k] == null) found[k] = r;
+    return true;
+  };
+  for (let r = dayHeaderIdx - 1; r > prevHeaderIdx && r >= dayHeaderIdx - 6; r--) {
+    if (!take(r)) break;
+  }
+  let dataStartRow = dayHeaderIdx + 1;
+  for (let r = dayHeaderIdx + 1; r < nextBlockRow && r <= dayHeaderIdx + 5; r++) {
+    if (!take(r)) break;
+    dataStartRow = r + 1;
+  }
+  return {
+    dateRowIdx:    found.date    != null ? found.date    : -1,
+    timeRowIdx:    found.time    != null ? found.time    : -1,
+    weekdayRowIdx: found.weekday != null ? found.weekday : -1,
+    dataStartRow,
+  };
+}
+
 /* ── Core parser ── */
 function parseExamRoutine(data, targetBatch, targetSection) {
   const table = data?.table;
@@ -106,20 +154,9 @@ function parseExamRoutine(data, targetBatch, targetSection) {
       return a;
     }, []);
 
-    let dateRowIdx = dayHeaderIdx + 1, timeRowIdx = dayHeaderIdx + 2, weekdayRowIdx = dayHeaderIdx + 3;
-    if (dayCols.length > 0) {
-      const sampleCol = dayCols[0];
-      for (let i = 1; i <= 5; i++) {
-        const rIdx = dayHeaderIdx + i;
-        if (rIdx >= allRows.length || rIdx >= nextBlockRow) break;
-        const cell = String(allRows[rIdx][sampleCol]).trim();
-        if (/Date\(/i.test(cell) || /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(cell)) dateRowIdx = rIdx;
-        else if (/\d{1,2}:\d{2}/.test(cell) || /am|pm/i.test(cell)) timeRowIdx = rIdx;
-        else if (/^(sun|mon|tue|wed|thu|fri|sat)/i.test(cell)) weekdayRowIdx = rIdx;
-      }
-    }
-
-    const dataStartRow = Math.max(dayHeaderIdx, dateRowIdx, timeRowIdx, weekdayRowIdx) + 1;
+    const prevHeaderIdx = blockIdx > 0 ? blockStarts[blockIdx - 1].rowIdx : -1;
+    const { dateRowIdx, timeRowIdx, weekdayRowIdx, dataStartRow } =
+      locateExamHeaderRows(allRows, dayHeaderIdx, prevHeaderIdx, nextBlockRow, dayCols, sectionCol);
     const dateRow    = allRows[dateRowIdx]    || [];
     const timeRow    = allRows[timeRowIdx]    || [];
     const weekdayRow = allRows[weekdayRowIdx] || [];
