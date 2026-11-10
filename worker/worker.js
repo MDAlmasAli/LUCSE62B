@@ -202,12 +202,8 @@ export default {
           ]);
         }
 
-        const smsUrl =
-          `https://bulksmsbd.net/api/smsapi?api_key=${env.SMS_API_KEY}` +
-          `&type=text&number=${encodeURIComponent(phone)}` +
-          `&senderid=${encodeURIComponent(env.SMS_SENDER_ID)}` +
-          `&message=${encodeURIComponent(message)}`;
-        await fetch(smsUrl);
+        const sent = await sendSms(env, String(phone).trim(), String(message));
+        if (!sent.ok) return errResp(cors, 502, `SMS provider error ${sent.code}`);
         return jsonResp(cors, { ok: true });
       }
 
@@ -265,13 +261,13 @@ export default {
           await env.SMS_RATE.put(`otp:${sid2}`, otp, { expirationTtl: 300 });
         }
 
-        // Send SMS
-        const smsUrl2 =
-          `https://bulksmsbd.net/api/smsapi?api_key=${env.SMS_API_KEY}` +
-          `&type=text&number=${encodeURIComponent(phone2)}` +
-          `&senderid=${encodeURIComponent(env.SMS_SENDER_ID)}` +
-          `&message=${encodeURIComponent(`Your CSE 62B PORTAL OTP is ${otp}`)}`;
-        await fetch(smsUrl2);
+        // Send SMS — and tell the page if the provider refused it, instead of
+        // claiming "OTP sent" for a message that never left.
+        const sent = await sendSms(env, phone2, `Your CSE 62B PORTAL OTP is ${otp}`);
+        if (!sent.ok) {
+          if (env.SMS_RATE) await env.SMS_RATE.delete(`otp:${sid2}`);
+          return errResp(cors, 502, `SMS provider error ${sent.code}`);
+        }
 
         const masked = phone2.substring(0, 5) + '***' + phone2.slice(-3);
         return jsonResp(cors, { ok: true, masked });
@@ -1208,6 +1204,32 @@ function v4ToTable(values) {
 /* Hidden column indices per tab → { "SATURDAY": [10], ... }.
    GVIZ has no hidden flag, so read columnMetadata.hiddenByUser via Sheets API.
    Cached in KV (10 min) so repeated routine loads don't re-hit the API. */
+/* Send one SMS through bulksmsbd and report whether it was accepted. The API
+   answers HTTP 200 even when it refuses the message (empty balance, IP not
+   whitelisted, bad sender ID...), so the JSON response_code has to be read:
+   202 means submitted, anything else is a refusal. */
+async function sendSms(env, phone, message) {
+  const smsUrl =
+    `https://bulksmsbd.net/api/smsapi?api_key=${env.SMS_API_KEY}` +
+    `&type=text&number=${encodeURIComponent(phone)}` +
+    `&senderid=${encodeURIComponent(env.SMS_SENDER_ID)}` +
+    `&message=${encodeURIComponent(message)}`;
+  try {
+    const r = await fetch(smsUrl, { signal: AbortSignal.timeout(15000) });
+    const text = await r.text();
+    let body = null;
+    try { body = JSON.parse(text); } catch (_) {}
+    const code = body && body.response_code !== undefined ? Number(body.response_code) : r.status;
+    if (code === 202) return { ok: true, code };
+    const detail = (body && (body.error_message || body.success_message)) || text.slice(0, 200);
+    console.log(`SMS refused: code=${code} detail=${detail}`);
+    return { ok: false, code, detail };
+  } catch (e) {
+    console.log(`SMS request failed: ${e && e.message}`);
+    return { ok: false, code: 0, detail: String(e && e.message || e) };
+  }
+}
+
 async function fetchHiddenColumns(sheetId, env) {
   if (!env || !env.DRIVE_API_KEY) return {};
   const cacheKey = `hidden:v4:${sheetId}`;
