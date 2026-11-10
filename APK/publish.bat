@@ -45,8 +45,8 @@ curl -sS -X POST https://lucse62b-api.sy164425.workers.dev/release-apk ^
   -H "x-release-key: %RELKEY%" ^
   -H "x-version-name: %VNAME%" ^
   -H "x-version-code: %VCODE%" ^
-  -H "x-release-features: [\"Groundwork for upcoming improvements; nothing changes on screen in this version\"]" ^
-  -H "x-release-fixes: [\"The class routine and exam schedule load more consistently\", \"Notification categories are applied more reliably\"]" ^
+  -H "x-release-features: [\"You stay signed in as long as you keep using the app - no more weekly sign-out\"]" ^
+  -H "x-release-fixes: [\"Mid and final exam routine shows every exam with its date and time again\", \"Sunday is no longer shown as a separate routine table\"]" ^
   -H "Content-Type: application/vnd.android.package-archive" ^
   --data-binary @build/app/outputs/flutter-apk/app-release.apk
 echo.

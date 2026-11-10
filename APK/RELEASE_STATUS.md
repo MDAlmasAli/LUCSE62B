@@ -4,13 +4,15 @@
 the repo and is built locally as often as needed, but no `publish.bat`, no `/release-apk` upload and
 no APK handed to anyone until the owner asks for it. (They held the September batch back for a few
 days, then asked for it on 2026-09-27; that batch is now out. The next batch went out on
-2026-09-30, again on the owner's say-so.)
+2026-09-30, again on the owner's say-so, and v1.1.45 on 2026-11-10.)
 
 ## What users have right now
 
-- **v1.1.44+60**, published 2026-09-30 — each student's own section (see below).
-  Nothing on screen changes for CSE 62B, so the release notes say exactly that.
+- **v1.1.45+61**, published 2026-11-10 — no more weekly sign-out, the new exam routine
+  layout, Sunday back in the main routine table (see "Shipped in v1.1.45+61").
   Optional, not forced (`min_version_code` 35).
+- Before that: **v1.1.44+60**, published 2026-09-30 — each student's own section (see below).
+  Nothing on screen changes for CSE 62B, so the release notes say exactly that.
 - Before that: **v1.1.43+59**, published 2026-09-30 — notifications reach the phone again, deadline
   reminders, more of the app works offline, the home-screen widget gone, and a round of
   security work. Optional, not forced (`min_version_code` 35).
@@ -24,6 +26,19 @@ days, then asked for it on 2026-09-27; that batch is now out. The next batch wen
 
 ## Waiting for the next release
 
+- Nothing right now.
+
+## Shipped in v1.1.45+61
+
+- **No more weekly sign-out** (2026-10, commit 6565b4a, `lib/data/session.dart`,
+  `models/student.dart`, `session_validator.dart`). The 7-day session expiry counted from the
+  moment of signing in and never moved, so everyone was signed out once a week. It now counts
+  from the last use (stamped at most once an hour). Pinned by `test/guest_section_test.dart`.
+  Already live on the website.
+- **Sunday no longer drawn as its own routine table** (2026-10, commit 5ba42eb,
+  `lib/data/routine_grid_repository.dart`). A day's header row is taken from the linked sheet
+  listing the most time slots, not the widest one, so a hidden "OL Class" column in Link 2 no
+  longer drops a period from one day. Already live on the website.
 - **Mid/Final Term exam routine reads the new sheet layout** (2026-11-02,
   `lib/data/exam_repository.dart`). The Fall-26 mid term sheet puts the Date / Weekday / Time
   rows above the "Day 1 … Day 9" header, and has a second morning/afternoon block. The old
