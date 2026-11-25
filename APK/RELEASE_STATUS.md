@@ -4,11 +4,13 @@
 the repo and is built locally as often as needed, but no `publish.bat`, no `/release-apk` upload and
 no APK handed to anyone until the owner asks for it. (They held the September batch back for a few
 days, then asked for it on 2026-09-27; that batch is now out. The next batch went out on
-2026-09-30, again on the owner's say-so, and v1.1.45 on 2026-11-10.)
+2026-09-30, again on the owner's say-so, v1.1.45 on 2026-11-10, and v1.1.46 on 2026-11-26.)
 
 ## What users have right now
 
-- **v1.1.45+61**, published 2026-11-10 — no more weekly sign-out, the new exam routine
+- **v1.1.46+62**, published 2026-11-26 — full Student IDs on the group cover page
+  (see "Shipped in v1.1.46+62"). Optional, not forced (`min_version_code` unchanged).
+- Before that: **v1.1.45+61**, published 2026-11-10 — no more weekly sign-out, the new exam routine
   layout, Sunday back in the main routine table (see "Shipped in v1.1.45+61").
   Optional, not forced (`min_version_code` 35).
 - Before that: **v1.1.44+60**, published 2026-09-30 — each student's own section (see below).
@@ -25,6 +27,10 @@ days, then asked for it on 2026-09-27; that batch is now out. The next batch wen
 - Nothing right now.
 
 ## Waiting for the next release
+
+- Nothing right now.
+
+## Shipped in v1.1.46+62
 
 - **Cover page: Student IDs no longer cut off in the group table** (2026-11-26,
   `lib/features/cover_page/cover_pdf.dart`). Reported by an app user. In the group

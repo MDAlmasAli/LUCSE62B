@@ -45,8 +45,8 @@ curl -sS -X POST https://lucse62b-api.sy164425.workers.dev/release-apk ^
   -H "x-release-key: %RELKEY%" ^
   -H "x-version-name: %VNAME%" ^
   -H "x-version-code: %VCODE%" ^
-  -H "x-release-features: [\"You stay signed in as long as you keep using the app - no more weekly sign-out\"]" ^
-  -H "x-release-fixes: [\"Mid and final exam routine shows every exam with its date and time again\", \"Sunday is no longer shown as a separate routine table\"]" ^
+  -H "x-release-features: []" ^
+  -H "x-release-fixes: [\"Cover page: the full Student ID now shows in the group table - the last digits were cut off\"]" ^
   -H "Content-Type: application/vnd.android.package-archive" ^
   --data-binary @build/app/outputs/flutter-apk/app-release.apk
 echo.
