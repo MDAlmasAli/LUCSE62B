@@ -24,6 +24,9 @@ class CoverPdf {
   static const double _fBody = 14;
   static const double _indent = 52.5; // 70px content left margin (t1)
   static const double _rowH = 26; // group-table row height (for merged cells)
+  static const double _contentW = 595.28 - 144; // A4 width minus 72pt margins
+  static const double _idColW = 132; // fits a 16-digit ID at 14pt + padding
+  static const double _bsColW = 64; // Batch / Section columns
 
   static final _grid = PdfColor.fromInt(0xFF444444);
   static final _headBg = PdfColor.fromInt(0xFFF0F0F0);
@@ -84,7 +87,7 @@ class CoverPdf {
     body.add(pw.Text('Submitted From', style: _s(_fBody, bold: true)));
     body.add(pw.SizedBox(height: 4));
     if (d.isGroup) {
-      body.add(_groupTable(d));
+      body.add(_groupTable(d, _contentW - _indent));
     } else {
       final fromRows = <List<String>>[];
       if (d.studentName.isNotEmpty) fromRows.add(['Name', d.studentName]);
@@ -160,7 +163,7 @@ class CoverPdf {
     w.add(pw.Text('Submitted From', style: _s(_fBody, bold: true)));
     if (d.isGroup) {
       w.add(pw.SizedBox(height: 4));
-      w.add(_groupTable(d));
+      w.add(_groupTable(d, _contentW));
     } else {
       if (d.studentName.isNotEmpty) line(d.studentName);
       if (d.studentId.isNotEmpty) line(d.studentId);
@@ -214,35 +217,53 @@ class CoverPdf {
   /// Bordered group table with merged Batch/Section cells (rowspan), built as
   /// a Name+ID table beside a single tall Batch+Section table so the merge is
   /// exact without needing real rowspan support.
-  static pw.Widget _groupTable(CoverData d) {
+  static pw.Widget _groupTable(CoverData d, double width) {
     final rows = d.members.where((m) => m.name.isNotEmpty || m.id.isNotEmpty).toList();
     if (rows.isEmpty) return pw.SizedBox();
     final n = rows.length;
+    final nameColW = width - 2 * _bsColW - _idColW;
 
-    pw.Widget cell(String s, {bool bold = false, bool header = false}) => pw.Container(
-          height: _rowH,
-          alignment: pw.Alignment.center,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 8),
-          color: header ? _headBg : null,
-          child: pw.Text(s, style: _s(_fBody, bold: bold), textAlign: pw.TextAlign.center, maxLines: 1),
-        );
+    // Rows have a fixed height (the merged Batch/Section cells depend on it),
+    // so a value that is too wide is shrunk to fit instead of being cut off;
+    // a clipped Student ID loses its last digits. With [wrapW] set the text
+    // first wraps onto two lines at that width, so a long name shrinks only a
+    // little instead of being squeezed onto one line. Names wrap at 115% of
+    // the cell width, so a name only slightly too wide stays on one line.
+    pw.Widget cell(String s, {bool bold = false, bool header = false, double? wrapW}) {
+      final text = pw.Text(s,
+          style: _s(_fBody, bold: bold),
+          textAlign: pw.TextAlign.center,
+          maxLines: wrapW == null ? 1 : 2);
+      return pw.Container(
+        height: _rowH,
+        alignment: pw.Alignment.center,
+        padding: const pw.EdgeInsets.symmetric(horizontal: 8),
+        color: header ? _headBg : null,
+        child: pw.FittedBox(
+          fit: pw.BoxFit.scaleDown,
+          child: wrapW == null
+              ? text
+              : pw.ConstrainedBox(constraints: pw.BoxConstraints(maxWidth: wrapW), child: text),
+        ),
+      );
+    }
 
     final nameTbl = pw.Table(
       border: pw.TableBorder.all(color: _grid, width: 1),
-      columnWidths: const {0: pw.FlexColumnWidth(2), 1: pw.FlexColumnWidth(1.3)},
+      columnWidths: {0: pw.FixedColumnWidth(nameColW), 1: const pw.FixedColumnWidth(_idColW)},
       children: [
         pw.TableRow(children: [
           cell('Name', bold: true, header: true),
           cell('Student ID', bold: true, header: true),
         ]),
         for (final m in rows)
-          pw.TableRow(children: [cell(m.name), cell(m.id)]),
+          pw.TableRow(children: [cell(m.name, wrapW: (nameColW - 16) * 1.15), cell(m.id)]),
       ],
     );
 
     final bsTbl = pw.Table(
       border: pw.TableBorder.all(color: _grid, width: 1),
-      columnWidths: const {0: pw.FixedColumnWidth(64), 1: pw.FixedColumnWidth(64)},
+      columnWidths: const {0: pw.FixedColumnWidth(_bsColW), 1: pw.FixedColumnWidth(_bsColW)},
       children: [
         pw.TableRow(children: [
           cell('Batch', bold: true, header: true),

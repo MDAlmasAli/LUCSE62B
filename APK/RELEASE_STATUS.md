@@ -26,7 +26,13 @@ days, then asked for it on 2026-09-27; that batch is now out. The next batch wen
 
 ## Waiting for the next release
 
-- Nothing right now.
+- **Cover page: Student IDs no longer cut off in the group table** (2026-11-26,
+  `lib/features/cover_page/cover_pdf.dart`). Reported by an app user. In the group
+  table the Student ID column got a flex share of the width (~107pt in the modern
+  template), but a 16-digit ID at 14pt needs ~128pt, and the one-line cell clipped
+  the last digits. The ID column is now a fixed 132pt, and any cell that is still
+  too wide is scaled down instead of clipped. Long names wrap onto two lines rather
+  than being squeezed. The website was never affected (its HTML table grows to fit).
 
 ## Shipped in v1.1.45+61
 
